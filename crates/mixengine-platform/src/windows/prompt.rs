@@ -1,9 +1,9 @@
 //! Raising UAC on the one-shot helper.
 //!
-//! `ShellExecuteExW` with the `runas` verb, which is the only documented way to start a process under
-//! a token this one does not hold: `CreateProcessAsUser` needs a privilege the daemon does not have,
-//! and marking the *helper* `requireAdministrator` in a manifest would make it un-runnable
-//! unelevated, which T40's own protocol tests depend on being able to do.
+//! `ShellExecuteExW` with the `runas` verb, which is the only documented way to start a process
+//! under a token this one does not hold: `CreateProcessAsUser` needs a privilege the daemon does
+//! not have, and marking the *helper* `requireAdministrator` in a manifest would make it
+//! un-runnable unelevated, which the helper's own protocol tests depend on being able to do.
 
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt as _;
@@ -34,7 +34,7 @@ impl Elevation for Prompt {
     fn probe(&self) -> ElevationSupport {
         // Unconditionally, and deliberately. UAC is part of the OS, and on an account with no
         // administrative rights the prompt asks for somebody else's credentials rather than being
-        // absent — so there is nothing cheap to look at here that would be true. See T40a, D6.
+        // absent — so there is nothing cheap to look at here that would be true.
         ElevationSupport::Available
     }
 
@@ -50,7 +50,7 @@ impl Elevation for Prompt {
         // directory the installer chose. **A null `lpDirectory` would give the elevated child the
         // daemon's own working directory**, which the user controls and which Windows searches when
         // it resolves a DLL — an elevated process with its working directory in a user-writable
-        // place is a DLL-planting target, and the fix costs one field. See T40a, D4.
+        // place is a DLL-planting target, and the fix costs one field.
         let directory = helper.parent().unwrap_or_else(|| Path::new("\\"));
 
         let verb = wide(OsStr::new(RUNAS));
@@ -92,7 +92,7 @@ impl Elevation for Prompt {
             let refusal = std::io::Error::last_os_error();
 
             // The person dismissed the prompt, and the helper never started — which is exactly why
-            // T40/D11 said a declined prompt could not be an exit code of the helper's.
+            // a declined prompt cannot be an exit code of the helper's.
             if refusal.raw_os_error()
                 == Some(i32::try_from(decide::ERROR_CANCELLED).expect("1223 fits in an i32"))
             {
@@ -105,7 +105,7 @@ impl Elevation for Prompt {
             });
         }
 
-        // No `said`: a `runas` child has no stream this process owns — T166, D5.
+        // No `said`: a `runas` child has no stream this process owns.
         Ok(Raised::from(finished(info.hProcess)))
     }
 }
@@ -114,7 +114,7 @@ impl Elevation for Prompt {
 ///
 /// The exit code is logged and goes no further. Two of the three systems hand one back cheaply and
 /// the third does not, so a caller that branched on it would be branching on something one of them
-/// cannot supply — T40a, D7. The report is beside the request.
+/// cannot supply. The report is beside the request.
 fn finished(process: HANDLE) -> ElevationOutcome {
     if process.is_null() {
         // `SEE_MASK_NOCLOSEPROCESS` asked for a handle; a shell that satisfied the request with a
@@ -155,7 +155,7 @@ fn finished(process: HANDLE) -> ElevationOutcome {
 /// A thread already in an apartment of another kind answers `RPC_E_CHANGED_MODE`, which is not a
 /// failure — but it must not be paired with a `CoUninitialize` that would tear down somebody else's.
 /// That is the whole of what the flag inside records.
-// Shared with `redistributable`, which starts a program through the same shell call (T150).
+// Shared with `redistributable`, which starts a program through the same shell call.
 pub(super) struct Apartment(bool);
 
 impl Apartment {

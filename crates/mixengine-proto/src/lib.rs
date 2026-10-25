@@ -3,8 +3,8 @@
 //! This crate is the single source of truth for the API surface: requests, responses, events and
 //! the wire error. It is `serde`-only on purpose — no I/O, no platform code, no domain logic — so
 //! that a client can depend on it without pulling in the daemon's world, and so that the published
-//! TypeScript contract can be generated from it — `bindings/` at the repository root, roadmap task
-//! **T56**, behind this crate's `ts` feature and off in every shipped binary.
+//! TypeScript contract can be generated from it — `bindings/` at the repository root, behind this
+//! crate's `ts` feature and off in every shipped binary.
 //!
 //! The payload types are re-exported flat, because a caller writes `DaemonStatus` and never wants
 //! to say which module it came from. [`rpc`] stays a module: `rpc::Request` is a JSON-RPC request
@@ -184,13 +184,13 @@ pub use version::{Execution, PackageChannel, PackageVersion, VersionConstraint, 
 /// `mixengine-elevate`. Bump it when a change is not backwards compatible for an older peer.
 ///
 /// **Adding a member to a response is not one of those changes** —
-/// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md), roadmap task
-/// **T88c**. Every member added after a version is frozen is optional on the wire —
+/// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md). Every member
+/// added after a version is frozen is optional on the wire —
 /// `#[serde(default, skip_serializing_if = "Option::is_none")]` on an `Option<T>` — so a peer that
-/// predates it sends nothing and one that has it encodes exactly what it did before. What bumps this
-/// number is a member **removed**, a member's **type** changed, a member's **meaning** changed, or a
-/// method's contract changed: the things an older peer cannot survive however carefully it was
-/// written.
+/// predates it sends nothing and one that has it encodes exactly what it did before. What bumps
+/// this number is a member **removed**, a member's **type** changed, a member's **meaning**
+/// changed, or a method's contract changed: the things an older peer cannot survive however
+/// carefully it was written.
 ///
 /// [`DaemonVersion`] and [`Health`] gain no member at all, optional or otherwise. They are what a
 /// client reads *before* it knows whether to trust the rest, so the one answer that must always
@@ -199,12 +199,12 @@ pub const PROTOCOL_VERSION: ProtocolVersion = ProtocolVersion(1);
 
 /// The oldest peer this build still serves.
 ///
-/// **A window and not a point** — roadmap task **T88a**. `mixengine-elevate` is excluded from
-/// auto-update, so a daemon newer than the installed helper is the ordinary state of a machine
-/// rather than a fault; refusing the whole request over the number in its envelope would mean an
-/// old helper served nothing at all, where `docs/features/updates.md` asks that it go on serving
-/// everything it knows — and the per-operation tolerance
-/// [`OpOutcome::Unsupported`](privileged::OpOutcome::Unsupported) exists for never gets a chance.
+/// **A window and not a point.** `mixengine-elevate` is excluded from auto-update, so a daemon
+/// newer than the installed helper is the ordinary state of a machine rather than a fault; refusing
+/// the whole request over the number in its envelope would mean an old helper served nothing at
+/// all, where `docs/features/updates.md` asks that it go on serving everything it knows — and the
+/// per-operation tolerance [`OpOutcome::Unsupported`](privileged::OpOutcome::Unsupported) exists
+/// for never gets a chance.
 ///
 /// The helper accepts `PROTOCOL_MINIMUM ..= PROTOCOL_VERSION` and refuses **above** the ceiling as
 /// well as below the floor: a fixed old binary cannot be taught later what a newer protocol means,

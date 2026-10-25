@@ -66,7 +66,7 @@ describe("groupByLine", () => {
     expect(groups[0].open).toBe(true);
   });
 
-  // Review focus 1: a daemon from before T193 sends no line.
+  // A daemon from before version lines sends no line.
   it("rows without a line are each their own group", () => {
     const groups = groupByLine([row("8.4.25", null, null), row("8.4.24", null, null)], (r) => r.kind, all, none);
     expect(groups.map((g) => g.head.version)).toEqual(["8.4.25", "8.4.24"]);

@@ -87,14 +87,13 @@ fn initialised(version: &str, provides: BTreeMap<String, String>) -> Context {
     context
 }
 
-/// **A reset follows the same route its ritual does, and creates no data directory** — roadmap
-/// task **T127**.
+/// **A reset follows the same route its ritual does, and creates no data directory.**
 ///
 /// All four rows of the route table, for [`route`]'s own reason: 5.6 is the one published line
 /// that repairs itself through `--bootstrap` rather than through `--init-file`, and no machine
 /// anybody runs these tests on is running 5.6.
-/// **Health is asked in the server's own protocol** — roadmap task T190b, D4. Readiness, which
-/// runs once per start, still asks the client program.
+/// **Health is asked in the server's own protocol.** Readiness, which runs once per start, still
+/// asks the client program.
 #[test]
 fn health_is_asked_in_the_protocol_and_readiness_is_still_the_client() {
     let spec = Mysql
@@ -138,10 +137,9 @@ fn the_reset_follows_the_route_and_creates_no_data_directory() {
     }
 }
 
-/// **Every step of every route, and the file, name one scratch directory of this instance's
-/// own** — roadmap task **T33c**, on MariaDB's measurement: the deletion is the same code in
-/// this server, and 5.6's installer loads the same system tables through the same temporary
-/// ones.
+/// **Every step of every route, and the file, name one scratch directory of this instance's own**,
+/// on MariaDB's measurement: the deletion is the same code in this server, and 5.6's installer
+/// loads the same system tables through the same temporary ones.
 #[test]
 fn every_first_run_step_and_the_file_name_this_instances_own_scratch_directory() {
     use crate::generate::recipes::{TMPDIR, scratch_dir};
@@ -182,7 +180,7 @@ fn every_first_run_step_and_the_file_name_this_instances_own_scratch_directory()
 }
 
 /// Two instances of one server, so its id carries an `@`.
-/// **A database is woken at the addresses it listens on itself** — T70a's D4.
+/// **A database is woken at the addresses it listens on itself.**
 ///
 /// On a system with Unix sockets that is *two* addresses and not one, and the difference is a
 /// client's habit rather than a configuration: a generated `.env` names `127.0.0.1`, and the
@@ -269,7 +267,7 @@ fn the_second_listener_a_modern_mysql_would_open_is_switched_off() {
     assert!(rendered.contains("loose-mysqlx"), "{rendered}");
 }
 
-/// **A development machine's defaults, which are not the server's** — roadmap task **T73**.
+/// **A development machine's defaults, which are not the server's.**
 ///
 /// Three lines, each holding memory or a disk wait that a laptop pays for and never reads:
 /// MyISAM's key cache, the instrumentation MySQL ships on where MariaDB ships it off, and the
@@ -290,9 +288,9 @@ fn the_configuration_is_tuned_for_a_laptop_rather_than_for_a_server() {
 
 /// **The relaxed flush is the log's, and the page barriers are untouched.**
 ///
-/// What T73 spends is the last second of committed transactions; what it must never spend is a
-/// data directory that will not open, and `innodb_doublewrite` is what keeps a torn page
-/// recoverable.
+/// What the development defaults spend is the last second of committed transactions; what they must
+/// never spend is a data directory that will not open, and `innodb_doublewrite` is what keeps a
+/// torn page recoverable.
 #[test]
 fn the_barriers_that_make_a_page_recoverable_are_left_alone() {
     let rendered = rendered("{}");

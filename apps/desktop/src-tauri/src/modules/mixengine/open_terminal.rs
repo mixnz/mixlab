@@ -1,4 +1,4 @@
-//! Hands a Terminal tab state to the shell's launch queue — roadmap task **T205**, D11.
+//! Hands a Terminal tab state to the shell's launch queue.
 //!
 //! The `explore_data.rs` path, one module along: build the state, call `launch::request`. The
 //! Terminal module validates what arrives exactly as it validates a restored tab, so nothing here

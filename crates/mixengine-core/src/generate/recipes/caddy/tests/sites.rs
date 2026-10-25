@@ -106,8 +106,8 @@ fn each_kind_renders_a_block_naming_what_it_was_given() {
         .sites(&context("{}"), &served)
         .expect("four site files");
 
-    // Four configurations, then the four welcome pages T124 appends after them, and the one
-    // starting page the PHP site among them gets (T167f).
+    // Four configurations, then the four welcome pages appended after them, and the one starting
+    // page the PHP site among them gets.
     assert_eq!(documents.len(), 9);
     assert!(
         documents
@@ -219,7 +219,7 @@ fn a_socket_under_a_home_with_a_space_in_it_is_one_token() {
     );
 }
 
-/// **The authority is rendered into a directory that holds only it** — the T75 design, D9.
+/// **The authority is rendered into a directory that holds only it.**
 ///
 /// `certs/ca/root.key` sits beside `certs/ca/root.crt`, so a front end pointed at the
 /// certificates directory would serve this home's signing key to the local network. The copy is
@@ -263,7 +263,7 @@ fn a_home_with_no_authority_renders_no_authority_file() {
     );
 }
 
-/// **The CA is downloadable from a shared site and from no other** — the T75 design, D9.
+/// **The CA is downloadable from a shared site and from no other.**
 ///
 /// "Served only while sharing is on" is a property of the rendering, which is what makes it
 /// something a test can hold rather than something a reviewer has to believe.
@@ -342,9 +342,9 @@ fn an_unshared_site_serves_no_authority() {
     assert!(!rendered.contains("__mixengine"), "{rendered}");
 }
 
-/// **Every address on one directive, loopback first** — the T74 design, D2. Caddy's `bind`
-/// replaces the default rather than adding to it, so a block naming only the LAN address would
-/// come up on the phone and go down in the browser on this machine.
+/// **Every address on one directive, loopback first.** Caddy's `bind` replaces the default rather
+/// than adding to it, so a block naming only the LAN address would come up on the phone and go down
+/// in the browser on this machine.
 #[test]
 fn a_shared_site_binds_loopback_and_the_lan_address() {
     let served = vec![a_shared_site([192, 168, 1, 10])];
@@ -379,12 +379,12 @@ fn a_shared_site_answers_to_the_address_a_phone_sends() {
     );
 }
 
-/// **The name is in the block's address list, not only on the network** — the T75 design, D3.
+/// **The name is in the block's address list, not only on the network.**
 ///
-/// T74 learned this with an address: binding an interface says where a connection is accepted,
-/// and the block's address list says which site replies. A phone that resolves the name and is
-/// answered 200 with an empty body is the slowest failure this feature has, and it is the one
-/// this line prevents.
+/// LAN sharing learned this with an address: binding an interface says where a connection is
+/// accepted, and the block's address list says which site replies. A phone that resolves the name
+/// and is answered 200 with an empty body is the slowest failure this feature has, and it is the
+/// one this line prevents.
 #[test]
 fn a_shared_site_answers_to_its_mdns_name() {
     let served = vec![a_shared_site([192, 168, 1, 10])];
@@ -402,9 +402,9 @@ fn a_shared_site_answers_to_its_mdns_name() {
 /// **Opt-in per site, and this is where it is actually enforced.**
 ///
 /// Caddy's default is every interface, so an unshared site was already listening on the network
-/// before T74 — it simply matched no `Host` anyone would send. T74 opens the port deliberately,
-/// which turns that from an accident nobody could reach into a promise this rendering has to
-/// keep: loopback, both families, and nothing else.
+/// before LAN sharing — it simply matched no `Host` anyone would send. LAN sharing opens the port
+/// deliberately, which turns that from an accident nobody could reach into a promise this rendering
+/// has to keep: loopback, both families, and nothing else.
 #[test]
 fn a_site_that_is_not_shared_binds_loopback_only() {
     let served = vec![Served {
@@ -447,9 +447,9 @@ fn both_blocks_of_a_shared_https_site_carry_the_addresses() {
     );
 }
 
-/// **One file per extension, named after it, and headed like every other generated file** —
-/// roadmap task **T81c**. The fragment arrives already substituted; what this adds is the
-/// sentence saying where the file came from and where to change it.
+/// **One file per extension, named after it, and headed like every other generated file** — the
+/// fragment arrives already substituted; what this adds is the sentence saying where the file came
+/// from and where to change it.
 #[test]
 fn an_extension_s_fragment_is_a_file_of_its_own() {
     let context = context("{}").with_fragments(vec![FrontEndAddition {
@@ -480,18 +480,18 @@ fn an_extension_s_fragment_is_a_file_of_its_own() {
     );
 }
 
-/// The front end is the only recipe that sweeps, and it sweeps the three directories whose
-/// contents follow a table: `sites/` the `sites` one, `extensions/` the `extensions` one, and
-/// `welcome/` the `sites` one a second time — roadmap task **T124**. A deleted site that kept
-/// its welcome page would be a page served for a site that no longer exists.
+/// The front end is the only recipe that sweeps, and it sweeps the three directories whose contents
+/// follow a table: `sites/` the `sites` one, `extensions/` the `extensions` one, and `welcome/` the
+/// `sites` one a second time. A deleted site that kept its welcome page would be a page served for
+/// a site that no longer exists.
 #[test]
 fn the_front_end_sweeps_the_directories_that_follow_a_table() {
     assert_eq!(Caddy.swept(), &["sites", "extensions", "welcome"]);
 }
 
-/// **A dead upstream is answered, at every path** — the T124 design, D4. Wide is safe here in
-/// a way it is not for the file kinds: a 502 the front end generated means nothing was
-/// listening, so there is no application whose answer is being overwritten.
+/// **A dead upstream is answered, at every path.** Wide is safe here in a way it is not for the
+/// file kinds: a 502 the front end generated means nothing was listening, so there is no
+/// application whose answer is being overwritten.
 #[test]
 fn a_proxy_site_answers_a_dead_upstream_with_the_welcome_page() {
     let rendered = render_site(&Served {
@@ -532,9 +532,9 @@ fn a_proxy_site_has_no_root_only_welcome_handler() {
     );
 }
 
-/// **Off renders neither the page nor the route** — the T124 design, D6. Either half alone is
-/// worse than neither: a page nothing routes to is a file nobody reads, and a route with no
-/// page behind it is a 404 on top of the 404 this feature exists to replace.
+/// **Off renders neither the page nor the route.** Either half alone is worse than neither: a page
+/// nothing routes to is a file nobody reads, and a route with no page behind it is a 404 on top of
+/// the 404 this feature exists to replace.
 #[test]
 fn the_switch_turned_off_renders_no_welcome_at_all() {
     let documents = Caddy
@@ -552,13 +552,13 @@ fn the_switch_turned_off_renders_no_welcome_at_all() {
     );
 }
 
-/// A static site at `blog.test` with a certificate — roadmap task **T51**.
+/// A static site at `blog.test` with a certificate.
 ///
 /// Paths that do not exist, deliberately: this module renders text and never reads a disk.
 /// Whether the pair is there was decided in `generate::served`, and asking again here would be a
 /// second answer to one question.
-/// **Two documents per site now** — roadmap task T124: the site's configuration, and the page
-/// it answers with when it has nothing to serve.
+/// **Two documents per site**: the site's configuration, and the page it answers with when it has
+/// nothing to serve.
 #[test]
 fn a_site_renders_a_welcome_page_beside_its_configuration() {
     let documents = Caddy
@@ -606,9 +606,8 @@ fn the_welcome_pages_come_after_every_site() {
     }
 }
 
-/// **The root path only, and after the site's own handlers** — the T124 design, D3. A
-/// catch-all error handler would replace an application's own 404, which is MixEngine lying
-/// about somebody else's program.
+/// **The root path only, and after the site's own handlers.** A catch-all error handler would
+/// replace an application's own 404, which is MixEngine lying about somebody else's program.
 #[test]
 fn a_static_site_falls_back_to_the_welcome_page_only_at_the_root() {
     let rendered = render_site(&a_site_with_a_certificate());
@@ -646,9 +645,8 @@ fn a_static_site_falls_back_to_the_welcome_page_only_at_the_root() {
     );
 }
 
-/// **Both blocks carry it.** A site with a certificate renders two — plaintext and TLS, the T51
-/// design's D2 — and the one that was missed is the one whichever scheme the developer typed
-/// happens to reach.
+/// **Both blocks carry it.** A site with a certificate renders two — plaintext and TLS — and the
+/// one that was missed is the one whichever scheme the developer typed happens to reach.
 #[test]
 fn both_blocks_carry_the_welcome_route() {
     let rendered = render_site(&a_site_with_a_certificate());

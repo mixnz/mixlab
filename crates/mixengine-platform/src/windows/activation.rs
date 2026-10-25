@@ -1,4 +1,4 @@
-//! A loopback port — roadmap task **T70**.
+//! A loopback port.
 //!
 //! **There is no socket arm here, and that is upstream's shape rather than an omission.** Windows
 //! has had `AF_UNIX` since 1803, but the services MixEngine starts on this system listen on ports:
@@ -57,8 +57,8 @@ impl Activation {
         &self.listen
     }
 
-    /// Close the listener — **T70a**. A port needs nothing else, and this system has no socket arm
-    /// to need it: see the module note for why there is none.
+    /// Close the listener. A port needs nothing else, and this system has no socket arm to need it:
+    /// see the module note for why there is none.
     pub(crate) fn release(self) -> Result<()> {
         drop(self);
 

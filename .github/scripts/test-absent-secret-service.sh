@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# The credential-store tests against a Linux with no secret service — the machine T15b exists for,
+# The credential-store tests against a Linux with no secret service — the machine this exists for,
 # and the one no runner is by accident.
 #
 # **This is the only leg that walks the absent branch.** Everywhere else the store is there: the
 # `test` job installs `gnome-keyring` on purpose so that Linux gets the coverage Windows and macOS
-# get for free, which leaves the answer a machine *without* one gets as a path every green run
-# steps past. That is how T15b's bug lived long enough to be found by a stack trace.
+# get for free, which leaves the answer a machine *without* one gets as a path every green run steps
+# past. That is how the bug this was written for lived long enough to be found by a stack trace.
 #
 # `MIXENGINE_TEST_NO_KEYRING=1` is what makes each round an assertion rather than a skip: with it
 # set, `crates/mixengine-platform/tests/secrets.rs` fails if it finds a store, so a round whose
@@ -20,7 +20,7 @@ cd -- "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/../.."
 
 # `--workspace --all-features` matches the job's own "Build tests" step, so these three rounds reuse
 # what it already compiled. `-p` with `--all-features` was not enough: cargo unifies features over the
-# packages it was asked for, and that narrower selection recompiled for 17.7 s (T170b).
+# packages it was asked for, and that narrower selection recompiled for 17.7 s.
 suite=(cargo test --workspace --all-features --test secrets --locked --offline)
 
 # A session bus of our own that can activate nothing: no `<servicedir>` at all, so the name
@@ -57,7 +57,7 @@ export MIXENGINE_TEST_NO_KEYRING=1
 export CARGO_NET_OFFLINE=true
 
 # `org.freedesktop.DBus.Error.ServiceUnknown` — a bus with nobody serving secrets on it. This is the
-# shape the CI run that opened T15b actually produced.
+# shape the CI run that found that bug actually produced.
 echo "--- a session bus with no secret service on it ---"
 DBUS_SESSION_BUS_ADDRESS="$address" "${suite[@]}"
 

@@ -1,5 +1,4 @@
-//! `msys2`, a toolchain: listed, installed and removed like a package, never made into a service —
-//! roadmap task **T206a**, its design's D5.
+//! `msys2`, a toolchain: listed, installed and removed like a package, never made into a service.
 //!
 //! **Multi-threaded on purpose**, for `tests/package.rs`' reason: `MockRegistry` serves the daemon
 //! `mix` talks to, in this same process, while `mix` runs as a blocking child.
@@ -78,7 +77,7 @@ fn index(packed: &Packed, url: &str) -> Value {
     })
 }
 
-/// **A toolchain is listed, installed and removed like a package** — T206a, D5.
+/// **A toolchain is listed, installed and removed like a package.**
 #[tokio::test(flavor = "multi_thread")]
 async fn a_toolchain_is_listed_installed_and_removed() {
     let fixture = Fixture::start().await;
@@ -104,8 +103,8 @@ async fn a_toolchain_is_listed_installed_and_removed() {
     );
 }
 
-/// **And it is never a service** — T206a, D5: the sentence says what it is, rather than "cannot
-/// run" beside a list of what can that would not name it.
+/// **And it is never a service**: the sentence says what it is, rather than "cannot run" beside a
+/// list of what can that would not name it.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_toolchain_is_not_a_service() {
     let fixture = Fixture::start().await;

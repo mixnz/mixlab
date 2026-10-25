@@ -96,7 +96,7 @@ function ServedPill({ cell }: { cell: ServedCell }) {
 }
 
 /**
- * Each site's certificate — T2.7.
+ * Each site's certificate.
  *
  * **One `cert.issue` call without `site` draws the whole table.** Reissuing one row calls that same
  * method again with `{ site }` — idempotent, raises no prompt.

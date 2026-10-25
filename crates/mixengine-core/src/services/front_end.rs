@@ -1,10 +1,10 @@
-//! Which service is already the home's front end — roadmap task **T37**.
+//! Which service is already the home's front end.
 //!
-//! `docs/features/services.md`: *exactly one of Caddy/Nginx is the active front end*. Until T37
-//! there was one front-end recipe and the sentence could not be broken; with two, a home can hold a
-//! `caddy` row and an `nginx` row, and what that is on the day sites arrive (T43) is two programs
-//! generated against 80 and 443 with the second one failing to bind — or worse, succeeding, because
-//! the first was stopped and half the sites are answered by a configuration nobody is looking at.
+//! `docs/features/services.md`: *exactly one of Caddy/Nginx is the active front end*. With one
+//! front-end recipe the sentence could not be broken; with two, a home can hold a `caddy` row and
+//! an `nginx` row, and what that is once sites are served is two programs generated against 80 and
+//! 443 with the second one failing to bind — or worse, succeeding, because the first was stopped
+//! and half the sites are answered by a configuration nobody is looking at.
 //!
 //! **[`Instancing`] cannot say this and neither can a port.** Instancing is about how many rows may
 //! name one package, and both front ends answer `Single`; the allocator would happily give the

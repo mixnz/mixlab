@@ -48,7 +48,7 @@ fn the_pool_names_one_address_and_its_spec_is_built_on_it() {
     }
 }
 
-/// What a failed start is diagnosed against — roadmap task **T38**.
+/// What a failed start is diagnosed against.
 ///
 /// One number on Windows and none anywhere else, which is this recipe's whole shape: a pool on
 /// Unix listens on a socket, and a path is not something another program can be holding.
@@ -99,7 +99,8 @@ fn a_pools_activator_is_a_second_address_and_not_the_pools_own() {
     );
 }
 
-/// **The one line T72a is about**: a pool has an idle probe whichever way this system runs it.
+/// **The one line the cold path is about**: a pool has an idle probe whichever way this system
+/// runs it.
 ///
 /// Before this, a pool on a socket answered [`None`] — an `IdleProbe` counted TCP and a socket
 /// has no port — so `generate` attached no `IdlePolicy`, the pool ran for ever, and there was no
@@ -195,7 +196,7 @@ fn the_pool_file_offers_a_status_page_no_front_end_can_ask_for() {
     );
 }
 
-/// **A row that predates T70 renders a site with no fallback rather than a broken one.**
+/// **A row that predates the activator renders a site with no fallback rather than a broken one.**
 ///
 /// On Windows the activator's port comes from the row, and every row written before the column
 /// existed carries none. That home simply has no on-demand activation — which is exactly what it
@@ -214,23 +215,23 @@ fn a_pool_whose_row_carries_no_activation_port_has_no_activator_on_windows() {
     );
 }
 
-/// **The first recipe in this build to answer anything but `None`** — T70, D9.
+/// **The first recipe in this build to answer anything but `None`.**
 ///
 /// A pool is stopped after half an hour of nobody using it *because something now starts it
 /// again*: the site names its activator, and the request that finds the pool down is what wakes
 /// it. The number is the one `features/resource-isolation.md` already publishes.
 ///
-/// The databases and the caches stay `None` until **T70a**, which is what can start them again,
-/// and the two front ends stay `None` for ever — the thing that starts everything else back up
-/// cannot be the thing that gets stopped.
+/// The databases and the caches stayed `None` until a connection could start them again, and the
+/// two front ends stay `None` for ever — the thing that starts everything else back up cannot be
+/// the thing that gets stopped.
 #[test]
 fn a_pool_is_idle_stopped_after_half_an_hour() {
-    // Only while the home saves resources (T167b); by default nothing is idle-stopped.
+    // Only while the home saves resources; by default nothing is idle-stopped.
     assert_eq!(PhpFpm.idle_when_saving(), Some(Millis::from_secs(30 * 60)));
     assert_eq!(PhpFpm.idle_default(), None);
 }
 
-/// A pool is the one service a memory watchdog may restart — roadmap task **T71a**.
+/// A pool is the one service a memory watchdog may restart.
 ///
 /// **Asserted against its neighbours rather than alone**, because the interesting half is what
 /// stays `false`: a database restarted for its size loses a transaction, and a cache loses
@@ -366,7 +367,7 @@ fn the_pool_file_says_what_the_overrides_said() {
             context.service().instance().expect("a pool is instanced")
         )),
         "the socket is named after the instance, which for a shared pool is the PHP it runs and \
-             for an extension's pool is the extension — roadmap task T82a\n{rendered}"
+             for an extension's pool is the extension\n{rendered}"
     );
 }
 
@@ -409,7 +410,7 @@ fn the_file_and_the_readiness_check_name_one_socket() {
     );
 }
 
-/// **The password is named, never carried** — roadmap task **T82a**, its design's D4.
+/// **The password is named, never carried.**
 ///
 /// The same assertion the three database recipes make about their own credential, arriving at
 /// the process that reads one of theirs. The edge beside it is D7: a pool started before its
@@ -505,7 +506,7 @@ fn with_credential(context: Context) -> Context {
     }))
 }
 
-/// **Two pools on one PHP are two sockets** — roadmap task **T82a**.
+/// **Two pools on one PHP are two sockets.**
 ///
 /// The path used to be spelled from the runtime's version, which is the same string as the
 /// instance for every pool [`pools::ensure`](crate::services::pools::ensure) makes and is *not*
@@ -549,9 +550,9 @@ fn pool_for(service: &str) -> Context {
 
 /// A socket path `sockaddr_un` cannot hold is refused here, by name.
 ///
-/// T33a measured the cap at 103 characters against a real server, and what it costs to find out
-/// the hard way is the reason this is a check: php-fpm aborts *after* it has started, in a way
-/// that reads like a different failure entirely.
+/// The cap was measured at 103 characters against a real server, and what it costs to find out the
+/// hard way is the reason this is a check: php-fpm aborts *after* it has started, in a way that
+/// reads like a different failure entirely.
 ///
 /// Asked of [`PhpFpm::unix`] rather than of [`Recipe::spec`], for the reason the socket
 /// agreement above is: [`PhpFpm::windows`] computes no socket path at all, and the check is

@@ -1,10 +1,10 @@
 //! What a domain may be, and which TLDs MixEngine manages.
 //!
 //! **Here rather than in `mixengine-core` because two processes need it and only one of them may
-//! ask the other** — the T41 design, D4. `mixengine-elevate` must refuse a domain outside a managed
-//! TLD *itself*: being handed a list of permitted TLDs inside a request would be the helper
-//! trusting the daemon, which is the one thing the security model does not allow. Sharing a
-//! compile-time constant is not that.
+//! ask the other** (`docs/specs/2026-08-23-t41-hosts-apply-design.md`, D4). `mixengine-elevate`
+//! must refuse a domain outside a managed TLD *itself*: being handed a list of permitted TLDs
+//! inside a request would be the helper trusting the daemon, which is the one thing the security
+//! model does not allow. Sharing a compile-time constant is not that.
 //!
 //! **Syntax lives here; policy does not.** Whether `.local` needs saying so out loud, which error a
 //! refusal becomes, what a project's name slugs to — all of it stays in `mixengine_core::domains`,
@@ -18,9 +18,9 @@
 //! other TLD is refused: the ones a person reaches for — `.dev`, `.app` — are HSTS-preloaded, and a
 //! browser would refuse plain HTTP before any of this was consulted.
 //!
-//! **Two tables, not one** (T45, D9). [`MANAGED_TLDS`] is what a site may be named on;
-//! [`WIRED_TLDS`] is what a resolver may be pointed at, and `.local` is in the first and not the
-//! second.
+//! **Two tables, not one** (`docs/specs/2026-08-23-t45-resolver-wiring-design.md`, D9).
+//! [`MANAGED_TLDS`] is what a site may be named on; [`WIRED_TLDS`] is what a resolver may be
+//! pointed at, and `.local` is in the first and not the second.
 //!
 //! **The helper's table can be older than the daemon's**, because `mixengine-elevate` is excluded
 //! from auto-update. That is the correct failure: a TLD a future build manages is refused by the
@@ -31,14 +31,14 @@ pub const DEFAULT_TLD: &str = "test";
 
 /// Every TLD MixEngine will answer for.
 ///
-/// **`internal` is here rather than added after a release** — the T45 design, D9. ICANN reserved it
-/// in July 2024 as the private-use TLD, which makes it safe in the sense the reserved ones are:
-/// never delegated, never publicly resolvable. Adding it later would be far more expensive than
-/// adding it now, because the helper is excluded from auto-update and every installed copy would
-/// refuse a TLD it had never heard of until the user reinstalled it.
+/// **`internal` is here rather than added after a release.** ICANN reserved it in July 2024 as the
+/// private-use TLD, which makes it safe in the sense the reserved ones are: never delegated, never
+/// publicly resolvable. Adding it later would be far more expensive than adding it now, because the
+/// helper is excluded from auto-update and every installed copy would refuse a TLD it had never
+/// heard of until the user reinstalled it.
 pub const MANAGED_TLDS: [&str; 4] = [DEFAULT_TLD, "localhost", "internal", "local"];
 
-/// The TLDs a resolver on this machine may be pointed at — the T45 design, D9.
+/// The TLDs a resolver on this machine may be pointed at.
 ///
 /// **`local` is managed and is not here, and two constants rather than one is the whole point.** A
 /// site may be declared on `.local`, with `--i-know`, and it gets one exact hosts entry like any
@@ -170,8 +170,8 @@ mod tests {
         assert!(!MANAGED_TLDS.contains(&"lc"), ".lc is a real ccTLD");
     }
 
-    /// The T45 design, D9. A site may be declared on `.local`; a resolver is never pointed at it,
-    /// because the server answers every name under a wired TLD and `printer.local` is Bonjour's.
+    /// A site may be declared on `.local`; a resolver is never pointed at it, because the server
+    /// answers every name under a wired TLD and `printer.local` is Bonjour's.
     #[test]
     fn local_is_managed_and_is_never_wired() {
         assert!(MANAGED_TLDS.contains(&"local"));

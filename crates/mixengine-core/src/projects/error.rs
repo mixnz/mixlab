@@ -1,7 +1,7 @@
 //! The ways a project, its manifest, its sites and their domains can be wrong.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 use std::path::PathBuf;
 
@@ -75,7 +75,7 @@ pub enum ProjectError {
     /// A project name that cannot be one.
     ///
     /// Refused rather than corrected, because a name is a handle: it is typed on a command line,
-    /// shown in a listing, and T39a takes a site's default domain from it — so a name silently
+    /// shown in a listing, and a site takes its default domain from it — so a name silently
     /// changed on the way in is a name that does not work where the user next types it.
     #[error("{name} cannot be a project name: {because}")]
     InvalidProjectName {
@@ -151,7 +151,7 @@ pub enum ProjectError {
     ///
     /// The primary decides the site's canonical URL and, from phase 5, the name on its certificate.
     /// Promoting another domain in its place would change what the site *is* under a verb that says
-    /// "remove a domain" — a larger act than the one asked for (T46 design, D3).
+    /// "remove a domain" — a larger act than the one asked for.
     #[error("{domain} is its site's primary domain")]
     PrimaryDomain {
         /// The domain that was to go.
@@ -172,7 +172,7 @@ pub enum ProjectError {
     },
 
     /// A site's `https_redirect` cannot be `true` on a site whose `https_enabled` is, or is
-    /// becoming, `false` — roadmap task **T98**.
+    /// becoming, `false`.
     ///
     /// `sites.https_redirect`'s own `CHECK` already refuses the row; this is the message a
     /// caller sees before that, in words about what was asked for rather than about the column that

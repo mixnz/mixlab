@@ -1,15 +1,16 @@
 //! `GET /logs/service/{id}` against a real `mixengined` supervising a real, talkative process.
 //!
-//! Roadmap task **T16b**, and the half its unit tests cannot reach. That a ring hands over a tail and
-//! a subscription under one lock is provable in one process; that a person watching a service sees
-//! what it printed before they connected *and* what it prints afterwards, over a socket, from a
-//! daemon that is also supervising it, is not. The seam between the two is the whole feature — see
+//! The half the unit tests cannot reach. That a ring hands over a tail and a subscription under one
+//! lock is provable in one process; that a person watching a service sees what it printed before
+//! they connected *and* what it prints afterwards, over a socket, from a daemon that is also
+//! supervising it, is not. The seam between the two is the whole feature — see
 //! `docs/decisions/0009-logs-travel-on-their-own-stream.md`.
 //!
-//! **The service is a `fakeservice` row**, rendered into a spec by the daemon's own generator (T30)
-//! through a recipe compiled into debug builds only, so these are ignored in a release build for the
-//! reason `crates/mixengine-cli/tests/service.rs` states: a release daemon has nothing that can run
-//! one, and the tests would fail on a service that never starts rather than on what they assert.
+//! **The service is a `fakeservice` row**, rendered into a spec by the daemon's own generator
+//! through a recipe compiled into debug builds only, so these are ignored in a release build for
+//! the reason `crates/mixengine-cli/tests/service.rs` states: a release daemon has nothing that can
+//! run one, and the tests would fail on a service that never starts rather than on what they
+//! assert.
 
 use std::time::Duration;
 
@@ -167,7 +168,7 @@ fn described(frames: &[LogFrame]) -> String {
         .join("\n")
 }
 
-/// The whole of T16b in one connection: what was printed before, and what is printed after, with
+/// The whole feature in one connection: what was printed before, and what is printed after, with
 /// nothing lost between them and nothing shown twice.
 #[tokio::test]
 #[cfg_attr(

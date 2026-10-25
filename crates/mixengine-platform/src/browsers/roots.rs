@@ -1,14 +1,15 @@
 //! Where the NSS databases are, on a machine that has any.
 //!
-//! **Six roots where `docs/features/tls.md` names two, and the three extra ones are the
-//! measurement this task started from** — the T49b design, D3. On Ubuntu 22.04 and later the
-//! `firefox` deb is a transitional package to the snap, whose profiles live under `~/snap`, so a
-//! faithful implementation of that table finds nothing on the distribution most people run and
-//! reports success.
+//! **Six roots where `docs/features/tls.md` names two, and the three extra ones are the measurement
+//! this module started from.** On Ubuntu 22.04 and later the `firefox` deb is a transitional
+//! package to the snap, whose profiles live under `~/snap`, so a faithful implementation of that
+//! table finds nothing on the distribution most people run and reports success.
 //!
 //! **The list is generous on purpose.** A root that matches nothing costs a `read_dir` that returns
 //! `ENOENT`; a root that is missing costs a user a red padlock with no diagnostic, in the browser
 //! they actually use. The asymmetry is the whole argument.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-25-t49b-nss-databases-design.md`.
 
 use std::path::{Path, PathBuf};
 

@@ -2,7 +2,7 @@
 import type { CredentialStore } from "./CredentialStore";
 
 /**
- * The store a daemon runs on, and whether it would accept a switch — roadmap task **T194**.
+ * The store a daemon runs on, and whether it would accept a switch.
  */
 export type CredentialsStatus = { 
 /**

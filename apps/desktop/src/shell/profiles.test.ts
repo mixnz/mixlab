@@ -3,7 +3,7 @@ import { MODULES, MODULE_PRESETS } from "./registry";
 import {
   MODULES_PRESET_KEY,
   MODULES_STORAGE_KEY,
-  PRESETS_BEFORE_T203,
+  PRESETS_BEFORE_MARK,
   defaultModuleId,
   normalizeModules,
   presetMark,
@@ -97,7 +97,7 @@ describe("withModule", () => {
     expect(enabled).toEqual(["mixengine"]);
   });
 
-  /* Order is the registry's, always — T108's D1 — so the stored set is free to carry any order at
+  /* Order is the registry's, always, so the stored set is free to carry any order at
      all and `visibleModules` still draws MixEngine first. */
   it("appends rather than sorting, because nothing reads an order out of the set", () => {
     expect(visibleModules(withModule(["db"], "mixengine", KNOWN)).map((m) => m.id)).toEqual([
@@ -107,7 +107,7 @@ describe("withModule", () => {
   });
 });
 
-/* Named per preset rather than positional, on purpose: with T109 the default is implicit in the
+/* Named per preset rather than positional, on purpose: the default tab is implicit in the
    registry's order, and a module inserted at the head of `MODULES` would move it silently. These
    three cases are what say so out loud. */
 describe("defaultModuleId", () => {
@@ -127,15 +127,16 @@ describe("defaultModuleId", () => {
   });
 });
 
-/* The three questions of D3, in order. Only the fourth answer — "ask" — costs an IPC call, and it
-   is the only one this cannot decide here; `null` is what it answers instead. */
+/* The three questions `resolveStoredModules` asks, in order. Only the fourth answer — "ask" —
+   costs an IPC call, and it is the only one this cannot decide here; `null` is what it answers
+   instead. */
 describe("resolveStoredModules", () => {
   it("uses a stored set when there is one", () => {
     const storage = storageOf({ [MODULES_STORAGE_KEY]: JSON.stringify(["mixengine", "db"]) });
     expect(resolveStoredModules(storage, KNOWN)).toEqual(["mixengine", "db"]);
   });
 
-  /* The window this task is most able to hurt: a MixLab install from before T108. It has a theme
+  /* The window this setting is most able to hurt: a MixLab install from before it. It has a theme
      and a session and four modules' worth of saved work, and no `mixlab-modules` — and handing it
      the MixEngine preset would make its database tabs disappear on an upgrade. */
   it("gives a window that predates this setting everything", () => {
@@ -166,30 +167,30 @@ describe("resolveStoredModules", () => {
   });
 });
 
-/* T203, D0. The mark beside the list: a preset id, `custom`, or absent on a home no T203 build has
-   written yet. */
+/* The mark beside the list: a preset id, `custom`, or absent on a home no build that writes the
+   mark has written yet. */
 describe("resolveStoredModules with a preset mark", () => {
   const list = (ids: string[]) => JSON.stringify(ids);
 
   it("shows this build's composition of a marked preset", () => {
     const storage = storageOf({
-      [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_T203.everything),
+      [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_MARK.everything),
       [MODULES_PRESET_KEY]: "everything",
     });
     expect(resolveStoredModules(storage, KNOWN)).toEqual(MODULE_PRESETS.everything);
   });
 
-  it("reads a list equal to a preset's composition before T203, with no mark, as that preset", () => {
-    const storage = storageOf({ [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_T203.databaseTools) });
+  it("reads a list equal to a preset's old composition, with no mark, as that preset", () => {
+    const storage = storageOf({ [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_MARK.databaseTools) });
     expect(resolveStoredModules(storage, KNOWN)).toEqual(MODULE_PRESETS.databaseTools);
   });
 
   it("a set that equals an old preset but is marked custom stays custom", () => {
     const storage = storageOf({
-      [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_T203.everything),
+      [MODULES_STORAGE_KEY]: list(PRESETS_BEFORE_MARK.everything),
       [MODULES_PRESET_KEY]: "custom",
     });
-    expect(resolveStoredModules(storage, KNOWN)).toEqual(PRESETS_BEFORE_T203.everything);
+    expect(resolveStoredModules(storage, KNOWN)).toEqual(PRESETS_BEFORE_MARK.everything);
   });
 
   it("lets a list changed where the mark is unknown win over the mark", () => {

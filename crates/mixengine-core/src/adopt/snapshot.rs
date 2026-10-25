@@ -1,5 +1,4 @@
-//! The copy of a home's state an uninstall leaves in the folders it keeps — roadmap task **T182h**,
-//! spec D5 and D6.
+//! The copy of a home's state an uninstall leaves in the folders it keeps — spec D5 and D6.
 //!
 //! Everything MixEngine knows is in `mixengine.db`, inside the home. An uninstall that removes the
 //! home but keeps the folders `[paths]` moved writes this copy into each of them, so the next home
@@ -187,11 +186,12 @@ pub struct Restored {
 /// Bring the copy at `copy` into `store`, in one transaction.
 ///
 /// Runtimes and packages whose folder still exists are matched with the rows this home already has
-/// by (kind, version) and (name, version) — the start may have recorded them already (T182f) — and
-/// the copy's integer ids are mapped onto this home's. Services come by their text id and are left
-/// stopped; one this home already has is kept. Projects, sites and their domains, routes and links
-/// are copied with their own ids, which is why this home may hold none yet. A share is not restored:
-/// its firewall rule went with the old home. The copy is renamed [`RESTORED_NAME`] afterwards.
+/// by (kind, version) and (name, version) — the start may have recorded them already
+/// ([`super::walk`]) — and the copy's integer ids are mapped onto this home's. Services come by
+/// their text id and are left stopped; one this home already has is kept. Projects, sites and their
+/// domains, routes and links are copied with their own ids, which is why this home may hold none
+/// yet. A share is not restored: its firewall rule went with the old home. The copy is renamed
+/// [`RESTORED_NAME`] afterwards.
 ///
 /// # Errors
 ///
@@ -755,7 +755,7 @@ mod tests {
         )))
         .execute(store.pool())
         .await
-        .expect("a runtime T182f recorded");
+        .expect("a runtime the start recorded");
         sqlx::query(
             "INSERT INTO services (id, runtime_install_id, instance_name, state)
              VALUES ('php-fpm@8.3', 1, '8.3', 'stopped')",

@@ -1,6 +1,6 @@
 //! `mix package` and `mix service create|delete` against a real daemon and a real signed index.
 //!
-//! Roadmap task **T31a**'s client half. What the daemon's own `tests/packages.rs` proves is that the
+//! The client half of `package.*`. What the daemon's own `tests/packages.rs` proves is that the
 //! methods do what they say; what is proved here is the part that is only true of `mix` — that the
 //! arguments a person types reach the right method, that an install waits by default and ends with
 //! an exit status a shell can branch on, that `--json` emits exactly one object, and that the human

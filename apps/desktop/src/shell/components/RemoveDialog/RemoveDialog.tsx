@@ -26,7 +26,8 @@ interface Props {
 }
 
 /**
- * MixLab ▸ Remove MixLab from this Mac…: T182a, `docs/specs/2026-10-07-t182a-an-uninstall-path-for-macos-design.md`, D4.
+ * MixLab ▸ Remove MixLab from this Mac…: D4 of
+ * `docs/specs/2026-10-07-t182a-an-uninstall-path-for-macos-design.md`.
  *
  * The plan first, with what is in the way, and nothing changes until **Remove MixLab**. A finished
  * removal ends the process from Rust, so this never draws "done": it draws only the cases where the
@@ -38,7 +39,7 @@ function RemoveDialog({ onClose }: Props) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState("");
-  /* Both unticked: keeping the data is the default, as on the Windows uninstaller's page (T182, D7). */
+  /* Both unticked: keeping the data is the default, as on the Windows uninstaller's page. */
   const [deleteData, setDeleteData] = useState(false);
   const [deleteRelocated, setDeleteRelocated] = useState(false);
 

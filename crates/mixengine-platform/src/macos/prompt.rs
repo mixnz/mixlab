@@ -6,9 +6,9 @@
 //! ADR 0005 rules out.
 //!
 //! **The script is a compile-time constant and the two paths arrive as `argv`** — see
-//! `crate::prompt::macos::SCRIPT`, and the T40a design, D3. Interpolating a path into an AppleScript
-//! string literal is the line T40/D9 singles out as the single most dangerous one in the elevation
-//! path on any of the three systems, and `quoted form of` is AppleScript's own answer to it.
+//! `crate::prompt::macos::SCRIPT`. Interpolating a path into an AppleScript string literal would be
+//! the single most dangerous line in the elevation path on any of the three systems, and `quoted
+//! form of` is AppleScript's own answer to it.
 
 use std::path::Path;
 use std::process::Command;

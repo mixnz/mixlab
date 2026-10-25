@@ -113,7 +113,7 @@
   font-weight: 500;
 }
 
-/* T183: the version beside the id, since the id is only a name somebody chose. */
+/* The version beside the id, since the id is only a name somebody chose. */
 .serviceVersion {
   flex-shrink: 0;
   font-family: var(--font-mono);

@@ -17,8 +17,7 @@ fn rendered_file(home: &std::path::Path) -> String {
     .expect("the rendered file is on disk")
 }
 
-/// **A recipe that asks gets a pair this home's authority signed, and the file names it** —
-/// roadmap task **T99**, the design's D4 and D5.
+/// **A recipe that asks gets a pair this home's authority signed, and the file names it.**
 #[tokio::test]
 async fn a_recipe_that_wants_a_certificate_gets_one_on_a_home_with_an_authority() {
     let (home, generator) =

@@ -2,13 +2,13 @@
 import type { ServiceId } from "./ServiceId";
 
 /**
- * Which database's superuser credential to re-set — roadmap task **T127**.
+ * Which database's superuser credential to re-set.
  *
- * **A type of its own rather than [`ServiceTarget`], and T125 is why.** That type's `service` is
- * optional and [`None`] means *every service this home declares* — which is how both clients came
- * to ask for the whole home when they meant one project. A repair asked for with no subject is that
- * mistake with worse consequences, so the subject is a required field and there is nothing left to
- * refuse at run time.
+ * **A type of its own rather than [`ServiceTarget`].** That type's `service` is optional and
+ * [`None`] means *every service this home declares* — which is how both clients came to ask for
+ * the whole home when they meant one project. A repair asked for with no subject is that mistake
+ * with worse consequences, so the subject is a required field and there is nothing left to refuse
+ * at run time.
  *
  * There is no `project` either, for the reason `service.stop` refuses one: a project's services
  * include the front end every *other* site is reached through, and none of them but a database

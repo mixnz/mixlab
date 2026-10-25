@@ -1,8 +1,9 @@
 //! Where a captured blueprint lives: one row, and one file rendered beside it.
 //!
-//! **The row is the truth; the file is a rendering** — the T77 design, D7. `blueprints.manifest_toml`
-//! is the blueprint. `blueprints/<slug>.toml` exists so a person can read and copy it, and is never
-//! parsed back into state — the rule everything under `etc/` has lived by since the beginning.
+//! **The row is the truth; the file is a rendering** —
+//! `docs/specs/2026-09-01-t77-blueprint-capture-design.md`, D7. `blueprints.manifest_toml` is the
+//! blueprint. `blueprints/<slug>.toml` exists so a person can read and copy it, and is never parsed
+//! back into state — the rule everything under `etc/` has lived by since the beginning.
 //!
 //! # The name is validated because it becomes a filename
 //!
@@ -72,15 +73,14 @@ pub fn validated_slug(name: &str) -> Result<String> {
 /// the next `blueprint.list` would not know about it.
 ///
 /// `trust` decides whether this build will later offer to run the manifest's own `[scaffold]`
-/// command — roadmap task **T78a**, its design's D1. It is the caller's to settle, once, from where
-/// the blueprint came from: a capture is this machine's own, and an import earns it only from a
-/// signature that verified. **Nothing raises it afterwards**, which is why it is a parameter here
-/// rather than something a later call can set.
+/// command. It is the caller's to settle, once, from where the blueprint came from: a capture is
+/// this machine's own, and an import earns it only from a signature that verified. **Nothing raises
+/// it afterwards**, which is why it is a parameter here rather than something a later call can set.
 ///
-/// **One value, two columns** — roadmap task **T79b**. The answer and the reason for it are written
-/// from the same [`Trust`], so nothing can set one without the other, and the `ON CONFLICT` list
-/// refreshes both: a row keeping the reason of a file it no longer holds would be exactly the
-/// self-contradiction the readers below decline to reconcile.
+/// **One value, two columns.** The answer and the reason for it are written from the same
+/// [`Trust`], so nothing can set one without the other, and the `ON CONFLICT` list refreshes both:
+/// a row keeping the reason of a file it no longer holds would be exactly the self-contradiction
+/// the readers below decline to reconcile.
 ///
 /// # Errors
 ///
@@ -229,9 +229,8 @@ pub async fn records(store: &Store, paths: &Paths) -> Result<Vec<BlueprintSummar
 /// One blueprint as it was filed: the manifest, and where it came from.
 ///
 /// **One read rather than two.** The manifest is what a plan is built from and the source and trust
-/// are what a client is told about it (roadmap task **T78a**, its design's D5), and reading the row
-/// twice would be two chances to read two different things — the rule
-/// [`crate::blueprints::plan`]'s one planning path already lives by.
+/// are what a client is told about it, and reading the row twice would be two chances to read two
+/// different things — the rule [`crate::blueprints::plan`]'s one planning path already lives by.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Filed {
     /// What the blueprint says.
@@ -243,11 +242,12 @@ pub struct Filed {
     /// Whether its `[scaffold]` command may be offered — decided when it arrived, and never since.
     pub trusted: bool,
 
-    /// Why, where anything was checked at all — roadmap task **T79b**.
+    /// Why, where anything was checked at all.
     ///
     /// Read from its own column beside the answer rather than derived from it: a hand-edited row
     /// that disagrees with itself is answered with `trusted`, which is what decides, and this
-    /// beside it. Reconciling the two here would be this build re-opening a question T78a settled.
+    /// beside it. Reconciling the two here would be this build re-opening a question the import
+    /// settled.
     pub signature: Option<SignatureCheck>,
 }
 
@@ -304,8 +304,7 @@ pub async fn exists(store: &Store, slug: &str) -> Result<bool> {
     Ok(found.is_some())
 }
 
-/// The reason a row records, or [`None`] for a word this build does not know — roadmap task
-/// **T79b**, its design's D3.
+/// The reason a row records, or [`None`] for a word this build does not know.
 ///
 /// Where [`BlueprintError::UnknownBlueprintSource`] refuses to guess, this shrugs, and what each
 /// column is for is the difference: `source` decides what a plan does, and this decides one
@@ -364,9 +363,8 @@ mod tests {
         }
     }
 
-    /// **Trust is a column, not a derivation** — roadmap task **T78a**, its design's D1. A capture
-    /// is this machine's own, and the flag it is saved with is what a scaffold consent is later
-    /// checked against.
+    /// **Trust is a column, not a derivation.** A capture is this machine's own, and the flag it is
+    /// saved with is what a scaffold consent is later checked against.
     #[tokio::test]
     async fn a_saved_blueprint_carries_the_trust_it_was_saved_with() {
         let (_temp, store, paths) = home().await;
@@ -393,8 +391,8 @@ mod tests {
         );
     }
 
-    /// An untrusted blueprint comes back untrusted, which is the half of D1 with teeth: nothing in
-    /// this build raises the flag once it is written.
+    /// An untrusted blueprint comes back untrusted, which is the half of the rule with teeth:
+    /// nothing in this build raises the flag once it is written.
     #[tokio::test]
     async fn an_untrusted_blueprint_comes_back_untrusted() {
         let (_temp, store, paths) = home().await;
@@ -415,9 +413,9 @@ mod tests {
         assert!(!listed[0].trusted);
     }
 
-    /// **The reason survives in the row, not in the call** — roadmap task **T79b**. A file whose
-    /// signature did not verify is untrusted for the same reason an unsigned one is, and the two
-    /// are not the same event; both readers of the table say which one it was.
+    /// **The reason survives in the row, not in the call.** A file whose signature did not verify
+    /// is untrusted for the same reason an unsigned one is, and the two are not the same event;
+    /// both readers of the table say which one it was.
     #[tokio::test]
     async fn a_rejected_signature_is_remembered_beside_the_answer() {
         let (_temp, store, paths) = home().await;
@@ -447,9 +445,9 @@ mod tests {
         );
     }
 
-    /// **The overwrite path refreshes the reason too** — roadmap task **T79b**, its design's D4.
-    /// Left out of the `ON CONFLICT` list, this build would manufacture the self-contradicting row
-    /// D3 declines to reconcile: `trusted = 0` beside `signature = 'verified'`.
+    /// **The overwrite path refreshes the reason too.** Left out of the `ON CONFLICT` list, this
+    /// build would manufacture the self-contradicting row the reader declines to reconcile:
+    /// `trusted = 0` beside `signature = 'verified'`.
     #[tokio::test]
     async fn re_importing_without_a_signature_forgets_the_old_reason() {
         let (_temp, store, paths) = home().await;
@@ -499,10 +497,10 @@ mod tests {
         assert_eq!(saved.signature, None);
     }
 
-    /// **A word this build does not know reads as no reason** — roadmap task **T79b**, its design's
-    /// D3. Where [`BlueprintError::UnknownBlueprintSource`] refuses to guess, this shrugs: `source`
-    /// decides what a plan does and this decides one sentence, so a newer build's word costs a
-    /// listing its explanation rather than costing it the listing.
+    /// **A word this build does not know reads as no reason.** Where
+    /// [`BlueprintError::UnknownBlueprintSource`] refuses to guess, this shrugs: `source` decides
+    /// what a plan does and this decides one sentence, so a newer build's word costs a listing its
+    /// explanation rather than costing it the listing.
     #[tokio::test]
     async fn a_reason_this_build_does_not_know_reads_as_no_reason() {
         let (_temp, store, paths) = home().await;

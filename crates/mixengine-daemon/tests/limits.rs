@@ -1,15 +1,17 @@
 //! `service.limits` and `service.set_limits` against a real `mixengined` over a real socket.
 //!
-//! Roadmap task **T68**, and the half no unit test reaches. That a job object or a cgroup accepts a
-//! ceiling is provable in one process — `mixengine-platform`'s own tests do it. What is only
-//! provable here is the seam: that a limit written by a *method* arrives at a process that is
-//! **already running**, which is D7's whole promise, and that what comes back describes what this
-//! machine will do with the number rather than the number alone.
+//! The half no unit test reaches. That a job object or a cgroup accepts a ceiling is provable in
+//! one process — `mixengine-platform`'s own tests do it. What is only provable here is the seam:
+//! that a limit written by a *method* arrives at a process that is **already running**, which is
+//! D7's whole promise, and that what comes back describes what this machine will do with the number
+//! rather than the number alone.
 //!
 //! **The service is a `fakeservice` row**, rendered by the daemon's own generator through a recipe
 //! compiled into debug builds only — so these are ignored in a release build for the reason
 //! `tests/logs.rs` states: a release daemon has nothing that can run one, and the tests would fail
 //! on a service that never starts rather than on what they assert.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-26-t68-resource-limits-design.md`.
 
 use mixengine_proto::rpc::method;
 use mixengine_testkit::{Client, Daemon, Home, Service};
@@ -22,7 +24,7 @@ const SERVICE: &str = "fakeservice@main";
 ///
 /// **Because neither is worth having alone.** A `memory_mb` of 512 means one thing where it is a
 /// commit charge enforced by a failed allocation, another where it is charged pages enforced by the
-/// OOM killer, and a third where it is stored and enforced by nothing at all. The T68 design, D2.
+/// OOM killer, and a third where it is stored and enforced by nothing at all (D2).
 #[tokio::test]
 #[cfg_attr(
     not(debug_assertions),
@@ -51,7 +53,7 @@ async fn limits_come_back_with_what_this_machine_will_enforce() {
     assert!(report["support"]["memory_measure"].is_string(), "{report}");
 }
 
-/// What is watching a ceiling this machine cannot hold — roadmap task **T71a**.
+/// What is watching a ceiling this machine cannot hold.
 ///
 /// **The invariant rather than one machine's answer**, on the rule `tests/limits.rs` in
 /// `mixengine-platform` follows: a Windows runner caps memory with a job object and reports no
@@ -117,8 +119,8 @@ async fn a_ceiling_this_machine_cannot_hold_is_watched_instead() {
 ///
 /// Setting `cpu_percent` alone clears a memory ceiling that was there, and that is **specified**
 /// rather than accidental: the alternative is a three-way patch value in every reader of limits, or
-/// a read-modify-write in a client, which is business logic a client may not hold and which T46
-/// refused by name when it added `domain.add` and `domain.remove`.
+/// a read-modify-write in a client, which is business logic a client may not hold and which
+/// `domain.add` and `domain.remove` were added to refuse by name.
 #[tokio::test]
 #[cfg_attr(
     not(debug_assertions),
@@ -226,8 +228,8 @@ async fn a_limit_reaches_a_service_that_is_already_running() {
 
 /// D10: the cores rule is the daemon's, because the number it is measured against is the machine's.
 ///
-/// `mixengine-proto` has no host and must not grow one, so this is the one refusal in T68 that
-/// cannot live beside the type it is about.
+/// `mixengine-proto` has no host and must not grow one, so this is the one refusal about limits
+/// that cannot live beside the type it is about.
 #[tokio::test]
 #[cfg_attr(
     not(debug_assertions),

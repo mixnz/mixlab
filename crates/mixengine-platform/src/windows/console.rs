@@ -22,9 +22,9 @@
 //! # What is left
 //!
 //! A flash. The window exists from process creation until this call, which is tens of milliseconds.
-//! That is the price of `mixengined` staying a console program a terminal can run — the alternatives
-//! are a windows-subsystem binary that prints nothing when a person runs it, and a fourth binary in
-//! every artifact. See the T85b design, D4.
+//! That is the price of `mixengined` staying a console program a terminal can run — the
+//! alternatives are a windows-subsystem binary that prints nothing when a person runs it, and a
+//! fourth binary in every artifact.
 
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt as _;

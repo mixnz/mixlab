@@ -2,7 +2,7 @@
 
 /**
  * Whether this home stops services nobody is using — `service.save_resources` answers it, and
- * `service.set_save_resources` answers it after changing it. Roadmap task **T167b**.
+ * `service.set_save_resources` answers it after changing it.
  *
  * **Off unless a person turned it on** ([ADR 0041]). While it is off, a service whose own idle
  * setting is unset is never stopped for being idle; a service somebody gave a number keeps it.

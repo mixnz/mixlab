@@ -67,13 +67,13 @@ pub struct Host {
     /// What this machine routes to our DNS server.
     reserved: reserved::Reserved,
 
-    /// What this mock says its application control policy is doing — T94.
+    /// What this mock says its application control policy is doing.
     app_control: app_control::Policy,
 
-    /// What this mock says the machine offers — T148.
+    /// What this mock says the machine offers.
     machine: machine::Facts,
 
-    /// How this mock's Visual C++ installer ends, when it has one — T150.
+    /// How this mock's Visual C++ installer ends, when it has one.
     redistributables: redistributable::Installer,
     installers: installers::Installers,
     resolver: resolver::Resolver,
@@ -105,7 +105,7 @@ impl Host {
     }
 
     /// This host, where an elevated process cannot read anything under `path` — macOS' TCC-gated
-    /// volume, on any OS a test runs on (T166).
+    /// volume, on any OS a test runs on.
     #[must_use]
     pub fn elevated_cannot_read(mut self, path: impl Into<PathBuf>) -> Self {
         self.home.blind_to(path.into());
@@ -159,7 +159,7 @@ impl Host {
 
     /// A host where `port` is already being listened on by `holder`.
     ///
-    /// The XAMPP case, which is what roadmap task **T38** exists for: a program MixEngine does not
+    /// The XAMPP case, which is why port owners are reported at all: a program MixEngine does not
     /// manage, on the port a service was about to bind, with no `services` row to look it up in.
     #[must_use]
     pub fn with_a_port_held(home: impl Into<PathBuf>, port: u16, holder: PortHolder) -> Self {
@@ -169,7 +169,7 @@ impl Host {
         }
     }
 
-    /// A host whose Smart App Control is in `state` — roadmap task **T94**.
+    /// A host whose Smart App Control is in `state`.
     ///
     /// The default host reports [`AppControlState::Off`](crate::AppControlState::Off), which is the
     /// ordinary machine and every machine that never had the feature.
@@ -181,7 +181,7 @@ impl Host {
         }
     }
 
-    /// A host whose machine reads as `facts` — roadmap task **T148**.
+    /// A host whose machine reads as `facts`.
     ///
     /// The default host knows nothing about its machine, which judges as lacking nothing.
     #[must_use]
@@ -192,8 +192,8 @@ impl Host {
         }
     }
 
-    /// A host whose daemon binary belongs to the package `receipt` — roadmap task **T88f**. The
-    /// default host has no receipts, as Linux and Windows do not.
+    /// A host whose daemon binary belongs to the package `receipt`. The default host has no
+    /// receipts, as Linux and Windows do not.
     #[must_use]
     pub fn with_receipt(home: impl Into<PathBuf>, receipt: &str) -> Self {
         Self {
@@ -202,14 +202,13 @@ impl Host {
         }
     }
 
-    /// Every package this host was asked to open, in order — roadmap task **T88f**.
+    /// Every package this host was asked to open, in order.
     #[must_use]
     pub fn opened(&self) -> Vec<PathBuf> {
         self.installers.opened()
     }
 
-    /// A host whose Visual C++ installer ends as `outcome` — roadmap task **T150**. The default host
-    /// has none to run.
+    /// A host whose Visual C++ installer ends as `outcome`. The default host has none to run.
     #[must_use]
     pub fn with_redistributable(
         home: impl Into<PathBuf>,
@@ -303,9 +302,10 @@ impl Host {
 
     /// A host where the person at the machine says no to the prompt.
     ///
-    /// **Not the same as [`unable_to_elevate`](Self::unable_to_elevate)**, and the distinction is the
-    /// one T40b's degraded mode turns on: a machine that *could* prompt and was refused will accept
-    /// the same operation later, and a machine that cannot prompt at all never will.
+    /// **Not the same as [`unable_to_elevate`](Self::unable_to_elevate)**, and the distinction is
+    /// the one the elevation queue's degraded mode turns on: a machine that *could* prompt and was
+    /// refused will accept the same operation later, and a machine that cannot prompt at all never
+    /// will.
     #[must_use]
     pub fn declining_elevation(home: impl Into<PathBuf>) -> Self {
         Self {
@@ -327,7 +327,7 @@ impl Host {
     /// A host where the prompt is accepted and the helper writes `said` to stderr.
     ///
     /// Pair it with a request nothing answers to reproduce a helper that refused its request: the
-    /// state T166 makes legible, where the only account of why is what the helper said.
+    /// state where the only account of why is what the helper said, which is why it is kept.
     #[must_use]
     pub fn elevation_saying(home: impl Into<PathBuf>, said: &str) -> Self {
         Self {
@@ -383,8 +383,8 @@ impl Host {
 
     /// A host whose hosts file already holds `lines`.
     ///
-    /// The producer's whole question — the T41 design, D11 — is whether the machine already says
-    /// what the database says it should, and this is the half a test can set.
+    /// The producer's whole question, before it spends a prompt, is whether the machine already
+    /// says what the database says it should, and this is the half a test can set.
     #[must_use]
     pub fn with_hosts<'a>(
         home: impl Into<PathBuf>,
@@ -417,8 +417,8 @@ impl Host {
 
     /// This host, with every prompt declined — for the fixtures that need a machine *and* a no.
     ///
-    /// Roadmap task T182b: a declined uninstall on a machine that holds a hosts block is the case
-    /// that has to leave the queue exactly as it found it.
+    /// A declined uninstall on a machine that holds a hosts block is the case that has to leave the
+    /// queue exactly as it found it.
     #[must_use]
     pub fn declining(self) -> Self {
         Self {
@@ -444,7 +444,7 @@ impl Host {
     ///
     /// The default is [`PortAccessMethod::Direct`](crate::PortAccessMethod::Direct) and granted,
     /// which is Windows — so a suite that says nothing about ports asks for no prompt, exactly as
-    /// every suite written before T42 does.
+    /// the suites written before ports below 1024 needed a grant expect.
     #[must_use]
     pub fn with_port_access(home: impl Into<PathBuf>, method: crate::PortAccessMethod) -> Self {
         Self {
@@ -455,10 +455,10 @@ impl Host {
 
     /// A host whose machine uses `method` and has granted it to `program` alone.
     ///
-    /// **The shape of a Linux home that has changed web server** — roadmap task **T97**: the grant
-    /// is an attribute of the binary, so the front end the home is on holds it and the one it is
-    /// being asked to move to does not. A fixture with one flag for the whole machine cannot say
-    /// that, and it is the case `service.set_front_end` exists to get right.
+    /// **The shape of a Linux home that has changed web server**: the grant is an attribute of the
+    /// binary, so the front end the home is on holds it and the one it is being asked to move to
+    /// does not. A fixture with one flag for the whole machine cannot say that, and it is the case
+    /// `service.set_front_end` exists to get right.
     #[must_use]
     pub fn with_port_access_for(
         home: impl Into<PathBuf>,
@@ -473,8 +473,8 @@ impl Host {
 
     /// A host whose machine uses `method` and has not been granted it, with `missing` saying why.
     ///
-    /// The producer's whole question — the T42 design, D7 — is whether the grant is still there, and
-    /// this is the half a test can set. It is also what an update looks like: a capability is
+    /// The producer is the re-probe, and its whole question is whether the grant is still there,
+    /// and this is the half a test can set. It is also what an update looks like: a capability is
     /// cleared by any write to the binary.
     #[must_use]
     pub fn without_port_access(
@@ -522,9 +522,9 @@ impl Host {
     /// A host whose machine holds this many inbound firewall rules for any program it is asked
     /// about — or [`None`] for a system with no such table, which is macOS and Linux.
     ///
-    /// Roadmap task **T76**: the rule in question is the one *Windows* offers to write when this
-    /// daemon binds UDP 5353, so no test can arrange it on the machine running the suite and this
-    /// branch would otherwise ship having never run.
+    /// The rule in question is the one *Windows* offers to write when this daemon binds UDP 5353,
+    /// so no test can arrange it on the machine running the suite and this branch would otherwise
+    /// ship having never run.
     #[must_use]
     pub fn with_firewall_rules(home: impl Into<PathBuf>, count: Option<usize>) -> Self {
         Self {
@@ -559,9 +559,9 @@ impl Host {
 
     /// A host whose machine uses `method` and already routes `wired` to our DNS server.
     ///
-    /// The default is [`ResolverMethod::None`](crate::ResolverMethod::None) routing nothing —
-    /// so a suite that says nothing about names stays in `hosts_only`, exactly as every suite
-    /// written before T45 was.
+    /// The default is [`ResolverMethod::None`](crate::ResolverMethod::None) routing nothing — so a
+    /// suite that says nothing about names stays in `hosts_only`, exactly as the suites written
+    /// before the resolver was wired expect.
     #[must_use]
     pub fn with_resolver(
         home: impl Into<PathBuf>,
@@ -615,7 +615,7 @@ impl Host {
         }
     }
 
-    /// A host whose browsers answer exactly `survey` — roadmap task **T49b**.
+    /// A host whose browsers answer exactly `survey`.
     ///
     /// **A whole survey rather than a `bool`**, unlike [`with_trust_store`](Self::with_trust_store)
     /// above, because the states a caller has to tell apart are the point: no tool, not this
@@ -629,7 +629,7 @@ impl Host {
         }
     }
 
-    /// Every certificate this host's browsers were asked to hold — roadmap task **T49b**.
+    /// Every certificate this host's browsers were asked to hold.
     ///
     /// The producer runs at every daemon start and writes without a prompt, so what a suite can
     /// assert on is what was asked rather than a file it would have to go and read.
@@ -640,8 +640,8 @@ impl Host {
 
     /// Every authority this host's browsers were asked to let go of.
     ///
-    /// **Nothing in T49b calls the removal** — T54 and T87 are its producers — so this is here for
-    /// them rather than for a caller that exists today.
+    /// The daemon asks for the removal when the CA is rotated or uninstalled, never at a start, so
+    /// this is what its suites read back.
     #[must_use]
     pub fn browsers_removed(&self) -> Vec<String> {
         self.browsers.removed()
@@ -660,7 +660,7 @@ impl Host {
         }
     }
 
-    /// A host whose trust store holds `roots` certificates — roadmap task **T132**.
+    /// A host whose trust store holds `roots` certificates.
     ///
     /// **A count and not a survey**, unlike [`with_browsers`](Self::with_browsers), because the one
     /// decision anything makes about this number is whether there are enough of it to believe: a
@@ -709,8 +709,8 @@ impl Host {
         }
     }
 
-    /// A host whose MixEngine install has a window at `program` — roadmap task **T107**. The default
-    /// host has none, which is the headless install.
+    /// A host whose MixEngine install has a window at `program`. The default host has none, which
+    /// is the headless install.
     #[must_use]
     pub fn with_window(home: impl Into<PathBuf>, program: impl Into<PathBuf>) -> Self {
         Self {

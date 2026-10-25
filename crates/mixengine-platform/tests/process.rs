@@ -71,11 +71,11 @@ async fn a_one_shot_given_nothing_reads_nothing() {
 
 /// What a supervised child says reaches its reader, and the type it arrives in is the platform's.
 ///
-/// **The type is the point.** `take_stdout` handed back `std::process::ChildStdout` until T34a,
-/// which cannot be built from a handle this crate creates — and on Windows this crate now creates
-/// one, because a child created from an unrestricted token is a child PostgreSQL will not be. What
-/// this asserts is the shape that made that possible: something implementing [`std::io::Read`],
-/// owned by the caller, whichever way the child was started.
+/// **The type is the point.** `take_stdout` once handed back `std::process::ChildStdout`, which
+/// cannot be built from a handle this crate creates — and on Windows this crate now creates one,
+/// because a child created from an unrestricted token is a child PostgreSQL will not be. What this
+/// asserts is the shape that made that possible: something implementing [`std::io::Read`], owned by
+/// the caller, whichever way the child was started.
 #[test]
 fn a_supervised_child_says_what_it_says_through_a_platform_pipe() {
     use std::io::Read as _;
@@ -165,7 +165,7 @@ async fn a_one_shot_does_not_run_as_an_administrator() {
 /// cap binds — that is `tests/limits.rs`'s, on the two systems that have a mechanism to bind it
 /// with. This one runs everywhere, including macOS, where succeeding while doing nothing is the
 /// specified behaviour: a spawn that refused a limit this system cannot enforce would make a
-/// blueprint written for three systems undeployable on one. See the T68 design, D6.
+/// blueprint written for three systems undeployable on one.
 #[test]
 fn limits_can_be_set_on_a_child_that_is_already_running() {
     use mixengine_platform::process::Priority;
@@ -397,9 +397,8 @@ fn staying_up() -> (std::path::PathBuf, Vec<std::ffi::OsString>) {
     }
 }
 
-/// **The shell is what makes a blueprint's own command mean what its author meant** — roadmap task
-/// **T78a**, its design's D9. A hand-rolled argv split would be a quoting rule of MixEngine's own,
-/// documented nowhere the author is looking.
+/// **The shell is what makes a blueprint's own command mean what its author meant.** A hand-rolled
+/// argv split would be a quoting rule of MixEngine's own, documented nowhere the author is looking.
 #[test]
 fn a_shell_command_runs_and_says_what_it_printed() {
     let directory = tempfile::tempdir().expect("a directory");
@@ -427,9 +426,9 @@ fn a_shell_command_runs_and_says_what_it_printed() {
     assert!(said.contains("hello"), "{said:?}");
 }
 
-/// **A quote survives the trip** — D12. On Windows this is the assertion that the command is
-/// appended to the line verbatim rather than quoted for `CommandLineToArgvW`, whose rule `cmd.exe`
-/// does not share; a blueprint whose command holds a quoted path would otherwise arrive mangled.
+/// **A quote survives the trip.** On Windows this is the assertion that the command is appended to
+/// the line verbatim rather than quoted for `CommandLineToArgvW`, whose rule `cmd.exe` does not
+/// share; a blueprint whose command holds a quoted path would otherwise arrive mangled.
 #[test]
 fn a_shell_command_with_quotes_in_it_arrives_intact() {
     let directory = tempfile::tempdir().expect("a directory");
@@ -501,11 +500,11 @@ fn a_shell_command_runs_in_the_directory_it_was_given() {
     assert!(directory.path().join("made.txt").is_file());
 }
 
-/// **T85b's measurement, from the other side.** A test binary is started by `cargo`, which is
-/// attached to the same console — so this process is never the only member of one, and the call has
-/// to decline. A `true` here would mean the discriminator fires for an ordinary program run from a
-/// terminal, which is the one thing it must never do; on both Unixes the answer is `false` because
-/// there is nothing to release at all.
+/// **The autostart console measurement, from the other side.** A test binary is started by `cargo`,
+/// which is attached to the same console — so this process is never the only member of one, and the
+/// call has to decline. A `true` here would mean the discriminator fires for an ordinary program
+/// run from a terminal, which is the one thing it must never do; on both Unixes the answer is
+/// `false` because there is nothing to release at all.
 #[test]
 fn a_console_somebody_else_is_attached_to_is_left_alone() {
     assert!(!mixengine_platform::process::release_unattended_console());

@@ -152,8 +152,8 @@ async fn the_database_lands_where_paths_says_it_does() {
 
     assert_eq!(store.file(), home.paths.database_file());
     assert!(home.paths.database_file().is_file());
-    // The home is private (T3a) and the database is inside it, so the file needs no permissions of
-    // its own — but a `[paths]` override must never be able to move it out from under that.
+    // The home is private and the database is inside it, so the file needs no permissions of its
+    // own — but a `[paths]` override must never be able to move it out from under that.
     assert_eq!(home.paths.database_file().parent(), Some(home.paths.root()));
 }
 
@@ -394,8 +394,8 @@ async fn a_database_that_cannot_be_created_names_the_path() {
     );
 }
 
-/// The three columns T28 adds are additive, and a row written before them says so rather than
-/// failing to be read.
+/// The three columns PHP extensions added are additive, and a row written before them says so
+/// rather than failing to be read.
 #[tokio::test]
 async fn a_runtime_installed_before_extensions_existed_offers_none() {
     let (_temp, store) = store().await;
@@ -551,10 +551,7 @@ async fn deleting_a_service_unlinks_it_and_leaves_the_site_standing() {
         .unwrap();
 
     assert_eq!(links, 0, "the link goes with the service");
-    assert_eq!(
-        pool, None,
-        "and the pool becomes a site that names none — spec D3"
-    );
+    assert_eq!(pool, None, "and the pool becomes a site that names none");
     assert_eq!(
         sites, 1,
         "the site itself is not a dependent of its database"

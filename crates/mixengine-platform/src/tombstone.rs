@@ -1,4 +1,4 @@
-//! A directory is renamed before it is deleted — roadmap task **T182**, D6.
+//! A directory is renamed before it is deleted.
 //!
 //! **Deleting a directory tree is not one operation**: a `remove_dir_all` that meets a held file half
 //! way leaves half a database behind. A rename is one operation, and Windows refuses it while
@@ -9,9 +9,9 @@
 //! found and removed by the next uninstall. **Not the restart queue**: `MoveFileEx` with
 //! `MOVEFILE_DELAY_UNTIL_REBOOT` writes under `HKLM` and needs an administrator the daemon is not.
 //!
-//! **A refused rename is tried again for a while** (T182b): what refuses one is usually gone a
-//! moment later — the daemon's last database connection closing, a scanner reading a file just
-//! written — and only what is still there after [`PATIENCE`] puts everything back.
+//! **A refused rename is tried again for a while**: what refuses one is usually gone a moment later
+//! — the daemon's last database connection closing, a scanner reading a file just written — and
+//! only what is still there after [`PATIENCE`] puts everything back.
 //!
 //! `std::fs`, plus the Restart Manager on Windows to name who holds a file, and so not behind a
 //! feature: `mix` reads [`tombstones_beside`] too, to tell a finished uninstall from one that left
@@ -42,8 +42,8 @@ pub struct Refused {
     /// What the system said.
     pub error: std::io::Error,
 
-    /// What inside it another program holds open, when something could be found — T182b. The
-    /// system names only the directory, and the file is what tells a person which program to close.
+    /// What inside it another program holds open, when something could be found. The system names
+    /// only the directory, and the file is what tells a person which program to close.
     pub held: Option<Held>,
 
     /// How long the rename was tried before this gave up.
@@ -66,14 +66,14 @@ pub struct Held {
 ///
 /// **A refusal is usually over in a moment**: the last database connection closing on its worker
 /// thread, an antivirus scanner reading a file that was just written, a service's process still
-/// being torn down. Every one of those used to cost the whole uninstall (T182b, measured on the
-/// first real Windows uninstalls); a window or a terminal standing in the home does not go away on
-/// its own, and is what is left to report once this has passed.
+/// being torn down. Every one of those used to cost the whole uninstall (measured on the first real
+/// Windows uninstalls); a window or a terminal standing in the home does not go away on its own,
+/// and is what is left to report once this has passed.
 pub const PATIENCE: Duration = Duration::from_secs(10);
 
-/// How long the first try waits, before anything is looked for — the T182e design, D5. Long enough
-/// for the daemon's last database connection to close; a holder that is still there after it is
-/// looked for, and what can be moved is moved.
+/// How long the first try waits, before anything is looked for. Long enough for the daemon's last
+/// database connection to close; a holder that is still there after it is looked for, and what can
+/// be moved is moved.
 pub const QUICK: Duration = Duration::from_secs(2);
 
 /// How long between two tries of a refused rename.
@@ -86,13 +86,13 @@ const RETRY_EVERY: Duration = Duration::from_millis(100);
 /// anything is put back.
 ///
 /// **`lifted` are files or directories inside one of `paths` that go out on their own first**,
-/// deepest first, each to a tombstone beside the directory holding it — T182b and T182e, D5. A
-/// directory another program *watches*, or a file it holds sharing delete, can be renamed, but the
-/// directory above it cannot: Windows refuses the parent's rename for as long as it is held. A
-/// home's `bin/` is on `PATH`, and editors watch every directory on `PATH` to offer its commands —
-/// measured with VS Code, whose watch kept every uninstall of a home until it was closed. Lifted
-/// out, the holder goes with it and the parent is free to move. A lifted item is put back with
-/// everything else when a later rename is refused.
+/// deepest first, each to a tombstone beside the directory holding it. A directory another program
+/// *watches*, or a file it holds sharing delete, can be renamed, but the directory above it cannot:
+/// Windows refuses the parent's rename for as long as it is held. A home's `bin/` is on `PATH`, and
+/// editors watch every directory on `PATH` to offer its commands — measured with VS Code, whose
+/// watch kept every uninstall of a home until it was closed. Lifted out, the holder goes with it
+/// and the parent is free to move. A lifted item is put back with everything else when a later
+/// rename is refused.
 ///
 /// # Errors
 ///
@@ -104,9 +104,9 @@ pub fn remove_all_or_nothing(
     pid: u32,
     patience: Duration,
 ) -> Result<Vec<Leftover>, Refused> {
-    // Deepest first, so a held file is out of a held directory before that directory moves (T182e,
-    // D5). Each goes beside the armed directory holding it; one inside nothing armed stays where it
-    // is and goes with whatever removes it.
+    // Deepest first, so a held file is out of a held directory before that directory moves. Each
+    // goes beside the armed directory holding it; one inside nothing armed stays where it is and
+    // goes with whatever removes it.
     let mut ordered: Vec<&PathBuf> = lifted.iter().collect();
     ordered.sort_by_key(|inner| std::cmp::Reverse(inner.components().count()));
     ordered.dedup();
@@ -169,7 +169,7 @@ pub fn remove_all_or_nothing(
     let mut left = Vec::new();
 
     for (_, renamed) in &moved {
-        // A lifted item may be a file (T182e), which `remove_dir_all` refuses.
+        // A lifted item may be a file, which `remove_dir_all` refuses.
         let removed = match std::fs::symlink_metadata(renamed) {
             Ok(metadata) if !metadata.is_dir() => std::fs::remove_file(renamed),
             _ => std::fs::remove_dir_all(renamed),
@@ -211,7 +211,7 @@ pub fn tombstones_beside(path: &Path) -> Vec<PathBuf> {
 }
 
 /// Where the daemon `pid` leaves the reason its removal did not finish, for `mix` to read once that
-/// process is gone — roadmap task **T182b**.
+/// process is gone.
 ///
 /// **Outside the home**, because the home is what could not be removed, and **not the daemon's
 /// standard error**, which a daemon started in the background writes to nowhere. Found by the pid,
@@ -221,7 +221,7 @@ pub fn note_for(pid: u32) -> PathBuf {
     std::env::temp_dir().join(format!("mixengined-{pid}.uninstall"))
 }
 
-/// Rename `from` to `to`, trying again for up to `patience` while the system refuses it — T182b.
+/// Rename `from` to `to`, trying again for up to `patience` while the system refuses it.
 ///
 /// Only a refusal is tried again: access denied, which is what a held file or a process standing
 /// in the directory makes a rename say, and a sharing violation. Anything else — a tombstone's name
@@ -453,8 +453,8 @@ fn tombstone_for(path: &Path, pid: u32) -> PathBuf {
 }
 
 /// Where `inner`, inside `outer`, is set aside on its own: beside `outer`, named after it and
-/// numbered by `order`, so two lifted `logs` cannot collide and [`tombstones_beside`] finds every one
-/// with `outer`'s own — T182e, D5.
+/// numbered by `order`, so two lifted `logs` cannot collide and [`tombstones_beside`] finds every
+/// one with `outer`'s own.
 fn lifted_tombstone_for(inner: &Path, outer: &Path, pid: u32, order: usize) -> PathBuf {
     let inner_name = inner
         .file_name()
@@ -582,7 +582,7 @@ mod tests {
         assert!(a.join("file").exists());
     }
 
-    /// T182b. The file another program holds is found and named, not only the directory above it.
+    /// The file another program holds is found and named, not only the directory above it.
     #[cfg(windows)]
     #[test]
     fn the_held_file_is_found_under_the_directory() {
@@ -599,9 +599,9 @@ mod tests {
         assert_eq!(found.path, held);
     }
 
-    /// T182b. A holder that lets go while the rename is being retried costs nothing: the directory
-    /// goes. This is the last database connection closing a moment after the daemon asked it to,
-    /// which refused every real Windows uninstall of a home with a front end.
+    /// A holder that lets go while the rename is being retried costs nothing: the directory goes.
+    /// This is the last database connection closing a moment after the daemon asked it to, which
+    /// refused every real Windows uninstall of a home with a front end.
     #[cfg(windows)]
     #[test]
     fn a_holder_that_lets_go_in_time_does_not_stop_the_removal() {
@@ -622,9 +622,9 @@ mod tests {
         assert!(!a.exists());
     }
 
-    /// T182b. A directory another program has open inside a home stops the home's rename, and the
-    /// same directory lifted out first does not: the handle goes with it, and the home moves. Put
-    /// back afterwards, when a later rename is refused, like every other directory.
+    /// A directory another program has open inside a home stops the home's rename, and the same
+    /// directory lifted out first does not: the handle goes with it, and the home moves. Put back
+    /// afterwards, when a later rename is refused, like every other directory.
     #[cfg(windows)]
     #[test]
     fn a_held_directory_lifted_out_first_does_not_stop_its_parent() {
@@ -667,7 +667,7 @@ mod tests {
         );
     }
 
-    /// T182b. A lifted directory is put back into its parent when a later rename is refused, so the
+    /// A lifted directory is put back into its parent when a later rename is refused, so the
     /// refusal leaves the home exactly as it was.
     #[test]
     fn a_lifted_directory_is_put_back_on_a_refusal() {
@@ -696,8 +696,8 @@ mod tests {
         );
     }
 
-    /// T182b. A directory held open — a shell standing in it, a window showing it — is named when
-    /// no file inside is, rather than nothing being named at all.
+    /// A directory held open — a shell standing in it, a window showing it — is named when no file
+    /// inside is, rather than nothing being named at all.
     #[cfg(windows)]
     #[test]
     fn a_held_directory_is_named_when_no_file_is() {
@@ -721,7 +721,7 @@ mod tests {
         assert!(found.by.is_empty(), "{:?}", found.by);
     }
 
-    /// T182b. The program holding a file is named, which is what tells a person what to close.
+    /// The program holding a file is named, which is what tells a person what to close.
     #[cfg(windows)]
     #[test]
     fn the_program_holding_a_file_is_named() {
@@ -748,8 +748,8 @@ mod tests {
         assert!(first_held(root.path()).is_none());
     }
 
-    /// T182e, D5. A held file inside a held directory leaves first, then the directory, then the
-    /// home; on a later refusal all of it comes back.
+    /// A held file inside a held directory leaves first, then the directory, then the home; on a
+    /// later refusal all of it comes back.
     #[test]
     fn nested_lifts_leave_deepest_first_and_come_back() {
         let root = tempfile::tempdir().expect("tempdir");
@@ -806,7 +806,7 @@ mod tests {
         );
     }
 
-    /// T182e, D5. A lifted file is deleted with the tombstones.
+    /// A lifted file is deleted with the tombstones.
     #[test]
     fn a_lifted_file_is_deleted() {
         let root = tempfile::tempdir().expect("tempdir");

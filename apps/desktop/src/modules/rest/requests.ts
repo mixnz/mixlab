@@ -213,7 +213,7 @@ export async function loadRequests(): Promise<RequestLists> {
 }
 
 /** Writes the list as it now stands, and rejects when the disk says no — what sync waits on,
- *  since it agrees only on what the disk holds (T178a, L5). */
+ *  since it agrees only on what the disk holds. */
 export async function saveRequests(lists: RequestLists): Promise<void> {
   const store = await getStore();
   await store.set(KEY, lists);

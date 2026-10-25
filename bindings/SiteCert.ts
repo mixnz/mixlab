@@ -22,10 +22,10 @@ sans: Array<string>,
  * The authority that signed it, as X.509 spells the name.
  *
  * **The fourth question the issuer asks is a comparison of this against the authority's own
- * subject** — the T50 design, D6 — which is free because T48 put the key's identity into that
- * name. On the wire rather than derived only where it is needed, because `mix cert status`
- * (T53) has to be able to show a person *which* authority signed a certificate they cannot get
- * a padlock for.
+ * subject** (`docs/specs/2026-08-25-t50-leaf-issuance-design.md`, D6), which is free because
+ * the authority carries its key's identity in that name. On the wire rather than derived only
+ * where it is needed, because `mix cert status` has to be able to show a person *which*
+ * authority signed a certificate they cannot get a padlock for.
  */
 issuer: string, 
 /**

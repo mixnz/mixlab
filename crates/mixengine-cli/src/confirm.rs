@@ -1,6 +1,6 @@
 //! One question, asked of whoever is at the keyboard, and the three things that can come back.
 //!
-//! **The only place `mix` reads its own standard input**, and it exists for one command: T64 says
+//! **The only place `mix` reads its own standard input**, and it exists for one command:
 //! `mix elevation grant` prints every operation and what each will literally change *before* the
 //! prompt is raised, and printing is only half of that — a person who has just read a list of
 //! changes to their hosts file has to be able to act on it.
@@ -33,7 +33,7 @@ pub(crate) enum Answer {
     Unanswerable,
 }
 
-/// What came back from a question with three answers — roadmap task **T78**.
+/// What came back from a question with three answers.
 ///
 /// A blueprint asking for a version this machine does not have is a question with three answers, and
 /// the feature doc writes all three: *install it / use the installed one / cancel*. Its own type
@@ -138,7 +138,7 @@ fn answer(line: Option<&str>) -> Answer {
     }
 }
 
-/// Ask the three-answer update question, and read one line back — roadmap task **T88**.
+/// Ask the three-answer update question, and read one line back.
 ///
 /// [`None`] is end of file, which the caller turns into the sentence naming `--yes`.
 ///
@@ -176,15 +176,14 @@ fn update_answer(line: &str) -> crate::commands::self_update::Choice {
     }
 }
 
-/// Put the prompt on standard error and read one line of a password back — roadmap task **T77b**.
+/// Put the prompt on standard error and read one line of a password back.
 ///
 /// [`None`] is end of file, on [`ask`]'s own reasoning: a line typed or piped in is the answer, and
 /// nobody being there to type one is a different thing from a "no" — the caller decides what that
 /// means (here, refusing before anything is sent to the daemon).
 ///
 /// **Echo is not hidden.** Doing so is a per-OS console call this crate has no dependency for, and
-/// the value is about to be pasted into a plaintext `.env` in the next few seconds regardless — see
-/// the design's D5.
+/// the value is about to be pasted into a plaintext `.env` in the next few seconds regardless.
 pub(crate) fn read_password(prompt: &str) -> Option<String> {
     let mut error = std::io::stderr();
     let _ = write!(error, "{prompt}");
@@ -249,7 +248,7 @@ mod tests {
         assert!(matches!(answer(None), Answer::Unanswerable));
     }
 
-    /// Three answers and a default that is none of them — roadmap task T78.
+    /// Three answers and a default that is none of them.
     ///
     /// The empty line again, one question further along: a person who hits Enter has not chosen to
     /// download eighty megabytes, and has not chosen to build on a version they did not ask for.
@@ -265,7 +264,7 @@ mod tests {
         assert_eq!(chosen(None), Choice::Unanswerable);
     }
 
-    /// The update question's three answers, and its default — roadmap task **T88**.
+    /// The update question's three answers, and its default.
     ///
     /// **Enter is *later*.** Nobody hitting a key to see what happens has chosen to stop every
     /// service on this machine, and nobody has chosen to make this version one they are never
@@ -308,8 +307,8 @@ mod tests {
         );
     }
 
-    /// **A line is the value, with its trailing newline gone** — roadmap task **T77b**. End of
-    /// file is `None`, the same way [`answer`] and [`chosen`] read it.
+    /// **A line is the value, with its trailing newline gone.** End of file is `None`, the same way
+    /// [`answer`] and [`chosen`] read it.
     #[test]
     fn a_password_line_keeps_everything_but_the_newline() {
         assert_eq!(password_line(Some("secret\n")), Some("secret".to_owned()));

@@ -1,6 +1,6 @@
 //! `mix project` against a real daemon.
 //!
-//! Roadmap task **T39**'s client half. What the daemon's own `tests/projects.rs` proves is that the
+//! The client half of `project.*`. What the daemon's own `tests/projects.rs` proves is that the
 //! methods do what they say; what is proved here is the part that is only true of `mix` — that the
 //! arguments a person types reach the right method, that `create` and `import` are one subcommand
 //! under two names, that a command typed inside a project finds it without being told, and that the
@@ -71,7 +71,7 @@ async fn a_project_is_created_shown_from_inside_and_exported_from_the_command_li
     );
 }
 
-/// **D2.** `import` is a second name for `create`, so both reach the same state.
+/// `import` is a second name for `create`, so both reach the same state.
 #[tokio::test(flavor = "multi_thread")]
 async fn create_and_import_are_one_subcommand_under_two_names() {
     let home = Home::new();

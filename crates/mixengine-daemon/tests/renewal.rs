@@ -1,4 +1,4 @@
-//! Renewal on a clock, against a real `mixengined` — roadmap task **T52**.
+//! Renewal on a clock, against a real `mixengined`.
 //!
 //! What the unit tests beside `certs::renewal` prove is that a report becomes the right decision.
 //! What is proved here is the part only a daemon can be wrong about: that the loop runs on its own
@@ -109,7 +109,7 @@ async fn a_site_with_https(home: &Home, repository: &Path) {
         .await;
 }
 
-/// **A running daemon renews, and the front end is told** — roadmap task **T52**.
+/// **A running daemon renews, and the front end is told.**
 ///
 /// The certificate assertion on its own would pass for a renewal wired only to the certificate
 /// directory, which is exactly the failure this task exists to prevent — so the line saying the
@@ -173,7 +173,7 @@ fn said_after(log: &str, mark: usize, wanted: &str) -> bool {
     })
 }
 
-/// **The half of T52 that already worked and had no test behind it.**
+/// **The half of renewal that already worked and had no test behind it.**
 ///
 /// Every start issues for every site that declares HTTPS, which is what keeps a machine switched
 /// off more than it is on current forever. Nothing asserted it: every suite that exercises issuance

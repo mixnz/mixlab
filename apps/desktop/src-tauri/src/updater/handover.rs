@@ -1,5 +1,5 @@
 //! macOS and Linux: download the window's installer and check it, then, on a second click, hand it
-//! to the system — spec D5, split in two by T188 (spec D2).
+//! to the system — spec D5, split in two so each step is a click of its own.
 //! Nothing here elevates: the installer asks for the password itself.
 
 use std::path::{Path, PathBuf};
@@ -80,8 +80,8 @@ pub fn installer_path(updates: &Path, version: &str, url: &str) -> PathBuf {
     updates.join(version).join(name)
 }
 
-/// Spec D2, `update_download` on macOS and Linux: fetch the installer of `kind` and check it, then
-/// mark it ready. Opens nothing and stops nothing.
+/// `update_download` on macOS and Linux: fetch the installer of `kind` and check it, then mark it
+/// ready. Opens nothing and stops nothing.
 pub async fn download_installer<R: Runtime>(
     app: &AppHandle<R>,
     feed: &Feed,
@@ -124,8 +124,8 @@ pub async fn download_installer<R: Runtime>(
     .map_err(|e| err!("error.updateFailed", message = e))
 }
 
-/// Spec D2, `update_open_installer`: hand the installer `download_installer` proved to the system.
-/// Stops nothing. A marker for another version or another file, or an installer that is gone, is
+/// `update_open_installer`: hand the installer `download_installer` proved to the system. Stops
+/// nothing. A marker for another version or another file, or an installer that is gone, is
 /// `error.updateNotDownloaded`: it has to be downloaded again.
 pub fn open_installer<R: Runtime>(
     app: &AppHandle<R>,

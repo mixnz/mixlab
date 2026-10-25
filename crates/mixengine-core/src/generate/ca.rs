@@ -1,4 +1,4 @@
-//! One file every runtime can be pointed at — roadmap task **T132**.
+//! One file every runtime can be pointed at.
 //!
 //! MixEngine installs its authority into the **operating system's** trust store, which is what
 //! makes a browser show a padlock on `https://blog.test`

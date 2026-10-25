@@ -1,11 +1,11 @@
 schema = 1
 
-# A blueprint whose stack is one `fakeservice` instance and one static site — roadmap task **T125**.
+# A blueprint whose stack is one `fakeservice` instance and one static site.
 #
 # **The site is what makes the service the project's.** `site_service_links` is the only place this
 # product records which services a project needs — `blueprint.apply` writes `context.ensured` into
 # it when it creates the site — so `mix service start --project` has nothing to find without one.
-# `with-a-service.toml` is the same stack with no site, kept for T116's question.
+# `with-a-service.toml` is the same stack with no site, kept for the autostart question.
 #
 # **`static`, so the suite stays offline**: a php-fpm site would want a runtime and a pool, and a
 # front end is planned only for a manifest asked with `--with-front-end`. A site row with no web

@@ -4,10 +4,10 @@ use super::*;
 
 /// Set the root password in this data directory to something MixEngine does not know.
 ///
-/// **The T126 collision, reproduced from the server's side rather than the keyring's.** The outage
-/// was the two copies of one password coming apart; which of them moved does not matter to anything
-/// downstream, and moving *this* one keeps the test process out of the credential store — which the
-/// module note explains at length is a thing this suite may not touch.
+/// **Two homes sharing one keyring entry, reproduced from the server's side rather than the
+/// keyring's.** The outage was the two copies of one password coming apart; which of them moved
+/// does not matter to anything downstream, and moving *this* one keeps the test process out of the
+/// credential store — which the module note explains at length is a thing this suite may not touch.
 ///
 /// It is the recipe's own bootstrap statement, run the way the recipe runs it: a server that listens
 /// on nothing, reading SQL on standard input.
@@ -41,8 +41,8 @@ fn set_the_root_password_behind_mixengines_back(root: &Path, data: &Path, passwo
     );
 }
 
-/// **A credential nothing can produce any more is re-set by a command, and the databases are kept**
-/// — roadmap task **T127**, and the outage T126 was reported from.
+/// **A credential nothing can produce any more is re-set by a command, and the databases are
+/// kept** — and the outage that first showed two homes sharing one keyring entry.
 ///
 /// The last assertion is the one that matters. Every other line here would also pass for a repair
 /// that threw the data directory away and bootstrapped a new one, which is the thing this command
@@ -113,11 +113,11 @@ async fn a_superuser_credential_is_re_set_and_the_databases_are_kept() {
     );
 }
 
-/// **T182f and T182g, the machine they were reported from.** A MariaDB with a database in it is
-/// kept on disk while the home's database goes — an uninstall that kept its folders, then a fresh
-/// install pointed at them. The next daemon records the package on its own, lists the data as
-/// found, and `mix service adopt` brings it back with a new admin password: the service starts, and
-/// the database made before is still there.
+/// **The machine a reinstall was first reported from.** A MariaDB with a database in it is kept on
+/// disk while the home's database goes — an uninstall that kept its folders, then a fresh install
+/// pointed at them. The next daemon records the package on its own, lists the data as found, and
+/// `mix service adopt` brings it back with a new admin password: the service starts, and the
+/// database made before is still there.
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real MariaDB — see the module note, and the `mariadb` step in _services.yml"]
 async fn service_data_an_earlier_home_left_is_adopted_and_keeps_its_databases() {
@@ -142,7 +142,7 @@ async fn service_data_an_earlier_home_left_is_adopted_and_keeps_its_databases() 
     let _daemon = home.start_daemon_reading_index(&registry.url(), registry.public_key());
     watch(&home);
 
-    // --- the package is recorded on its own (T182f), the data is found (T182g) -------------------
+    // --- the package is recorded on its own, the data is found -----------------------------------
     at("listing what the earlier home left");
     let found = expect(&home, &["service", "found", "--json"]);
     let row = found["found"]
@@ -183,12 +183,12 @@ async fn service_data_an_earlier_home_left_is_adopted_and_keeps_its_databases() 
     );
 }
 
-/// The patch after [`VERSION`], published from the same archive — roadmap task **T193c**. A real
-/// second patch of one line is not on the machine, and what is under test is the move, not the build.
+/// The patch after [`VERSION`], published from the same archive. A real second patch of one line is
+/// not on the machine, and what is under test is the move, not the build.
 const NEXT: &str = "11.4.13";
 
-/// **T193c, added at execution.** An instance updated within its line keeps its databases: the
-/// account made before the update logs in afterwards, through the new version's own client.
+/// An instance updated within its line keeps its databases: the account made before the update logs
+/// in afterwards, through the new version's own client.
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real MariaDB — see the module note, and the `mariadb` step in _services.yml"]
 async fn an_instance_updated_within_its_line_keeps_its_databases() {

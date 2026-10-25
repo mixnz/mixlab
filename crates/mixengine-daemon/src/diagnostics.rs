@@ -1,4 +1,4 @@
-//! `daemon.bundle` — one archive a person can attach to a bug report. Roadmap task **T93**.
+//! `daemon.bundle` — one archive a person can attach to a bug report.
 //!
 //! **Five members, and the list is closed.** What goes in is
 //! [`Part`]'s five variants and never a walk of the home: `certs/` will hold
@@ -36,7 +36,7 @@ use crate::error::ToWire as _;
 /// How much of `daemon.log` travels.
 ///
 /// A megabyte, because this file is attached to a message somebody sends. The whole log is 10 MB
-/// before it rotates (T4), and an archive that carried all of it would be one nobody could email —
+/// before it rotates, and an archive that carried all of it would be one nobody could email —
 /// which would make the bundle's own purpose fail on the machines that produced the most output.
 const LOG_TAIL_BYTES: u64 = 1 << 20;
 
@@ -49,7 +49,7 @@ const BUNDLES_KEPT: usize = 3;
 /// Where they are written, inside [`Paths::cache`](mixengine_core::Paths::cache).
 const DIRECTORY: &str = "diagnostics";
 
-/// What this build refuses to carry, and why — the T93 design, D4.
+/// What this build refuses to carry, and why.
 ///
 /// **A table rather than three pushes**, so that adding a member and removing its reason are one
 /// edit, and so the reasons read together the way the person receiving a bundle reads them.
@@ -80,7 +80,7 @@ pub(crate) struct Bundles {
     /// The home: where the log is read from, and where the archive is written.
     paths: mixengine_core::Paths,
 
-    /// This home's crash reports — roadmap task **T91**.
+    /// This home's crash reports.
     crashes: crate::crash::Reports,
 }
 
@@ -204,7 +204,7 @@ struct Written {
     /// What has been left out so far. The log's own accounting joins it inside [`Written::pack`].
     omitted: Vec<Omission>,
 
-    /// This home's crash reports, read inside [`Written::pack`] — roadmap task **T91**.
+    /// This home's crash reports, read inside [`Written::pack`].
     ///
     /// **Here rather than read in [`Bundles::take`]** for the reason this struct exists: reading
     /// twenty small files is blocking work, and it belongs on the thread the log tail and the
@@ -224,8 +224,8 @@ impl Written {
         let (log, excerpt) = tail(&self.log, LOG_TAIL_BYTES);
         self.parts.push((Part::DaemonLog, log));
 
-        // **Roadmap task T91.** An empty array is an answer and not a hole: a home that has never
-        // crashed says so, exactly as a check that found nothing wrong is the evidence that it ran.
+        // An empty array is an answer and not a hole: a home that has never crashed says so,
+        // exactly as a check that found nothing wrong is the evidence that it ran.
         let (reports, unreadable) = self.crashes.load();
         encoded(&mut self.parts, &mut self.omitted, Part::Crashes, &reports);
 

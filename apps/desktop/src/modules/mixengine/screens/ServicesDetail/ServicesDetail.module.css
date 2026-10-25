@@ -102,7 +102,7 @@
   color: var(--text-muted);
 }
 
-/* T183: the version after the instance, in the name's own size so the line keeps its height. */
+/* The version after the instance, in the name's own size so the line keeps its height. */
 .version {
   margin-left: 6px;
   font-family: var(--font-mono);

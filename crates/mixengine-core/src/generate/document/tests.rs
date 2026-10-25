@@ -202,9 +202,8 @@ async fn a_refused_configuration_leaves_the_last_good_one_live() {
     );
 }
 
-/// **A judgement installs nothing** — roadmap task **T81c**, the design's D5. It is what lets an
-/// extension whose fragment the front end refuses be refused before the home changes, so the
-/// thing it must not do is change the home.
+/// **A judgement installs nothing.** It is what lets an extension whose fragment the front end
+/// refuses be refused before the home changes, so the thing it must not do is change the home.
 #[tokio::test]
 async fn judging_writes_nothing_and_leaves_nothing_behind() {
     let home = tempfile::tempdir().expect("a temporary directory");

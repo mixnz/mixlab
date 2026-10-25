@@ -1,9 +1,9 @@
 import type { PackageCatalogue, PackageRelease, PackageSummary, RuntimeRelease } from "@mixengine/api";
 
-/** The package that gives a Windows Ruby a compiler — roadmap task T206a. */
+/** The package that gives a Windows Ruby a compiler. */
 export const DEVKIT_PACKAGE = "msys2";
 
-/** What a release cannot do on this machine's cell, in the publisher's words — T206, D2. */
+/** What a release cannot do on this machine's cell, in the publisher's words. */
 export function lacksLabels(release: RuntimeRelease): { key: string; reason: string }[] {
   return Object.entries(release.lacks ?? {})
     .sort(([a], [b]) => a.localeCompare(b))
@@ -34,7 +34,7 @@ function compareReleases(a: string, b: string): number {
   return 0;
 }
 
-/** The devkit this machine can install, and whether any version of it already is — T206a. */
+/** The devkit this machine can install, and whether any version of it already is. */
 export function devkitOffer(catalogue: PackageCatalogue): {
   release: PackageRelease | null;
   installed: boolean;
@@ -47,14 +47,14 @@ export function devkitOffer(catalogue: PackageCatalogue): {
   return { release, installed: releases.some((candidate) => candidate.installed) };
 }
 
-/** Whether a devkit is here, recorded with its folder gone, or neither — T206d. */
+/** Whether a devkit is here, recorded with its folder gone, or neither. */
 export type DevkitState =
   | { state: "absent" }
   | { state: "missing"; version: string }
   | { state: "present"; version: string };
 
 /** Read from `package.list`, not the catalogue: a catalogue reads a missing devkit as not installed
- *  and would offer the newest release, leaving the missing row behind — T206d. */
+ *  and would offer the newest release, leaving the missing row behind. */
 export function devkitState(packages: PackageSummary[]): DevkitState {
   const newest = (rows: PackageSummary[]) =>
     rows.reduce<PackageSummary | null>(

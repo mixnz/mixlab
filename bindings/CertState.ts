@@ -3,7 +3,7 @@ import type { SiteCert } from "./SiteCert";
 import type { Unusable } from "./Unusable";
 
 /**
- * Whether a site has a usable certificate — roadmap task **T50**.
+ * Whether a site has a usable certificate.
  *
  * **[`CaState`]'s vocabulary, reused deliberately.** The ways a key and a certificate on disk can
  * disagree do not depend on which of the two they are, so [`Unusable`] is the same closed enum

@@ -1,4 +1,4 @@
-//! Requests in the `blueprint.*` namespace — roadmap task **T77**.
+//! Requests in the `blueprint.*` namespace.
 
 use crate::{ProjectRef, RuntimeKind, ServiceId};
 
@@ -28,9 +28,9 @@ pub struct BlueprintCapture {
 /// `blueprint.import` — take in a blueprint somebody else wrote.
 ///
 /// **The only thing in this build that can produce [`BlueprintSource::Imported`]**, and therefore
-/// the only thing that can produce an untrusted one — roadmap task **T78a**, its design's D3. A
-/// capture is this machine's own and the gallery is this build's own; everything else arrives
-/// through here, and what it arrives with decides whether its `[scaffold]` will ever be offered.
+/// the only thing that can produce an untrusted one. A capture is this machine's own and the
+/// gallery is this build's own; everything else arrives through here, and what it arrives with
+/// decides whether its `[scaffold]` will ever be offered.
 ///
 /// [`BlueprintSource::Imported`]: crate::BlueprintSource
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -95,8 +95,6 @@ pub struct BlueprintApply {
     /// The composed path is not a surprise: it comes back in
     /// [`PlanAction::RegisterProject`](crate::PlanAction), which every client renders before
     /// anything is created.
-    ///
-    /// Roadmap task **T120a**.
     #[serde(default)]
     pub root_is_parent: bool,
 
@@ -108,17 +106,16 @@ pub struct BlueprintApply {
     #[serde(default)]
     pub dry_run: bool,
 
-    /// Install what the plan's releases need of the machine before anything else — roadmap task
-    /// **T152**. What [`BlueprintApplyResponse::Planned`](crate::BlueprintApplyResponse)'s `needs`
-    /// asked about.
+    /// Install what the plan's releases need of the machine before anything else. What
+    /// [`BlueprintApplyResponse::Planned`](crate::BlueprintApplyResponse)'s `needs` asked about.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub install_prerequisites: bool,
 
-    /// Do not judge what the plan's releases need of the machine — T152. The smoke tests still run.
+    /// Do not judge what the plan's releases need of the machine. The smoke tests still run.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
 
-    /// The answers to the version questions this plan raises — roadmap task **T78**.
+    /// The answers to the version questions this plan raises.
     ///
     /// **A question is asked by a client and answered in the request**, because a daemon has no
     /// keyboard: a job that stopped halfway to ask one would be a job holding a project directory
@@ -131,8 +128,7 @@ pub struct BlueprintApply {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub answers: Vec<VersionAnswer>,
 
-    /// Agreement to run the blueprint's own `[scaffold]` command — roadmap task **T78a**, its
-    /// design's D4.
+    /// Agreement to run the blueprint's own `[scaffold]` command.
     ///
     /// **Asked by a client and answered here**, exactly as a version mismatch is, and for the same
     /// reason: a daemon has no keyboard, and a job that stopped halfway to ask would be a job
@@ -144,14 +140,13 @@ pub struct BlueprintApply {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scaffold: Option<ScaffoldConsent>,
 
-    /// The `.env` keys the person agreed to have written, password included — roadmap task
-    /// **T205a**. Apart from [`BlueprintApply::scaffold`], since a plan can carry both and one
-    /// consent must not answer the other. A key the plan does not write is refused before
-    /// anything is touched.
+    /// The `.env` keys the person agreed to have written, password included. Apart from
+    /// [`BlueprintApply::scaffold`], since a plan can carry both and one consent must not answer
+    /// the other. A key the plan does not write is refused before anything is touched.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dotenv: Vec<String>,
 
-    /// Whether to plan a front end where this home has none — roadmap task **T115**.
+    /// Whether to plan a front end where this home has none.
     ///
     /// `core::sites` renders nothing for a home with no front end and succeeds while doing it, so a
     /// manifest with a `[site]` applied to a fresh machine ends with a project, a database, a site
@@ -170,7 +165,7 @@ pub struct BlueprintApply {
     #[serde(default)]
     pub front_end: bool,
 
-    /// Whether the services this apply **creates** start with the daemon — roadmap task **T116**.
+    /// Whether the services this apply **creates** start with the daemon.
     ///
     /// **Only what it creates.** A shared MariaDB somebody deliberately leaves stopped is not
     /// something a second project gets to re-decide, so a step that plans
@@ -198,8 +193,8 @@ pub struct ScaffoldConsent {
     #[serde(default)]
     pub command: String,
 
-    /// The archive URL as it was shown — roadmap task **T205**, D2. Exactly one of `command` and
-    /// this names what the plan showed.
+    /// The archive URL as it was shown. Exactly one of `command` and this names what the plan
+    /// showed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub archive: Option<String>,
 
@@ -285,8 +280,8 @@ pub enum MismatchAnswer {
 
     /// Use what this machine has, and pin the project to *that* version.
     ///
-    /// The pin is the whole point (the T78 design, D7): without it the two answers would produce
-    /// identical machines and the question would be theatre.
+    /// The pin is the whole point: without it the two answers would produce identical machines and
+    /// the question would be theatre.
     UseInstalled,
 }
 
@@ -295,7 +290,7 @@ mod tests {
     use super::*;
 
     /// A request from a client that has never heard of an answer still decodes: the field is
-    /// defaulted, which is what stops this task breaking every caller T77 shipped.
+    /// defaulted, which is what stops version answers breaking every caller written before them.
     #[test]
     fn a_request_without_answers_still_decodes() {
         let asked: BlueprintApply = serde_json::from_value(serde_json::json!({
@@ -309,8 +304,8 @@ mod tests {
         assert!(!asked.dry_run);
     }
 
-    /// **The consent names what was read** — roadmap task **T78a**, its design's D4: the exact
-    /// command, and whether the person was told nobody had vouched for the blueprint.
+    /// **The consent names what was read**: the exact command, and whether the person was told
+    /// nobody had vouched for the blueprint.
     #[test]
     fn a_consent_carries_the_command_and_what_was_said_about_it() {
         let consent = ScaffoldConsent {
@@ -331,7 +326,7 @@ mod tests {
     }
 
     /// A request carrying no consent is a request nobody answered the question in, which is the
-    /// reading T78 shipped and the safe one.
+    /// reading every apply has had and the safe one.
     #[test]
     fn a_request_without_a_consent_agrees_to_nothing() {
         let asked: BlueprintApply = serde_json::from_value(serde_json::json!({

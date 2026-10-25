@@ -1,4 +1,4 @@
-//! Two health probes that speak a database's own protocol — roadmap task **T190b**, the spec's D4.
+//! Two health probes that speak a database's own protocol.
 //!
 //! **Instead of starting `mysqladmin ping` and `redis-cli ping`.** On Windows a process start is a
 //! restricted token, `CreateProcessAsUser` and a thread per pipe: 10 ms of the daemon's CPU, twice

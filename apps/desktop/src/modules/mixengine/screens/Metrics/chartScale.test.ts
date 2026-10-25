@@ -7,8 +7,8 @@ const HOUR = 60 * MINUTE;
 const MIB = 1024 * 1024;
 
 describe("CPU_UNIT.niceMax", () => {
-  /* An idle subject must not blow noise up into mountains: the scale has its floor, which since
-     T190c is 5% of the whole machine. */
+  /* An idle subject must not blow noise up into mountains: the scale has its floor, which is 5% of
+     the whole machine. */
   it("never goes below its floor", () => {
     expect(CPU_UNIT.niceMax(0)).toBe(5);
     expect(CPU_UNIT.niceMax(3.2)).toBe(5);
@@ -37,7 +37,7 @@ describe("CPU_UNIT labels", () => {
     expect(CPU_UNIT.tick(0)).toBe("0%");
   });
 
-  /* The tooltip reads like Task Manager, like the Dashboard table (T190c): one decimal place of the
+  /* The tooltip reads like Task Manager, like the Dashboard table: one decimal place of the
      whole machine. */
   it("writes a tooltip value with one decimal, as Task Manager does", () => {
     expect(CPU_UNIT.value(12.3456789)).toBe("12.3%");

@@ -31,10 +31,10 @@ const RUN: &str = "run";
 ///
 /// The same steps `mixengine_core::paths::resolve_root` takes, and it has to stay that way: an
 /// override wins outright, then a development checkout's suggestion
-/// ([`mixengine_platform::home::development_home`], T166), then the platform, and the result is made
-/// absolute and spelled in full rather than canonicalised — the daemon may already be running against a home that has
-/// since been renamed, and `canonicalize` would both require the directory to exist and hand back a
-/// `\\?\` path on Windows that no endpoint fingerprint would match.
+/// ([`mixengine_platform::home::development_home`]), then the platform, and the result is made
+/// absolute and spelled in full rather than canonicalised — the daemon may already be running
+/// against a home that has since been renamed, and `canonicalize` would both require the directory
+/// to exist and hand back a `\\?\` path on Windows that no endpoint fingerprint would match.
 ///
 /// **The spelling is part of the agreement and not a detail.**
 /// [`mixengine_platform::paths::in_full`] resolves an 8.3 alias to the name behind it, and a
@@ -134,7 +134,7 @@ mod tests {
         assert!(root.ends_with("default-home"), "{root:?}");
     }
 
-    /// T166: a checkout's suggestion sits between an override and the platform.
+    /// A checkout's suggestion sits between an override and the platform.
     #[test]
     fn a_checkout_suggestion_beats_the_default_and_an_override_beats_it() {
         let suggested = OsStr::new("checkout-home");

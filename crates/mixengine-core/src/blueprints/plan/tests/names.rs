@@ -3,8 +3,7 @@
 
 use super::*;
 
-/// **D11.** Adding a domain writes the hosts file, and nothing else in a plan asks for a
-/// password.
+/// Adding a domain writes the hosts file, and nothing else in a plan asks for a password.
 #[tokio::test]
 async fn only_the_steps_that_need_a_password_say_so() {
     let (temp, store) = home().await;
@@ -38,9 +37,9 @@ async fn only_the_steps_that_need_a_password_say_so() {
         )));
 }
 
-/// **D10, and the case a project name makes reachable.** Project names allow spaces and upper
-/// case; service ids do not. A dedicated instance for `My Blog` cannot be spelled, and that is
-/// said here rather than discovered by T78 while writing the row.
+/// **The case a project name makes reachable.** Project names allow spaces and upper case; service
+/// ids do not. A dedicated instance for `My Blog` cannot be spelled, and that is said here rather
+/// than discovered by the executor while writing the row.
 #[tokio::test]
 async fn a_project_name_no_service_id_can_hold_blocks_its_dedicated_instance() {
     let (temp, store) = home().await;
@@ -120,10 +119,9 @@ async fn a_root_that_is_already_a_project_is_blocked() {
     );
 }
 
-/// **D1.** A project's name is a label a person reads; a database, a domain and a service id
-/// each have a charset it does not have to satisfy. `{project}` expands to the handle between
-/// them — `domains::slug`, which is the rule `project.create` has derived a domain with since
-/// T39a.
+/// A project's name is a label a person reads; a database, a domain and a service id each have a
+/// charset it does not have to satisfy. `{project}` expands to the handle between them —
+/// `domains::slug`, which is the rule `project.create` derives a domain with.
 #[tokio::test]
 async fn the_token_expands_to_the_projects_slug_and_not_its_name() {
     let (temp, store) = home().await;
@@ -190,9 +188,9 @@ async fn the_token_expands_to_the_projects_slug_and_not_its_name() {
     assert_eq!(command, "composer create-project laravel/laravel my-blog-1");
 }
 
-/// **D1, and the reason the comment above the scaffold expansion is now true.** A slug holds no
-/// shell metacharacter, so a project name full of them reaches the shell as a handle rather
-/// than as a second command.
+/// **The reason the comment above the scaffold expansion is now true.** A slug holds no shell
+/// metacharacter, so a project name full of them reaches the shell as a handle rather than as a
+/// second command.
 #[tokio::test]
 async fn a_name_holding_shell_metacharacters_reaches_the_shell_as_a_slug() {
     let (temp, store) = home().await;
@@ -232,10 +230,10 @@ async fn a_name_holding_shell_metacharacters_reaches_the_shell_as_a_slug() {
     assert!(!command.contains('$'), "{command}");
 }
 
-/// **D2.** The planner's whole promise is that an apply does not get five actions into a
-/// project directory before discovering the sixth was impossible. Before T120 the database step
-/// checked only the account's *length*, so a name the server would refuse outright was a green
-/// dry run and a failure after three packages had been downloaded.
+/// The planner's whole promise is that an apply does not get five actions into a project directory
+/// before discovering the sixth was impossible. The database step once checked only the account's
+/// *length*, so a name the server would refuse outright was a green dry run and a failure after
+/// three packages had been downloaded.
 #[tokio::test]
 async fn a_database_name_the_server_would_refuse_is_blocked_at_plan_time() {
     let (temp, store) = home().await;
@@ -270,9 +268,9 @@ async fn a_database_name_the_server_would_refuse_is_blocked_at_plan_time() {
     assert!(reason.contains("lower-case"), "{reason}");
 }
 
-/// **D2 again, for the other name space.** A blueprint from somebody else's machine can name a
-/// TLD this home does not answer for, and finding that out from `site.create` is finding it out
-/// after the database exists.
+/// **The same, for the other name space.** A blueprint from somebody else's machine can name a TLD
+/// this home does not answer for, and finding that out from `site.create` is finding it out after
+/// the database exists.
 #[tokio::test]
 async fn a_domain_that_is_not_one_is_blocked_at_plan_time() {
     let (temp, store) = home().await;
@@ -308,9 +306,9 @@ async fn a_domain_that_is_not_one_is_blocked_at_plan_time() {
     );
 }
 
-/// **D3.** A name with no ASCII in it cannot be slugged, so the token stays where it is — and
-/// every step that uses it says *that*, rather than complaining about a character set the
-/// person never typed a character of.
+/// A name with no ASCII in it cannot be slugged, so the token stays where it is — and every step
+/// that uses it says *that*, rather than complaining about a character set the person never typed a
+/// character of.
 #[tokio::test]
 async fn a_name_with_nothing_to_slug_blocks_the_steps_that_need_the_token() {
     let (temp, store) = home().await;

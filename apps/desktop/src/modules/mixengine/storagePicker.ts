@@ -50,8 +50,7 @@ export function pick(rows: StorageRow[], key: StorageKey, directory: string): St
  * `<directory>\runtimes`, `<directory>\packages`, … — the common case is "put everything on the
  * other drive", and making people click four times for one intention is making them do the
  * machine's work. Joined with the operating system's separator, like the value the per-row button
- * sends: the daemon writes `config.toml` through `toml_edit`, which escapes backslashes itself
- * (T191).
+ * sends: the daemon writes `config.toml` through `toml_edit`, which escapes backslashes itself.
  */
 export function oneFolderFor(
   rows: StorageRow[],

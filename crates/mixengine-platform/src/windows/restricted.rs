@@ -1,4 +1,4 @@
-//! A child created from a restricted copy of this process's token — roadmap task **T34a**.
+//! A child created from a restricted copy of this process's token.
 //!
 //! **Why this exists, in one sentence a reader can check:** `postgres` calls `check_root()` at
 //! startup, which on Windows asks `pgwin32_is_admin()`, and a process whose token holds
@@ -8,7 +8,7 @@
 //! An ordinary machine never meets that: an interactive administrator carries a UAC-*filtered*
 //! token where the group is present deny-only and grants nothing. The machine that meets it is this
 //! repository's own Windows CI leg, which holds a full token deliberately and asserts that it still
-//! does (T2b, `.github/workflows/_test.yml`).
+//! does (`.github/workflows/_test.yml`).
 //!
 //! **So every supervised child is created from a restricted token, not only PostgreSQL's.** The
 //! decision and its reasons are

@@ -6,7 +6,7 @@
  * **No site, and none to give.** `site_domains_domain` is `UNIQUE` — the index its own migration
  * calls "the one that decides ownership" — so a domain names its site. Asking a caller for it as
  * well would be asking for a fact the database holds, and would let them name a site the domain is
- * not on (T46 design, D2).
+ * not on (D2).
  */
 export type DomainRemove = { 
 /**

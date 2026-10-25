@@ -9,7 +9,8 @@
  */
 export type HostEntry = { 
 /**
- * Where the name points. Only `127.0.0.1` and `::1` are ever accepted — see the T41 design, D5.
+ * Where the name points. Only `127.0.0.1` and `::1` are ever accepted — see
+ * `docs/specs/2026-08-23-t41-hosts-apply-design.md`, D5.
  */
 address: string, 
 /**

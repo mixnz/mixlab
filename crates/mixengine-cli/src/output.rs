@@ -40,8 +40,8 @@ pub(crate) fn rendered(
 pub(crate) fn emit(rendered: &str) -> Result<(), Error> {
     let mut stdout = std::io::stdout().lock();
 
-    // T182e: a reader that cannot decode UTF-8 — the Windows uninstaller, through `nsExec` — asks
-    // for ASCII look-alikes of the typography this crate's sentences use.
+    // A reader that cannot decode UTF-8 — the Windows uninstaller, through `nsExec` — asks for
+    // ASCII look-alikes of the typography this crate's sentences use.
     let rendered = match std::env::var_os(PLAIN_TEXT) {
         Some(_) => plain_text(rendered),
         None => rendered.to_owned(),
@@ -59,8 +59,8 @@ pub(crate) fn emit(rendered: &str) -> Result<(), Error> {
         })
 }
 
-/// Set, to anything, by a caller that reads `mix`'s output in a legacy code page — T182e. The
-/// Windows uninstaller does, since `nsExec` decodes what it captures as ANSI.
+/// Set, to anything, by a caller that reads `mix`'s output in a legacy code page. The Windows
+/// uninstaller does, since `nsExec` decodes what it captures as ANSI.
 const PLAIN_TEXT: &str = "MIXENGINE_PLAIN_TEXT";
 
 /// `text` with the typographic characters `mix` and the daemon write — dashes, curly quotes, the
@@ -104,8 +104,8 @@ pub(crate) fn report(error: &Error, json: bool) {
 mod tests {
     use super::*;
 
-    /// T182e. The uninstaller reads `mix` through `nsExec`, which decodes in the ANSI code page, so
-    /// under `MIXENGINE_PLAIN_TEXT` the typographic characters become their ASCII look-alikes — the
+    /// The uninstaller reads `mix` through `nsExec`, which decodes in the ANSI code page, so under
+    /// `MIXENGINE_PLAIN_TEXT` the typographic characters become their ASCII look-alikes — the
     /// firewall row read `MixEngine â€” shared sites` in the uninstaller's log.
     #[test]
     fn plain_text_spells_typography_in_ascii() {

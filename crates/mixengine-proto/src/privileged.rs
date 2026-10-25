@@ -3,8 +3,9 @@
 //! The daemon writes a [`PrivilegedRequest`] into a fresh single-use directory, raises the OS
 //! elevation prompt on the helper with that file's path as its one argument, and reads the
 //! [`PrivilegedResponse`] the helper leaves beside it. See
-//! `docs/decisions/0005-on-demand-elevation.md` and the T40 design for why it is files and not a
-//! socket: the helper has no listener, no idle state, and exists for seconds.
+//! `docs/decisions/0005-on-demand-elevation.md` and `docs/specs/2026-08-22-t40-elevate-design.md`
+//! for why it is files and not a socket: the helper has no listener, no idle state, and exists for
+//! seconds.
 //!
 //! **The response file is the protocol.** When it is there, it is the answer and the exit code says
 //! nothing; the exit code matters only when there is no file. That is not a preference — the macOS
@@ -36,7 +37,7 @@ pub use ledger::{HomesLedger, LedgerEntry};
 /// the anti-replay check — a request with an answer beside it has been processed and is refused.
 pub const RESPONSE_FILE_NAME: &str = "response.json";
 
-/// Where a replacement helper waits for the prompt that installs it — roadmap task **T88a**.
+/// Where a replacement helper waits for the prompt that installs it.
 ///
 /// **Under `run/` and not `cache/`**, because `Paths::new` builds `run` with no `[paths]` override:
 /// the elevated process composes this path from a compiled-in constant, and a directory a config
@@ -69,14 +70,14 @@ pub fn helper_candidate_signature(home: &std::path::Path) -> PathBuf {
     ))
 }
 
-/// The helper's own version — roadmap task **T182b**, D1.
+/// The helper's own version.
 ///
 /// **Not the product's.** Two releases' helpers would otherwise always differ, and keeping the
 /// installed helper in step would cost a prompt at every update. `crates/mixengine-elevate/helper.lock`
 /// decides when this changes, and `packaging/helper-lock.sh --bump` is what changes it.
 pub const HELPER_VERSION: &str = "0.1.8";
 
-/// What a candidate helper's *signed* trusted comment says it is — roadmap task **T88a**.
+/// What a candidate helper's *signed* trusted comment says it is.
 ///
 /// **The only fact about a candidate that a compromised daemon cannot write.** minisign's global
 /// signature covers the trusted comment, and `minisign-verify` hands it over only after the
@@ -157,8 +158,8 @@ impl HelperStamp {
             return false;
         }
 
-        // macOS publishes one universal helper listed under two architecture rows — the T88
-        // design's D6, one artifact along — so there it is a third spelling of this machine.
+        // macOS publishes one universal helper, listed under both architecture rows, so there it
+        // is a third spelling of this machine.
         self.arch == Self::host_arch() || (self.os == "macos" && self.arch == "universal")
     }
 }
@@ -199,7 +200,8 @@ pub struct PrivilegedRequest {
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct HostEntry {
-    /// Where the name points. Only `127.0.0.1` and `::1` are ever accepted — see the T41 design, D5.
+    /// Where the name points. Only `127.0.0.1` and `::1` are ever accepted — see
+    /// `docs/specs/2026-08-23-t41-hosts-apply-design.md`, D5.
     pub address: IpAddr,
 
     /// The name, lowercased and already checked by whoever built this.
@@ -222,7 +224,8 @@ pub struct PortRedirect {
     pub bind: u16,
 }
 
-/// What granting port access means on the machine being asked — the T42 design, D2 and D4.
+/// What granting port access means on the machine being asked —
+/// `docs/specs/2026-08-23-t42-port-access-design.md`, D2 and D4.
 ///
 /// **Two variants rather than one struct holding both a binary and a redirect list**, because a
 /// field the helper does not use is a field the helper cannot validate, and validating is that
@@ -235,7 +238,7 @@ pub enum PortAccessPlan {
     /// Linux: `cap_net_bind_service` on the front end's binary, which then binds 80 itself.
     Capability {
         /// The program the capability goes on. The helper checks that the caller owns it and that
-        /// nobody else can write it — the T42 design, D5.
+        /// nobody else can write it, or the capability would go on whatever replaced it.
         binary: PathBuf,
 
         /// Which reserved ports it is being allowed. Only 80 and 443 are ever accepted.
@@ -273,10 +276,7 @@ pub enum PortAccessTarget {
     Redirect {},
 }
 
-/// How this machine is asked to route managed TLDs to MixEngine's own DNS server — the T45
-/// design, D2 and D3.
-///
-/// What ports this machine should have open for MixEngine — roadmap task **T74**.
+/// What ports this machine should have open for MixEngine.
 ///
 /// **Whole state, like [`ResolverPlan`] and [`PortAccessPlan`]**: the plan names every port that
 /// should end up open, so a second request supersedes the first, "already done" is a comparison
@@ -316,7 +316,7 @@ pub struct FirewallPlan {
 pub const FIREWALL_LABEL: &str = "MixEngine — ";
 
 /// The words an outcome's detail carries when the operating system accepted a removal but will only
-/// perform it at the next restart — roadmap task **T87**.
+/// perform it at the next restart.
 ///
 /// **A constant because it is a promise to a person**, and it appears in three places a person can
 /// read: the audit log's line, `mix job` output, and the sentence beside the row in `mix uninstall`.
@@ -357,10 +357,11 @@ pub enum ResolverPlan {
 
     /// Linux: a dummy link of MixEngine's own, declared to `systemd-networkd`.
     ///
-    /// **A link rather than a file of resolver settings** — the T45 design, D10, and every
-    /// alternative was measured out: a `resolved.conf.d` drop-in redirects the whole machine, the
-    /// loopback link is refused by systemd-resolved by name, a real link would have its own servers
-    /// replaced rather than added to, and a link with no address is configured and inert.
+    /// **A link rather than a file of resolver settings**, and every alternative was measured out
+    /// (`docs/specs/2026-08-23-t45-resolver-wiring-design.md`, D10): a `resolved.conf.d` drop-in
+    /// redirects the whole machine, the loopback link is refused by systemd-resolved by name, a
+    /// real link would have its own servers replaced rather than added to, and a link with no
+    /// address is configured and inert.
     SystemdLink {
         /// Which TLDs become routing domains on that link.
         tlds: Vec<String>,
@@ -373,7 +374,7 @@ pub enum ResolverPlan {
     ///
     /// Its `Name` value is a `REG_MULTI_SZ`, so all of them live under the one GUID the helper
     /// compiles in rather than one rule each — which is what makes "already done" a read of a single
-    /// key. **No port**: NRPT has no field for one, which is why T44 puts the server on 53 here.
+    /// key. **No port**: NRPT has no field for one, which is why the DNS server listens on 53 here.
     Nrpt {
         /// Which namespaces the rule names.
         tlds: Vec<String>,
@@ -408,7 +409,7 @@ pub enum ResolverTarget {
     Nrpt {},
 }
 
-/// How this machine is asked to trust MixEngine's own certificate authority — roadmap task **T49a**.
+/// How this machine is asked to trust MixEngine's own certificate authority.
 ///
 /// **The certificate's DER travels; a path to it does not.** [`ResolverPlan`] above carries the
 /// argument in full: what the helper can know is compiled into the helper, and a path is somebody
@@ -424,7 +425,8 @@ pub enum ResolverTarget {
 pub enum TrustPlan {
     /// Windows: the `Root` store under `LocalMachine`.
     SystemRoot {
-        /// The certificate, DER. Checked against the T49a design's D4 table by the helper itself,
+        /// The certificate, DER. Checked against the table of
+        /// `docs/specs/2026-08-24-t49a-system-trust-store-design.md`, D4, by the helper itself,
         /// before a store is opened.
         der: Vec<u8>,
     },
@@ -448,7 +450,8 @@ pub enum TrustPlan {
     },
 }
 
-/// Which authority to take back out, and **not which certificate** — the T49a design, D5.
+/// Which authority to take back out, and **not which certificate** —
+/// `docs/specs/2026-08-24-t49a-system-trust-store-design.md`, D5.
 ///
 /// **There is no fingerprint field, and that is the whole of this type's security decision.** The
 /// install direction is close to harmless: a daemon compromised badly enough to forge one already
@@ -457,11 +460,12 @@ pub enum TrustPlan {
 /// it could take out the root that validates Windows Update, or an organisation's own root, through
 /// the audited binary and under the user's own Allow click.
 ///
-/// So what travels is T48's key-id: eight lowercase hex characters, refused by the helper before a
-/// store is opened, and unable to describe a corporate root at all. The helper then finds
-/// certificates whose subject is exactly `MixEngine Local CA <key_id>`, checks each against D4's
-/// table, and removes only those that pass. This is [`ResolverPlan`]'s own argument one capability
-/// along: the value an attacker would abuse is not validated, it is absent.
+/// So what travels is the authority's key-id: eight lowercase hex characters, refused by the helper
+/// before a store is opened, and unable to describe a corporate root at all. The helper then finds
+/// certificates whose subject is exactly `MixEngine Local CA <key_id>`, checks each against the
+/// table an install is checked against, and removes only those that pass. This is
+/// [`ResolverPlan`]'s own argument one capability along: the value an attacker would abuse is not
+/// validated, it is absent.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "method", rename_all = "kebab-case", deny_unknown_fields)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -513,10 +517,9 @@ pub enum PrivilegedOp {
 
     /// Set MixEngine's block in the hosts file to exactly `entries`.
     ///
-    /// **The whole state, not a delta** — the T41 design, D1. A block that has drifted cannot be
-    /// pulled back by "add this line", so a whole-state operation is idempotent, is its own repair,
-    /// and makes "already done" a byte comparison rather than a judgement. An empty list removes
-    /// the block.
+    /// **The whole state, not a delta.** A block that has drifted cannot be pulled back by "add
+    /// this line", so a whole-state operation is idempotent, is its own repair, and makes "already
+    /// done" a byte comparison rather than a judgement. An empty list removes the block.
     HostsApply {
         /// Whose block: the tag `mixengine_platform::hosts::tag_for` derives from a home's path, or
         /// [`None`] for the untagged block every home shared before each kept its own (ADR 0066).
@@ -532,7 +535,7 @@ pub enum PrivilegedOp {
         entries: Vec<HostEntry>,
     },
 
-    /// Let this machine's front end answer on the ports the OS reserves — roadmap task **T42**.
+    /// Let this machine's front end answer on the ports the OS reserves.
     ///
     /// **Whole state, like [`HostsApply`](Self::HostsApply)**: the plan says what the machine should
     /// end up allowing, so a second request supersedes the first rather than queueing behind it, and
@@ -544,15 +547,16 @@ pub enum PrivilegedOp {
 
     /// Take it away again.
     ///
-    /// **Nothing in T42 enqueues one** — the T42 design, D12. The producer asks in one direction
-    /// only, deliberately: on Linux the question needs the front end's binary, which is exactly what
-    /// a home with no front end cannot supply. Uninstall (T87) is the producer that can. It ships
-    /// built, validated and tested, which is the shape T20, T21 and T22 landed in.
+    /// **The port grant never enqueues one**
+    /// (`docs/specs/2026-08-23-t42-port-access-design.md`, D12). It asks in one direction only,
+    /// deliberately: on Linux the question needs the front end's binary, which is exactly what a
+    /// home with no front end cannot supply. Uninstall is the producer that can. The operation was
+    /// built, validated and tested before uninstall existed, so that it was ready when it came.
     PortAccessRevoke {
         /// What to take away.
         target: PortAccessTarget,
     },
-    /// Route this home's managed TLDs to MixEngine's own DNS server — roadmap task **T45**.
+    /// Route this home's managed TLDs to MixEngine's own DNS server.
     ///
     /// **Whole state**, like [`HostsApply`](Self::HostsApply) and
     /// [`PortAccessGrant`](Self::PortAccessGrant): the plan says what this machine should end up
@@ -565,21 +569,23 @@ pub enum PrivilegedOp {
 
     /// Take it away again.
     ///
-    /// **Nothing in T45 enqueues one** — the T45 design, D13, on T42's precedent. Uninstall (T87)
-    /// is the producer. It ships built, validated and tested because reversing a wiring written
-    /// five phases earlier is a worse task than writing both halves while the mechanism is in view.
+    /// **The resolver wiring never enqueues one**
+    /// (`docs/specs/2026-08-23-t45-resolver-wiring-design.md`, D13), on the port grant's
+    /// precedent. Uninstall is the producer. It was built, validated and tested with the wiring
+    /// because reversing a wiring written long before is a worse task than writing both halves
+    /// while the mechanism is in view.
     ResolverRevoke {
         /// Which mechanism's artifacts to remove.
         target: ResolverTarget,
     },
 
-    /// Make this machine trust MixEngine's own certificate authority — roadmap task **T49a**.
+    /// Make this machine trust MixEngine's own certificate authority.
     ///
-    /// **The helper refuses a certificate that is not shaped like one T48 generates, and the reason
-    /// is not that this stops a compromised daemon.** One holding the CA key can already sign
-    /// anything. It is that `mix cert ca-uninstall` (T54) and uninstall (T87) must be able to
-    /// enumerate everything an install could ever have put into a store, and an unconstrained one
-    /// could leave behind a root called anything at all, which nothing would ever find again.
+    /// **The helper refuses a certificate that is not shaped like the authority MixEngine
+    /// generates, and the reason is not that this stops a compromised daemon.** One holding the CA
+    /// key can already sign anything. It is that `mix cert ca-uninstall` and uninstall must be able
+    /// to enumerate everything an install could ever have put into a store, and an unconstrained
+    /// one could leave behind a root called anything at all, which nothing would ever find again.
     TrustCaInstall {
         /// Which store, and the certificate.
         plan: TrustPlan,
@@ -587,15 +593,17 @@ pub enum PrivilegedOp {
 
     /// Take it back out again.
     ///
-    /// **Nothing in T49a enqueues one** — the T49a design, D5, on T42's D12 and T45's D13. T54 and
-    /// T87 are the producers. It ships built, validated and tested because reversing a mechanism
-    /// phases after it was written is a worse task than writing both halves while it is in view.
+    /// **The trust install never enqueues one**
+    /// (`docs/specs/2026-08-24-t49a-system-trust-store-design.md`, D5), on the port grant's and
+    /// the resolver's precedent. `mix cert ca-uninstall` and uninstall are the producers. It was
+    /// built, validated and tested with the install because reversing a mechanism long after it
+    /// was written is a worse task than writing both halves while it is in view.
     TrustCaRemove {
         /// Which authority, by key-id. Never a fingerprint — see [`TrustTarget`].
         target: TrustTarget,
     },
 
-    /// Let the local network reach the ports a shared site answers on — roadmap task **T74**.
+    /// Let the local network reach the ports a shared site answers on.
     ///
     /// **Whole state**, like every operation above it, so unsharing the last shared site is this
     /// same operation carrying no ports rather than a revoke of its own.
@@ -604,9 +612,10 @@ pub enum PrivilegedOp {
         plan: FirewallPlan,
     },
 
-    /// Put this helper where only an administrator can rewrite it — roadmap task **T85**.
+    /// Put this helper where only an administrator can rewrite it.
     ///
-    /// **It carries nothing, and that is the design** (the T85 design, D2). The alternative — a
+    /// **It carries nothing, and that is the design**
+    /// (`docs/specs/2026-09-04-t85-installers-design.md`, D2). The alternative — a
     /// `source` field — would hand a compromised daemon a primitive it does not have today: *copy
     /// this file, as root, into a directory only root can write*. That is `Exec { cmd }` with two
     /// more steps, and the closed-enum rule in `docs/architecture/security-model.md` exists to
@@ -623,7 +632,7 @@ pub enum PrivilegedOp {
     /// `HelperInstall {}` and not `HelperInstall`, for [`Probe`](Self::Probe)'s reason.
     HelperInstall {},
 
-    /// Replace this helper with a newer one MixEngine downloaded — roadmap task **T88a**.
+    /// Replace this helper with a newer one MixEngine downloaded.
     ///
     /// **It carries nothing, on [`HelperInstall`](Self::HelperInstall)'s rule**, and the rule
     /// survives here for a reason worth writing out. The candidate is at
@@ -634,7 +643,7 @@ pub enum PrivilegedOp {
     /// refuses anything the signed trusted comment ([`HelperStamp`]) says is older than itself or
     /// built for another machine.
     ///
-    /// **That check is the whole of T88a**, and it is why this is not the
+    /// **That check is the whole of the operation**, and it is why this is not the
     /// `HelperInstall { source }` ADR 0015 refused: the primitive is not *copy this file as root*
     /// but *install a `mixengine-elevate` that MixEngine signed, and never an older one*.
     ///
@@ -646,21 +655,21 @@ pub enum PrivilegedOp {
     /// `HelperReplace {}` and not `HelperReplace`, for [`Probe`](Self::Probe)'s reason.
     HelperReplace {},
 
-    /// Take that helper back off this machine — roadmap task **T87**.
+    /// Take that helper back off this machine.
     ///
-    /// **It carries nothing, on [`HelperInstall`](Self::HelperInstall)'s rule** (the T85 design,
-    /// D2): where the file is is a constant compiled into `mixengine-elevate`, so this is not a
-    /// *delete this file as root* primitive a compromised daemon could aim anywhere.
+    /// **It carries nothing, on [`HelperInstall`](Self::HelperInstall)'s rule**: where the file is
+    /// is a constant compiled into `mixengine-elevate`, so this is not a *delete this file as root*
+    /// primitive a compromised daemon could aim anywhere.
     ///
     /// **On Windows this cannot complete at once, and the helper says so rather than pretending.** A
     /// file whose image is mapped cannot be unlinked, and the helper is the running program when it
     /// applies this; there the removal is handed to the operating system's own queue and happens at
     /// the next restart, and the outcome's detail says so in [`AT_NEXT_RESTART`]'s words. What the
     /// daemon reports it as is settled by the queue and the disk rather than by that sentence — see
-    /// the constant. The T87 design, D8.
+    /// the constant, and `docs/specs/2026-09-04-t87-uninstall-design.md`, D8.
     HelperRemove {},
 
-    /// Remove what the macOS `.pkg` placed outside the home — roadmap task **T182a**.
+    /// Remove what the macOS `.pkg` placed outside the home.
     ///
     /// **It carries nothing, on [`HelperRemove`](Self::HelperRemove)'s rule**: the four command-line
     /// binaries, the application bundle and the package receipt are constants compiled into
@@ -668,7 +677,7 @@ pub enum PrivilegedOp {
     /// bundle goes only when its `Info.plist` names MixLab. Other systems answer `Unsupported`.
     PackageRemove {},
 
-    /// Remove the root-owned record of what ran as root — roadmap task **T87**.
+    /// Remove the root-owned record of what ran as root.
     ///
     /// **The one thing outside `MIXENGINE_HOME` that no other operation can reach.** The log lives
     /// where the user cannot unlink it, which is the whole reason it is outside the home — so taking
@@ -676,8 +685,9 @@ pub enum PrivilegedOp {
     ///
     /// **Applied after every other operation in the batch, and recorded nowhere.** The line
     /// describing this removal would recreate the file the removal exists to remove, so this is the
-    /// one operation that log cannot record (the T87 design, D5). Its outcome still arrives in
-    /// [`PrivilegedResponse::results`] at its own index, which is the record the daemon reads.
+    /// one operation that log cannot record (`docs/specs/2026-09-04-t87-uninstall-design.md`, D5).
+    /// Its outcome still arrives in [`PrivilegedResponse::results`] at its own index, which is the
+    /// record the daemon reads.
     AuditLogRemove {},
 }
 
@@ -722,7 +732,8 @@ impl PrivilegedOp {
         Self::HostsApply { home, entries }
     }
 
-    /// The identity a queue deduplicates on — the T41 design, D2.
+    /// The identity a queue deduplicates on — `docs/specs/2026-08-23-t41-hosts-apply-design.md`,
+    /// D2.
     ///
     /// For an operation that carries no state this is its serialisation, so two identical requests
     /// are one row. For a **whole-state** operation it is the bare kind: two `hosts-apply` rows
@@ -899,8 +910,7 @@ pub enum OpOutcome {
         message: String,
     },
 
-    /// This machine has no mechanism for what was asked, and saying so is the honest answer —
-    /// roadmap task **T74**.
+    /// This machine has no mechanism for what was asked, and saying so is the honest answer.
     ///
     /// **Neither [`Applied`](Self::Applied) nor [`Failed`](Self::Failed), and the distinction is the
     /// point.** macOS's application firewall needs no rule for a listening socket, and a Linux with
@@ -921,9 +931,10 @@ pub enum OpOutcome {
 
 /// What became of one *attempt to elevate* — the outcome of raising the prompt, not of the batch.
 ///
-/// Defined here and used by T40a, where the three launchers live. A declined prompt cannot be an exit
-/// code of the helper's, because when the user clicks Cancel the helper never ran: `ERROR_CANCELLED`
-/// (1223), osascript's `-128` and `pkexec`'s 126 all map onto [`ElevationOutcome::Declined`].
+/// Defined here and used by the three launchers in `mixengine-platform`. A declined prompt cannot
+/// be an exit code of the helper's, because when the user clicks Cancel the helper never ran:
+/// `ERROR_CANCELLED` (1223), osascript's `-128` and `pkexec`'s 126 all map onto
+/// [`ElevationOutcome::Declined`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "outcome", rename_all = "kebab-case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -931,7 +942,8 @@ pub enum ElevationOutcome {
     /// The helper ran. Whether the batch succeeded is in the response file.
     Completed,
 
-    /// The user said no. A normal outcome, and the daemon goes into degraded mode (T40b).
+    /// The user said no. A normal outcome: the operations stay queued and the daemon goes into
+    /// degraded mode until they are granted or dropped.
     Declined,
 
     /// There is no way to raise a prompt on this machine — no polkit agent, no session.

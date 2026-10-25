@@ -1,6 +1,6 @@
 use super::*;
 
-/// **What a cell cannot do reaches MixEngine** — roadmap task **T206**, D2.
+/// **What a cell cannot do reaches MixEngine.**
 #[test]
 fn an_artifact_carries_what_it_lacks() {
     let artifact: Artifact = serde_json::from_value(serde_json::json!({
@@ -15,7 +15,7 @@ fn an_artifact_carries_what_it_lacks() {
     );
 }
 
-/// An entry written before T206 lacks nothing, and reads.
+/// An entry written before the index carried `lacks` lacks nothing, and reads.
 #[test]
 fn an_artifact_without_lacks_lacks_nothing() {
     let artifact: Artifact = serde_json::from_value(serde_json::json!({
@@ -35,8 +35,7 @@ fn a_cpu_requirement_is_kept_rather_than_dropped() {
     assert!(!requires.is_empty());
 }
 
-/// **`libraries` is read** — roadmap task **T27e**, its design's D13: the sonames a Linux JDK
-/// links and does not ship.
+/// **`libraries` is read**: the sonames a Linux JDK links and does not ship.
 #[test]
 fn requires_reads_the_libraries_a_build_links() {
     let requires: Requires =
@@ -65,7 +64,7 @@ fn timestamp_accepts_what_the_generator_writes() {
     assert_eq!(stamp.to_string(), "2026-08-14T06:55:12Z");
 }
 
-/// The door the publishing pipeline comes through — roadmap task **T81a**.
+/// The door the publishing pipeline comes through.
 #[test]
 fn timestamp_parses_from_a_string() {
     let stamp: Timestamp = "2026-09-02T11:00:00Z".parse().expect("a UTC second parses");
@@ -219,7 +218,7 @@ fn php_as_published() -> Document {
     .expect("the published shape parses")
 }
 
-/// The finding this task exists for — roadmap task **T92**.
+/// The case the emulation rule exists for: upstream builds no PHP for ARM64 Windows.
 #[test]
 fn an_arm64_windows_machine_is_offered_the_x86_64_build_and_told_so() {
     let index = Index::from(php_as_published());
@@ -318,7 +317,7 @@ fn a_version_reachable_only_by_emulation_is_listed_as_installable() {
     );
 }
 
-/// The whole of the emulation rule, asserted per target — roadmap task **T92**.
+/// The whole of the emulation rule, asserted per target.
 #[test]
 fn only_an_arm64_windows_machine_can_run_something_that_is_not_its_own_build() {
     for target in TARGETS {
@@ -376,7 +375,7 @@ fn package(kind: &str, version: &str) -> Package {
     .expect("a package")
 }
 
-/// A view holds the kinds it was asked for — roadmap task **T196**, its design's D2.
+/// A view holds the kinds it was asked for.
 #[test]
 fn a_view_answers_for_the_kinds_it_was_built_for() {
     let stamp: Timestamp = "2026-09-30T00:00:00Z".parse().expect("valid");

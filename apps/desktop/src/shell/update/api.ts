@@ -1,4 +1,5 @@
-/** The only `invoke` calls for MixLab's updater: T187, split into download and install by T188. The Rust side is `src-tauri/src/updater/commands.rs`. */
+/** The only `invoke` calls for MixLab's updater, with a download and an install as two calls. The
+ *  Rust side is `src-tauri/src/updater/commands.rs`. */
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type { PlacementKind } from "./view";
 

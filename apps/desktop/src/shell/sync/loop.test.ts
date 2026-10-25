@@ -118,7 +118,7 @@ describe("one collection", () => {
 
   it("writes and commits a lost conflict's winner before it reports a refused entry", async () => {
     // What landed and what was replaced are recorded first; the refusal is reported after, the
-    // way a failed push always was (T178c, C2).
+    // way a failed push always was.
     const refusal = { code: "error.syncRecordTooLarge" };
     const { fake, calls } = backend([], { accepted: 1, replaced: one, token: "w1", error: refusal, needsPull: false });
     await expect(pushCollection(fake, collection(calls))).rejects.toEqual(refusal);

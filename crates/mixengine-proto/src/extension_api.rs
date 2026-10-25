@@ -1,6 +1,6 @@
-//! `extension.inspect` — roadmap task **T80**.
+//! `extension.inspect`, and what the rest of `extension.*` takes and answers.
 //!
-//! One method, and it is read-only: T80 installs nothing. What it answers is what an install on
+//! `extension.inspect` is read-only: it installs nothing. What it answers is what an install on
 //! this machine *would* produce, which is `blueprint.apply --dry-run`'s position — a plan is worth
 //! having because it was computed rather than because it was described.
 //!
@@ -87,7 +87,7 @@ pub struct ExtensionInspection {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub enum ArtifactAvailability {
-    /// There is one. **T81 verifies it**; T80 only says it exists.
+    /// There is one. **The install verifies it**; this only says it exists.
     Published {
         /// Where it comes from.
         url: String,
@@ -110,9 +110,9 @@ pub enum ArtifactAvailability {
 
 /// One port an extension asked for.
 ///
-/// **A wish and not a reservation.** Allocation happens when a row is written, which is T81's, and
-/// nothing here holds a number. A line that read like a reservation is how somebody concludes a
-/// port is theirs.
+/// **A wish and not a reservation.** Allocation happens when a row is written, which is the
+/// install's, and nothing here holds a number. A line that read like a reservation is how somebody
+/// concludes a port is theirs.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct PortWish {
@@ -123,7 +123,7 @@ pub struct PortWish {
     pub wanted: u16,
 }
 
-/// The site a `web-app` would be given — roadmap task **T81b**.
+/// The site a `web-app` would be given.
 ///
 /// Shown in the plan so the name that will be taken and the PHP it will run on are read before
 /// anything is fetched; **not part of the consent**, because it is derived from a manifest the
@@ -135,15 +135,14 @@ pub struct PlannedSite {
     pub domain: String,
 
     /// The pool it would run on — **its own**, on the newest installed PHP inside
-    /// `[web-app.runtime].requires` (roadmap task **T82a**).
+    /// `[web-app.runtime].requires`.
     ///
-    /// T81b named the shared `php-fpm@<version>` here. A `web-app` now gets a second pool on that
-    /// same PHP, so an administrative interface onto this machine's databases is never in the
-    /// process serving somebody's project — and so the credential below has somewhere to be that is
-    /// nobody else's.
+    /// Not the shared `php-fpm@<version>`: a `web-app` gets a second pool on that same PHP, so an
+    /// administrative interface onto this machine's databases is never in the process serving
+    /// somebody's project — and so the credential below has somewhere to be that is nobody else's.
     pub pool: ServiceId,
 
-    /// The account this application would be **signed in as** — roadmap task **T82a**.
+    /// The account this application would be **signed in as**.
     ///
     /// Shown before anything is agreed to, beside the database: its own php-fpm pool would be given
     /// that account's password, read from the OS keyring at the moment the pool starts and written
@@ -153,8 +152,7 @@ pub struct PlannedSite {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signs_in: Option<String>,
 
-    /// The database it would administer, for a `web-app` declaring `[web-app.database]` — roadmap
-    /// task **T82**.
+    /// The database it would administer, for a `web-app` declaring `[web-app.database]`.
     ///
     /// **Shown before anything is agreed to**, because it is the second thing an install freezes:
     /// which server this administrative interface opens onto is not a detail somebody should find
@@ -199,7 +197,7 @@ pub enum RecipeAddition {
 
     /// Directives added to the front end's configuration.
     FrontEnd {
-        /// Which of the two front ends the fragment is written for — roadmap task **T81c**.
+        /// Which of the two front ends the fragment is written for.
         ///
         /// Shown rather than folded away, because a home running the *other* front end renders
         /// nothing for this entry: what an inspection would otherwise say is that something is
@@ -211,10 +209,10 @@ pub enum RecipeAddition {
     },
 }
 
-/// Where an install gets its manifest — roadmap task **T81**.
+/// Where an install gets its manifest.
 ///
 /// **`ExtensionOrigin` and not `ExtensionSource`**: that name belongs to a *PHP* extension's
-/// `runtime_api`, which is the same collision `php_extensions.rs` was renamed for in T80.
+/// `runtime_api`, which is the same collision `php_extensions.rs` was renamed for.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -261,8 +259,8 @@ pub struct ExtensionPlan {
     /// What it is for.
     pub description: String,
 
-    /// Where it is from, when the manifest says — on the plan since roadmap task **T84**, because
-    /// *"where is this from"* is part of deciding.
+    /// Where it is from, when the manifest says — on the plan because *"where is this from"* is
+    /// part of deciding.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub homepage: Option<String>,
 
@@ -285,7 +283,7 @@ pub struct ExtensionPlan {
     /// Where what it writes would go — outside `install_dir`, so an uninstall can keep it.
     pub data_dir: String,
 
-    /// The site it would be served on, for a `web-app` — roadmap task **T81b**.
+    /// The site it would be served on, for a `web-app`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<PlannedSite>,
 }
@@ -363,11 +361,11 @@ pub struct ExtensionRemoval {
     /// The data directory that was **kept**, so a client can say where it still is.
     pub data_dir_kept: Option<String>,
 
-    /// The domain that was released with it, for a `web-app` — roadmap task **T81b**.
+    /// The domain that was released with it, for a `web-app`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<String>,
 
-    /// The php-fpm pool that went with it, for a `web-app` — roadmap task **T82a**.
+    /// The php-fpm pool that went with it, for a `web-app`.
     ///
     /// Said rather than left to be discovered: a `web-app` runs on a pool of its own, and an
     /// uninstall that removed a service without naming it would leave somebody comparing two
@@ -394,8 +392,8 @@ pub struct ExtensionSummary {
 
     /// Whether a signature covered it when it arrived.
     ///
-    /// **Decided once, when it was installed**, exactly as a blueprint's trust is (T79b): this is a
-    /// record of what was checked, never a re-check.
+    /// **Decided once, when it was installed**, exactly as a blueprint's trust is: this is a record
+    /// of what was checked, never a re-check.
     pub signed: bool,
 
     /// The service it runs as, where it runs one.
@@ -404,19 +402,19 @@ pub struct ExtensionSummary {
     /// The ports it holds, by the name each was asked for under.
     pub ports: Vec<PortWish>,
 
-    /// The domain it is served on, for a `web-app` — roadmap task **T81b**.
+    /// The domain it is served on, for a `web-app`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<String>,
 
-    /// What it is for, from the manifest it was installed from — roadmap task **T200**, D5.
+    /// What it is for, from the manifest it was installed from.
     ///
-    /// The listing of what *could* be installed always said this, and the listing of what *is*
-    /// did not, so an add-on lost its one sentence of explanation the moment somebody installed it.
-    /// Optional on the wire (ADR 0019): a daemon older than T200 leaves it out.
+    /// The listing of what *could* be installed always said this, and the listing of what *is* did
+    /// not, so an add-on lost its one sentence of explanation the moment somebody installed it.
+    /// Optional on the wire (ADR 0019): a daemon older than this member leaves it out.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    /// The page a person opens, for a `service` that declares `[ui]` — roadmap task **T200a**, D2.
+    /// The page a person opens, for a `service` that declares `[ui]`.
     ///
     /// Rendered by the daemon from the port it allocated, so a client only opens it and never
     /// guesses which port is a page. Optional on the wire (ADR 0019).
@@ -482,7 +480,7 @@ pub struct ExtensionCatalogue {
     /// The entries this build can read.
     pub extensions: Vec<ExtensionOffer>,
 
-    /// How many entries it could not — roadmap task **T81**, the design's D4.
+    /// How many entries it could not.
     ///
     /// **Said rather than swallowed.** An extension missing from a listing is one somebody goes
     /// looking for in the wrong place, and "your MixEngine is older than this entry" is an answer

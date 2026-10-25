@@ -1,9 +1,11 @@
 //! Raising a prompt: what a mock can prove, and what a real machine will answer without one.
 //!
-//! Nothing here raises a prompt. The mock half is the surface T40b's queue will be written against;
-//! the real-host half asserts the refusals, which happen before any mechanism is reached and are
-//! therefore safe to run on a developer's machine and in CI's ordinary `test` job. The half that
-//! needs an administrative token is `#[ignore]`d and run by CI's `system` job.
+//! Nothing here raises a prompt. The mock half is the surface the daemon's elevation queue is
+//! written against; the real-host half asserts the refusals, which happen before any mechanism is
+//! reached and are therefore safe to run on a developer's machine and in CI's ordinary `test` job.
+//! The half that needs an administrative token is `#[ignore]`d and run by CI's `system` job.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-22-t40a-elevation-design.md`.
 
 use std::path::{Path, PathBuf};
 
@@ -59,11 +61,12 @@ fn a_mock_records_every_prompt_it_was_asked_to_raise() {
             helper,
             request,
         }],
-        "the pair is the assertion T40b's queue needs: one prompt, on the request it just wrote"
+        "the pair is the assertion the elevation queue needs: one prompt, on the request it just \
+         wrote"
     );
 }
 
-/// T166: the mock hands back what its helper "said", and only with a prompt that was accepted.
+/// The mock hands back what its helper "said", and only with a prompt that was accepted.
 #[test]
 fn a_mock_helper_can_say_why_it_left_nothing() {
     let (helper, request) = a_helper_and_a_request();
@@ -75,8 +78,8 @@ fn a_mock_helper_can_say_why_it_left_nothing() {
     assert_eq!(raised.said.as_deref(), Some("mixengine-elevate: refused"));
 }
 
-/// The distinction T40b's degraded mode turns on: a machine that *could* prompt and was refused will
-/// accept the same operation later, and one that cannot prompt at all never will.
+/// The distinction the elevation queue's degraded mode turns on: a machine that *could* prompt and
+/// was refused will accept the same operation later, and one that cannot prompt at all never will.
 #[test]
 fn a_declined_prompt_is_still_a_machine_that_can_prompt() {
     let (helper, request) = a_helper_and_a_request();
@@ -160,7 +163,7 @@ fn windows_refuses_a_request_path_carrying_a_quotation_mark() {
 // ---------------------------------------------------------------------------------------------
 // The half that needs a real machine. `#[ignore]`d, so a developer's `cargo test` says how many it
 // skipped rather than reporting a pass it did not earn; CI's `system` job runs these elevated on all
-// three runners. See the T40a design, "Testing".
+// three runners. See *Testing* in that design.
 // ---------------------------------------------------------------------------------------------
 
 /// The `mixengine-elevate` built alongside this test.
@@ -205,10 +208,10 @@ struct Pending {
 
 /// Write one, and hand it to whoever invoked `sudo`.
 ///
-/// **A root-owned request is what the helper refuses** — T40/D4 makes the owner of the request file
-/// the identity of the caller — and on the two Unix legs this suite is itself running as root. A
-/// no-op on Windows, where an administrator's own files belong to `BUILTIN\Administrators` and that
-/// is the ordinary case rather than the refused one.
+/// **A root-owned request is what the helper refuses** — the owner of the request file is the
+/// identity of the caller — and on the two Unix legs this suite is itself running as root. A no-op
+/// on Windows, where an administrator's own files belong to `BUILTIN\Administrators` and that is
+/// the ordinary case rather than the refused one.
 ///
 /// The document is built from the type rather than from a JSON literal: `PrivilegedRequest` is
 /// `deny_unknown_fields`, so a field renamed in `mixengine-proto` should break this at compile time
@@ -265,9 +268,9 @@ fn report(pending: &Pending) -> Option<mixengine_proto::privileged::PrivilegedRe
     Some(serde_json::from_str(&text).expect("the helper writes what proto describes"))
 }
 
-/// The whole round trip, prompt-free: this runner already holds a full administrator token (T2b), so
-/// `runas` raises nothing and what is under test is the launcher itself — the argument it builds, the
-/// working directory it sets, the handle it waits on.
+/// The whole round trip, prompt-free: this runner already holds a full administrator token, so
+/// `runas` raises nothing and what is under test is the launcher itself — the argument it builds,
+/// the working directory it sets, the handle it waits on.
 #[cfg(windows)]
 #[test]
 #[ignore = "needs an administrative token; run in CI's system job, with MIXENGINE_SYSTEM_TESTS=1"]
@@ -298,9 +301,10 @@ fn windows_runs_the_helper_and_a_report_appears_beside_the_request() {
 }
 
 /// **A measurement, and written as one.** If this leg turns out to authenticate rather than run
-/// straight through, it hangs, the step's own `timeout-minutes` ends it, and the finding is recorded
-/// in the phase file — this row is then reduced to `probe()` rather than guessed at in advance. That
-/// is T29's method applied to a yes/no question: measure it, do not reason about it.
+/// straight through, it hangs, the step's own `timeout-minutes` ends it, and the finding is
+/// recorded in the phase file — this row is then reduced to `probe()` rather than guessed at in
+/// advance. That is the shim benchmark's method applied to a yes/no question: measure it, do not
+/// reason about it.
 #[cfg(target_os = "macos")]
 #[test]
 #[ignore = "needs an administrative token; run in CI's system job, with MIXENGINE_SYSTEM_TESTS=1"]

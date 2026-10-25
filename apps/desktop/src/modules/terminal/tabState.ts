@@ -21,15 +21,15 @@ export type TerminalTabState =
   | {
       kind: "local";
       /** `""` is the machine's default shell: a tab handed over by another module cannot know
-       *  this machine's shell names — T205. */
+       *  this machine's shell names. */
       shellName: string;
       cwd: string | null;
       targetId?: string;
-      /** Variables and a `PATH` prefix for the shell — T205, D9. Written back, like `cwd`. */
+      /** Variables and a `PATH` prefix for the shell. Written back, like `cwd`. */
       env?: Record<string, string>;
       pathPrepend?: string[];
       /** Lines typed once when the tab opens, then dropped: `tabStateFor` never writes them back,
-       *  so the next launch reopens a plain shell — T205, D8. */
+       *  so the next launch reopens a plain shell. */
       run?: string[];
       /** Whether the last of `run` gets Enter. Absent is `true`. */
       press?: boolean;

@@ -1,5 +1,4 @@
-//! `mix database client` and `mix database open` against a real daemon — roadmap tasks **T83**
-//! and **T165**.
+//! `mix database client` and `mix database open` against a real daemon.
 //!
 //! A daemon out of `target/debug` has no MixLab beside it, so what answers here is the install with
 //! no window. What the methods do when the window *is* there is proved on a mock host in
@@ -46,8 +45,7 @@ fn with_no_window_both_commands_say_no_client() {
     assert!(!said.contains("mix extension install"), "{said}");
 }
 
-/// A plan says where an extension is from, before anybody agrees to anything — roadmap task
-/// **T84**.
+/// A plan says where an extension is from, before anybody agrees to anything.
 #[test]
 fn a_plan_names_where_an_extension_is_from() {
     let home = Home::new();
@@ -91,9 +89,9 @@ fn a_service_no_client_opens_is_said_in_those_words() {
     );
 }
 
-/// **`--password` with no value and closed standard input refuses before anything is sent** —
-/// roadmap task **T77b**. `Home::mix` gives its child a closed stdin, which is exactly the cron
-/// job this refusal exists for: nobody was there to answer, and the daemon is never asked.
+/// **`--password` with no value and closed standard input refuses before anything is sent.**
+/// `Home::mix` gives its child a closed stdin, which is exactly the cron job this refusal exists
+/// for: nobody was there to answer, and the daemon is never asked.
 #[test]
 fn password_flag_with_no_value_and_closed_stdin_refuses() {
     let home = Home::new();

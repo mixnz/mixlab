@@ -1,6 +1,6 @@
-//! The Windows update, in the order spec D4 gives — split by T188 into a download
-//! ([`stage_payload`]) and an install ([`install_staged`]), each its own click — and what the next
-//! start does when a window died half way through it (spec D8).
+//! The Windows update, in the order spec D4 gives — split into a download ([`stage_payload`]) and
+//! an install ([`install_staged`]), each its own click — and what the next start does when a window
+//! died half way through it (spec D8).
 
 use std::path::Path;
 
@@ -46,8 +46,8 @@ fn failed(message: impl std::fmt::Display) -> AppError {
     err!("error.updateFailed", message = message)
 }
 
-/// Spec D4 steps 2 to 4, then the `ready` marker (T188 D2). Touches nothing installed and takes no
-/// lock: the files it writes are under `updates/<version>/`, which nothing but this updater reads.
+/// Spec D4 steps 2 to 4, then the `ready` marker. Touches nothing installed and takes no lock: the
+/// files it writes are under `updates/<version>/`, which nothing but this updater reads.
 pub async fn stage_payload<R: Runtime>(
     app: &AppHandle<R>,
     feed: &Feed,

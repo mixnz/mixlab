@@ -24,10 +24,10 @@ root: string,
  */
 steps: Array<PlanStep>, 
 /**
- * Where the blueprint being applied came from — roadmap task **T78a**, its design's D5.
+ * Where the blueprint being applied came from.
  *
- * Defaulted, so a plan encoded before this task still decodes as what it was: something this
- * machine captured.
+ * Defaulted, so a plan encoded before the field existed still decodes as what it was:
+ * something this machine captured.
  */
 source: BlueprintSource, 
 /**
@@ -43,13 +43,13 @@ source: BlueprintSource,
  */
 trusted: boolean, 
 /**
- * Why [`Self::trusted`] says what it says — roadmap task **T79b**.
+ * Why [`Self::trusted`] says what it says.
  *
  * Carried here as well as on [`BlueprintSummary`] because the `[scaffold]` question is where
  * it matters most: the moment somebody is asked to run a stranger's command is the moment
  * worth knowing that a signature came with this file and was not the gallery's.
  *
  * It changes what is *said* and nothing about what is allowed: one flag still answers for both
- * kinds of untrusted, and a signature that did not verify is still not a refusal (T78a's D3).
+ * kinds of untrusted, and a signature that did not verify is still not a refusal.
  */
 signature?: SignatureCheck | null, };

@@ -18,7 +18,7 @@
 //! re-fetch.
 //!
 //! **`metrics.snapshot` and `metrics.history` are here too** — the two methods a client asks once
-//! rather than streams (roadmap tasks T71 and T190c).
+//! rather than streams.
 
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -131,7 +131,7 @@ impl Api {
         &self,
         query: &MetricsHistoryQuery,
     ) -> Result<MetricsHistory, Error> {
-        // The machine's logical processors ride along (T190c), so a client draws the rows as a
+        // The machine's logical processors ride along, so a client draws the rows as a
         // share of the machine without asking a second question.
         let cores = self.elevation.host().resource_control().support().cores;
 

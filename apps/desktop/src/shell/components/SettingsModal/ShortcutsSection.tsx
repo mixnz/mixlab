@@ -4,8 +4,8 @@ import { useTranslation } from "../../../i18n";
 import styles from "./SettingsModal.module.css";
 
 interface Props {
-  /** The catalogue the dispatcher was handed, passed rather than imported — T108 made it a function
-   *  of the visible modules, and a constant beside a catalogue that changes is exactly the
+  /** The catalogue the dispatcher was handed, passed rather than imported — it is a function of
+   *  the visible modules, and a constant beside a catalogue that changes is exactly the
    *  disagreement this table exists not to have. Not read back from `currentCatalogue()` either:
    *  the dispatcher writes that in an effect, one render later than this wants it. */
   shortcuts: ShortcutGroup[];

@@ -15,7 +15,7 @@ pub(crate) enum Pathed {
     Installed,
     /// `mix path uninstall`.
     Uninstalled,
-    /// `mix path rescan` — roadmap task **T131**.
+    /// `mix path rescan`.
     Rescanned,
 }
 
@@ -74,9 +74,9 @@ pub(crate) fn path_report(pathed: Pathed, report: &PathReport) -> String {
         }
     ));
 
-    // **Where the ones that are not compiled in came from** — roadmap tasks T130 and T131. The
-    // line above is a list of names; this is the half that tells somebody why `mysqldump` and
-    // `yarn` are on their PATH, and which install would change if they uninstalled something.
+    // **Where the ones that are not compiled in came from.** The line above is a list of names;
+    // this is the half that tells somebody why `mysqldump` and `yarn` are on their PATH, and which
+    // install would change if they uninstalled something.
     for origin in &report.origins {
         let said = match &origin.source {
             CommandSource::BuiltIn {} => continue,

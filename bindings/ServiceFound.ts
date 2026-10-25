@@ -3,8 +3,8 @@ import type { PackageVersion } from "./PackageVersion";
 import type { ServiceId } from "./ServiceId";
 
 /**
- * One service data directory an earlier home left under `data/`, with no service row — roadmap
- * task **T182g**. The answer to `service.found` is a list of these.
+ * One service data directory an earlier home left under `data/`, with no service row. The answer
+ * to `service.found` is a list of these.
  */
 export type ServiceFound = { 
 /**

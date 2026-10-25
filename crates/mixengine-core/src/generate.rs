@@ -1,6 +1,6 @@
 //! Turning declared state into configuration on disk, and into something the supervisor can run.
 //!
-//! Roadmap task **T30**. Two halves of one job, which is why they are one module:
+//! Two halves of one job, which is why they are one module:
 //!
 //! - **Config generation.** Every managed service's configuration is rendered from a template plus
 //!   the user's overrides into `etc/<service-id>/`, atomically, skipping what has not changed and
@@ -9,8 +9,8 @@
 //!   `package_id`, `port`, `data_dir`, `config_overrides_json` and `limits_json` — and what turns
 //!   one into a runnable specification is the same knowledge that renders its config: a [`recipe`].
 //!
-//! So this module is also the answer to the port `mixengine-daemon` has been asking through since
-//! T19 (`SpecSource`), and the thing that answers it is [`Generator`]. Before this, the daemon's
+//! So this module is also the answer to the port `mixengine-daemon`'s runner asks through
+//! (`SpecSource`), and the thing that answers it is [`Generator`]. Before this, the daemon's
 //! shipped source was `Undeclared` — an empty set, honest for a build that could not render a spec
 //! at all.
 //!
@@ -88,7 +88,7 @@ pub struct Generator {
     /// system — `PortAccess::bindings` is pure for exactly this reason.
     bindings: Vec<PortBinding>,
 
-    /// Whether a site with nothing behind it answers with MixEngine's page — roadmap task **T124**.
+    /// Whether a site with nothing behind it answers with MixEngine's page.
     ///
     /// `config.sites.welcome_page`, carried for [`bindings`](Self::bindings)' reason: `config.toml`
     /// is read once at boot, and a generator that re-read it per render would be a second place this
@@ -122,7 +122,7 @@ pub struct Generated {
     /// it is *performed* by the daemon, once, and only when the markers say it has not been.
     pub first_run: Option<FirstRun>,
 
-    /// How this service's databases are administered, if it has any — roadmap task **T77a**.
+    /// How this service's databases are administered, if it has any.
     ///
     /// Computed here for [`Generated::first_run`]'s reason exactly: this is the only place both
     /// halves are in hand. It is *used* by the daemon, which holds the credentials it needs.
@@ -176,7 +176,7 @@ struct Row {
     /// `NULL` is "use the recipe's default", `0` is "never", and `n` is minutes.
     idle_minutes: Option<i64>,
     /// The port the activator listens on, for a service that listens on TCP and can be started by a
-    /// connection. `NULL` for every other row, which is most of them — T70.
+    /// connection. `NULL` for every other row, which is most of them.
     activation_port: Option<i64>,
     package: Option<String>,
     package_version: Option<String>,
@@ -186,7 +186,7 @@ struct Row {
     runtime_version: Option<String>,
     runtime_path: Option<String>,
     runtime_provides: Option<String>,
-    /// The third parent — roadmap task **T81**. Only the id: everything else an extension's row
+    /// The third parent: an installed extension. Only the id: everything else an extension's row
     /// says is in `extensions`, read once per walk rather than joined per service.
     extension: Option<String>,
 }
@@ -225,7 +225,7 @@ struct Parent {
 }
 
 impl Parent {
-    /// The parent an installed extension is — roadmap task **T81**.
+    /// The parent an installed extension is.
     ///
     /// **No `provides` map**, and that is not an omission: `provides` exists because a package's
     /// archive keeps its publisher's layout and a recipe has to be told where the binary landed. An
@@ -348,11 +348,11 @@ impl Generator {
 
     /// Generate one service's configuration and specification.
     ///
-    /// **The whole home is rendered and one answer is picked out**, which is not a shortcut: a front
-    /// end's configuration is a function of every site in the database and of where every pool
-    /// listens, so "render this one service" is not a smaller job than rendering all of them. It was
-    /// one before T43, and pretending it still is would mean a second, subtly different assembly of
-    /// the same map.
+    /// **The whole home is rendered and one answer is picked out**, which is not a shortcut: a
+    /// front end's configuration is a function of every site in the database and of where every
+    /// pool listens, so "render this one service" is not a smaller job than rendering all of them.
+    /// It was one before sites were rendered into the front end's own files, and pretending it
+    /// still is would mean a second, subtly different assembly of the same map.
     ///
     /// # Errors
     ///
@@ -390,12 +390,11 @@ impl Generator {
             })
         })?;
 
-        // **An extension brings its own recipe** — roadmap task **T81**, the design's D7. A recipe
-        // is what *this build* knows and an extension is what a home installed, so it cannot come
-        // out of the catalogue; what it comes out of is the manifest in its row, through
-        // `ExtensionRecipe`. Everything below this point — ports, limits, the idle policy, the
-        // activation port — is then the same code every other service goes through, which is the
-        // whole reason an extension is a `services` row at all.
+        // **An extension brings its own recipe.** A recipe is what *this build* knows and an
+        // extension is what a home installed, so it cannot come out of the catalogue; what it comes
+        // out of is the manifest in its row, through `ExtensionRecipe`. Everything below this point
+        // — ports, limits, the idle policy, the activation port — is then the same code every other
+        // service goes through, which is the whole reason an extension is a `services` row at all.
         let (parent, recipe): (Parent, Arc<dyn Recipe>) = match row.extension.take() {
             Some(id) => {
                 let installed = installed.get(&id).ok_or_else(|| {
@@ -442,9 +441,9 @@ impl Generator {
             })?),
         };
 
-        // The activator's own port — roadmap task T70. Read exactly as `port` above is, and
-        // separate from it for the reason the column is separate: it is allocated, not derived, so
-        // there is nothing here to compute it from.
+        // The activator's own port. Read exactly as `port` above is, and separate from it for the
+        // reason the column is separate: it is allocated, not derived, so there is nothing here to
+        // compute it from.
         let activation_port = match row.activation_port {
             None => None,
             Some(port) => Some(u16::try_from(port).map_err(|_| {
@@ -466,13 +465,13 @@ impl Generator {
             })
         })?;
 
-        // **The row's half of an idle policy, and its three states — roadmap task T69.** A policy
-        // cannot be assembled here: the other half is the recipe's probe, and a probe may name an
-        // endpoint, which is computed a few lines below this. What is decided here is only whether
-        // there is a policy at all and how long it waits.
+        // **The row's half of an idle policy, and its three states.** A policy cannot be assembled
+        // here: the other half is the recipe's probe, and a probe may name an endpoint, which is
+        // computed a few lines below this. What is decided here is only whether there is a policy
+        // at all and how long it waits.
         let idle_after = match row.idle_minutes {
             // Nobody has said. The recipe's default, which is nothing for every recipe (ADR 0041),
-            // unless the home is saving resources — then the recipe's saving number (T167b).
+            // unless the home is saving resources — then the recipe's saving number.
             None => recipe
                 .idle_default()
                 .or_else(|| saving.then(|| recipe.idle_when_saving()).flatten()),
@@ -528,7 +527,7 @@ impl Generator {
             endpoints: recipe::Endpoints::default(),
             bindings: self.bindings.clone(),
 
-            // **This home's authority, for a front end to hand to a phone** — roadmap task T75.
+            // **This home's authority, for a front end to hand to a phone.**
             // Read here rather than in a recipe, on the rule `bindings` follows: a recipe is a
             // function of its context, and a recipe that went looking at a disk would be a second
             // place this path is spelled. A home with no authority renders no copy of one.
@@ -537,16 +536,16 @@ impl Generator {
             ))
             .ok(),
 
-            // **Whether a site with nothing behind it answers with a page of ours** — roadmap task
-            // T124, `config.sites.welcome_page`. A value on the generator for `bindings`' reason: a
+            // **Whether a site with nothing behind it answers with a page of ours**,
+            // `config.sites.welcome_page`. A value on the generator for `bindings`' reason: a
             // recipe is a function of its context, and `config.toml` is read once at boot and not
             // once per render.
             welcome: self.welcome,
 
-            // **What this home's extensions add to this front end** — roadmap task T81c. On the
-            // front end's context and on nothing else, and already filtered to the fragments
-            // written for *this* front end: a Caddyfile fragment is not something the nginx recipe
-            // should have to know it must skip.
+            // **What this home's extensions add to this front end.** On the front end's context and
+            // on nothing else, and already filtered to the fragments written for *this* front end:
+            // a Caddyfile fragment is not something the nginx recipe should have to know it must
+            // skip.
             fragments: match recipe.role() {
                 Role::FrontEnd(server) => fragments
                     .iter()
@@ -557,21 +556,22 @@ impl Generator {
             },
             secrets: BTreeMap::new(),
 
-            // **What this service's processes are handed at spawn** — roadmap task **T82a**, that
-            // design's D4. An address and never a value: `mixengine-core` may not reach a credential
-            // store, so what a recipe puts on its spec is an `EnvValue::Keyring` and the supervisor
-            // does the reading. [`None`] for every service but the pool of a `web-app` extension
-            // that declared `signs_in`.
+            // **What this service's processes are handed at spawn.** An address and never a value:
+            // `mixengine-core` may not reach a credential store, so what a recipe puts on its spec
+            // is an `EnvValue::Keyring` and the supervisor does the reading. [`None`] for every
+            // service but the pool of a `web-app` extension that declared `signs_in`.
             credential: credentials.get(&service).cloned(),
-            // **The certificate this service presents, when a usable pair is on disk** — roadmap
-            // task T99. Read here rather than issued, on `authority`'s rule and on `drift`'s: a
-            // drift check renders what the last install rendered, so it must see the pair that
-            // install saw. Issuing is `install`'s, just before the render.
+            // **The certificate this service presents, when a usable pair is on disk.** Read here
+            // rather than issued, on `authority`'s rule and on `drift`'s: a drift check renders
+            // what the last install rendered, so it must see the pair that install saw. Issuing is
+            // `install`'s, just before the render.
             certificate: Self::certificate_of(self.paths.certs(), &service),
 
-            // **Which home a credential of this service's belongs to** — roadmap task **T126**. On
-            // the context because `Context::secret_address` is where an address is composed, and
-            // the whole of T126 is that the address has to say this.
+            // **Which home a credential of this service's belongs to.** On the context because
+            // `Context::secret_address` is where an address is composed, and the address has to say
+            // this: one user's homes share one credential store, and an address without the home
+            // lets a second home replace the first one's password
+            // (`docs/decisions/0032-a-keyring-address-names-the-home-it-belongs-to.md`).
             home: home.clone(),
             service,
         };
@@ -588,8 +588,8 @@ impl Generator {
         })
     }
 
-    /// What `certs/services/` holds for this service, as the template and the spec name it —
-    /// roadmap task **T99**. [`None`] unless a usable pair is there now.
+    /// What `certs/services/` holds for this service, as the template and the spec name it.
+    /// [`None`] unless a usable pair is there now.
     fn certificate_of(
         certs: &std::path::Path,
         service: &ServiceId,
@@ -604,14 +604,13 @@ impl Generator {
         }
     }
 
-    /// Give this service a certificate covering `names`, and say what is on disk afterwards —
-    /// roadmap task **T99**.
+    /// Give this service a certificate covering `names`, and say what is on disk afterwards.
     ///
-    /// **Every failure is a warning and a [`None`]**, on the design's D4: a home with no authority,
-    /// a machine that will not make a key, a directory that will not write — each leaves the server
-    /// to generate its own certificate, slowly, and start. What is returned is read back off the
-    /// disk rather than described from the write, so the fingerprint the header carries is the one
-    /// a client will see.
+    /// **Every failure is a warning and a [`None`]**: a home with no authority, a machine that will
+    /// not make a key, a directory that will not write — each leaves the server to generate its own
+    /// certificate, slowly, and start. What is returned is read back off the disk rather than
+    /// described from the write, so the fingerprint the header carries is the one a client will
+    /// see.
     fn issue(
         certs: &std::path::Path,
         service: &ServiceId,
@@ -659,21 +658,21 @@ impl Generator {
     /// reads to work out *why* it will not start, and a spec that does not build is a bug in a
     /// recipe rather than a state anybody has to recover from.
     async fn install(&self, mut prepared: Prepared, served: &[Served]) -> Result<Generated> {
-        // **A certificate for a recipe that asks for one, before anything is rendered** — roadmap
-        // task **T99**, the design's D4. Here rather than in `prepare` because this is the step
-        // that writes: the pair is a file the configuration names and the server will not make,
-        // exactly what the `logs/` and data directories below are. And before `documents`, because
-        // the template reads the fingerprint into its header. A failure here is a warning and a
-        // context carrying `None` — never a start refused: the template then says nothing about
-        // TLS and the server does what it did before this task.
+        // **A certificate for a recipe that asks for one, before anything is rendered.** Here
+        // rather than in `prepare` because this is the step that writes: the pair is a file the
+        // configuration names and the server will not make, exactly what the `logs/` and data
+        // directories below are. And before `documents`, because the template reads the fingerprint
+        // into its header. A failure here is a warning and a context carrying `None` — never a
+        // start refused: the template then says nothing about TLS and the server makes its own
+        // certificate, as it would with no authority here.
         if let Some(names) = prepared.recipe.certificate(&prepared.context) {
             prepared.context.certificate =
                 Self::issue(self.paths.certs(), prepared.context.service(), &names);
         }
 
         // Rendered before the row is taken apart, and through the helper `drift` uses, so the set
-        // that gets installed is the set that gets compared. The role is what selects the recipe, on
-        // T37's rule — a home has at most one front end, because `service.create` refuses a second.
+        // that gets installed is the set that gets compared. The role is what selects the recipe: a
+        // home has at most one front end, because `service.create` refuses a second.
         let documents = Self::documents(&prepared, served)?;
 
         let Prepared {
@@ -729,9 +728,9 @@ impl Generator {
         let mut builder = recipe
             .spec(&context)?
             .limits(limits)
-            // **Off the recipe and never off a row** — roadmap task T71a. Whether this program
-            // survives a restart under memory pressure is a fact about the program, so it is carried
-            // onto every spec the recipe renders rather than joined from anything per-home.
+            // **Off the recipe and never off a row.** Whether this program survives a restart under
+            // memory pressure is a fact about the program, so it is carried onto every spec the
+            // recipe renders rather than joined from anything per-home.
             .restart_over_memory(recipe.restart_over_memory_default());
 
         // **Both halves or neither.** A probe with no duration is a measurement nobody acts on, and

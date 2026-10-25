@@ -7,14 +7,14 @@
 //! manages is a product decision with a `CHECK` behind it in the schema, never something a package
 //! index gets to extend by publishing.
 //!
-//! A version and a channel used to live here too. They moved to [`crate::version`] in T31a, when a
-//! service package turned out to need the same string with the same rules — they were never about
-//! runtimes, only ever used by them first.
+//! A version and a channel used to live here too. They moved to [`crate::version`] when a service
+//! package turned out to need the same string with the same rules — they were never about runtimes,
+//! only ever used by them first.
 
 use std::fmt;
 
-/// Which language runtime something is a version of — or, since T27c, which tool that is installed
-/// the way a language is.
+/// Which language runtime something is a version of — or which tool that is installed the way a
+/// language is.
 ///
 /// **Closed, unlike [`JobKind`](crate::JobKind) and like [`JobState`](crate::JobState).** The set
 /// grows only when MixEngine learns to manage another language, or a tool it installs like one,
@@ -35,14 +35,13 @@ pub enum RuntimeKind {
     Python,
     /// Ruby.
     Ruby,
-    /// Go (roadmap task **T27d**). Its archive is upstream's whole tree, and `GOROOT` is wherever
-    /// that tree was unpacked.
+    /// Go. Its archive is upstream's whole tree, and `GOROOT` is wherever that tree was unpacked.
     Go,
-    /// Java (roadmap task **T27e**). A JDK from Microsoft Build of OpenJDK; `JAVA_HOME` is two
-    /// directories above `provides.java`, which the shim renders.
+    /// Java. A JDK from Microsoft Build of OpenJDK; `JAVA_HOME` is two directories above
+    /// `provides.java`, which the shim renders.
     Java,
-    /// Composer — not a language, and installed like one (roadmap task **T27c**): a `.phar` the
-    /// `composer` shim hands to the project's PHP. Last, because it runs under another kind.
+    /// Composer — not a language, and installed like one: a `.phar` the `composer` shim hands to
+    /// the project's PHP. Last, because it runs under another kind.
     Composer,
 }
 
@@ -125,8 +124,8 @@ mod tests {
         }
     }
 
-    /// **Composer is last** — roadmap task **T27c**, its design's D1 — because it is the one that
-    /// runs under another, and it stays last when a kind is added before it (T27d).
+    /// **Composer is last**, because it is the one that runs under another, and it stays last when
+    /// a kind is added before it.
     #[test]
     fn composer_is_the_last_kind() {
         assert_eq!(RuntimeKind::ALL.last(), Some(&RuntimeKind::Composer));
@@ -134,7 +133,7 @@ mod tests {
         assert_eq!(RuntimeKind::Composer.override_env(), "MIXENGINE_COMPOSER");
     }
 
-    /// **Go is the sixth kind** — roadmap task **T27d**, its design's D1.
+    /// **Go is the sixth kind.**
     #[test]
     fn go_is_a_kind() {
         assert!(RuntimeKind::ALL.contains(&RuntimeKind::Go));
@@ -142,7 +141,7 @@ mod tests {
         assert_eq!(RuntimeKind::Go.override_env(), "MIXENGINE_GO");
     }
 
-    /// **Java is the seventh kind** — roadmap task **T27e**, its design's D1.
+    /// **Java is the seventh kind.**
     #[test]
     fn java_is_a_kind() {
         assert_eq!(RuntimeKind::ALL.len(), 7);

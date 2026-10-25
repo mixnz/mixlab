@@ -11,8 +11,8 @@ import { openReleasesPage, RELEASES_PAGE } from "../../version";
 import styles from "./SettingsModal.module.css";
 
 /**
- * MixLab's updater — T187, `docs/specs/2026-09-26-t187-mixlab-updates-itself-design.md`, D9, in the
- * two steps T188 gave it: *Download*, then *Install and restart* or *Open installer*.
+ * MixLab's updater — D9 of `docs/specs/2026-09-26-t187-mixlab-updates-itself-design.md`, in two
+ * steps: *Download*, then *Install and restart* or *Open installer*.
  *
  * Since ADR 0056 this is where MixLab is updated, with or without MixEngine: the running version,
  * the check, the offer and the install. What it draws is `updates.view`, decided in

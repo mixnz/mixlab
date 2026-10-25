@@ -24,11 +24,11 @@ pub struct Handoff {
     /// The tab's name and the name pre-filled for saving — MixEngine's service id, `mariadb@main`.
     pub label: String,
     /// The key half of this account's address in MixEngine's keyring entry — `service="mixengine"`
-    /// is a compile-time constant on the side that reads it and never travels on the wire (T84's
-    /// D5). `Some` only when `secret` proved this process was actually started by MixEngine: a
-    /// `mixlab://` link can name any `secret_key` it likes, but it cannot set an environment
-    /// variable for the process it starts, so a value here without that proof would let a forged
-    /// link get a saved connection pointed at an arbitrary MixEngine account.
+    /// is a compile-time constant on the side that reads it and never travels on the wire. `Some`
+    /// only when `secret` proved this process was actually started by MixEngine: a `mixlab://` link
+    /// can name any `secret_key` it likes, but it cannot set an environment variable for the
+    /// process it starts, so a value here without that proof would let a forged link get a saved
+    /// connection pointed at an arbitrary MixEngine account.
     pub keyring_ref: Option<String>,
 }
 
@@ -158,7 +158,7 @@ pub fn parse(url: &str, secret: Option<String>) -> Result<Handoff, AppError> {
     })
 }
 
-/// The connection string a MongoDB handed over by MixEngine is dialled with — roadmap task T155.
+/// The connection string a MongoDB handed over by MixEngine is dialled with.
 ///
 /// `mongodb://<host>:<port>/<database>?directConnection=true`. Shared by this module's URL and by
 /// the Services screen's Open (`explore_data.rs`), so the two doors cannot build two strings.
@@ -347,7 +347,7 @@ mod tests {
         assert_eq!(handoff.label, "clickhouse@main");
     }
 
-    /// A MongoDB MixEngine runs, as `mix database open` hands it over — roadmap task T155.
+    /// A MongoDB MixEngine runs, as `mix database open` hands it over.
     #[test]
     fn a_mongodb_url_reads_as_a_connection_string() {
         let handoff = parse(

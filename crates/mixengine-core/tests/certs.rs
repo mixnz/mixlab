@@ -2,8 +2,8 @@
 //!
 //! **Every assertion about a generated certificate is made after parsing it back**, never against
 //! the `CertificateParams` that went in. Asserting on the parameters would prove that `rcgen` was
-//! called and nothing whatever about what it produced — and what T49 installs into a trust store
-//! and what T50 signs with is the file, not the request.
+//! called and nothing whatever about what it produced — and what a trust store is given and what a
+//! leaf is signed with is the file, not the request.
 
 use std::path::Path;
 use std::time::{Duration, SystemTime};
@@ -301,7 +301,7 @@ fn the_two_files_are_where_the_feature_specification_says() {
 }
 
 /// The staging root is a certificates root of its own, so `ensure` and `read` work on it unchanged
-/// — roadmap task **T54**, and the reason a rotation needs no second way to make an authority.
+/// — the reason a rotation needs no second way to make an authority.
 #[test]
 fn a_candidate_is_made_and_read_by_the_same_code_as_the_real_one() {
     let home = certs();

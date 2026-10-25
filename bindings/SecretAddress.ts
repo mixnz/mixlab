@@ -3,10 +3,11 @@
 /**
  * Where a credential lives in this machine's credential store: the whole address, both halves.
  *
- * **The convention two applications share** — roadmap task **T84**, the design's D6. Until that
- * task a response carried the key alone and the namespace lived inside `mixengine-platform`, so
- * anything outside this workspace that wanted to name the entry — MixLab, or any other graphical client — had
- * to hardcode the word `mixengine`. That second copy is what item 4 of
+ * **The convention two applications share**
+ * (`docs/specs/2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md`, D6). A
+ * response used to carry the key alone, with the namespace inside `mixengine-platform`, so
+ * anything outside this workspace that wanted to name the entry — MixLab, or any other graphical
+ * client — had to hardcode the word `mixengine`. That second copy is what item 4 of
  * `features/extensions.md`'s *Opening a database in MixLab* list exists to remove.
  *
  * A struct rather than one string with a separator: the two halves are two fields, so there is no

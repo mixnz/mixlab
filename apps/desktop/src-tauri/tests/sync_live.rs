@@ -277,8 +277,8 @@ async fn two_machines_settle_a_conflict_the_same_way() {
     assert_eq!(open(&data_key, &last), b"laptop's");
 }
 
-/// T189: the machine that wrote is told nothing is new and its cursor steps over its own write;
-/// the other machine is told to pull.
+/// The machine that wrote is told nothing is new and its cursor steps over its own write; the other
+/// machine is told to pull.
 #[tokio::test]
 #[ignore = "needs a sync server in test-outbox mode; see the module comment"]
 async fn heads_name_what_another_machine_wrote_and_step_over_an_echo() {
@@ -347,7 +347,7 @@ async fn heads_name_what_another_machine_wrote_and_step_over_an_echo() {
     );
 }
 
-/// T189, the shell's call: plain names in, plain names out, one request for the lot.
+/// The shell's call: plain names in, plain names out, one request for the lot.
 #[tokio::test]
 #[ignore = "needs a sync server in test-outbox mode; see the module comment"]
 async fn the_client_asks_which_collections_to_pull_by_name() {
@@ -552,8 +552,8 @@ async fn the_client_signs_up_signs_in_and_carries_an_item() {
     assert_eq!(laptop.devices().await.unwrap().len(), 2);
 }
 
-/// D6 case 1: the other machine is signed out, nothing is re-encrypted, and the new password is
-/// the one that signs in.
+/// A password changed with the old one: the other machine is signed out, nothing is re-encrypted,
+/// and the new password is the one that signs in.
 #[tokio::test]
 #[ignore = "needs a sync server in test-outbox mode; see the module comment"]
 async fn changing_the_password_signs_the_others_out_and_keeps_the_records() {
@@ -597,8 +597,8 @@ async fn changing_the_password_signs_the_others_out_and_keeps_the_records() {
     assert_eq!(page.changes.upserts, vec![snippet]);
 }
 
-/// D6 case 2: the code proves who, the recovery key keeps what — and a mistyped key costs a retry,
-/// not a second letter, because the ticket is held.
+/// A forgotten password and the recovery key: the code proves who, the recovery key keeps what —
+/// and a mistyped key costs a retry, not a second letter, because the ticket is held.
 #[tokio::test]
 #[ignore = "needs a sync server in test-outbox mode; see the module comment"]
 async fn a_forgotten_password_with_the_recovery_key_keeps_the_records() {
@@ -639,8 +639,8 @@ async fn a_forgotten_password_with_the_recovery_key_keeps_the_records() {
     );
 }
 
-/// D6 case 3: nothing survives on the server, and the machine starts over under a new `MK`, with a
-/// new recovery key of the same shape.
+/// A forgotten password and no recovery key: nothing survives on the server, and the machine
+/// starts over under a new `MK`, with a new recovery key of the same shape.
 #[tokio::test]
 #[ignore = "needs a sync server in test-outbox mode; see the module comment"]
 async fn a_forgotten_password_without_the_key_starts_over() {
@@ -728,8 +728,8 @@ async fn a_frozen_account_is_seen_and_thawed_from_another_machine() {
     pull_everything(&laptop, "query-snippets").await;
     desktop.freeze_for_test().await.unwrap();
     assert_eq!(laptop.freeze_state().await.unwrap().state, "frozen");
-    // A refusal comes back beside what the push did, not in place of it (T178c, C2); the loop
-    // throws it once it has committed the rest.
+    // A refusal comes back beside what the push did, not in place of it; the loop throws it once it
+    // has committed the rest.
     let pushed = laptop
         .push(
             "query-snippets",
@@ -807,7 +807,7 @@ async fn an_account_moves_to_another_server() {
     assert_eq!(gone.code, "error.syncWrongPassword");
 }
 
-/// C3: a mistyped password stops a move at its first step, and the new server never learns it.
+/// A mistyped password stops a move at its first step, and the new server never learns it.
 #[tokio::test]
 #[ignore = "needs two sync servers in test-outbox mode; see the module comment"]
 async fn a_move_with_the_wrong_password_is_refused_before_anything_is_registered() {
@@ -827,7 +827,7 @@ async fn a_move_with_the_wrong_password_is_refused_before_anything_is_registered
     letter_on(&second_server(), &email, "verification").await;
 }
 
-/// C4: an account moved away and back is a new account on its first server. This machine's store
+/// An account moved away and back is a new account on its first server. This machine's store
 /// for the old one held a cursor past both records; kept under the address alone, the return
 /// pulled nothing until `seq` caught up. Under the account, it starts from nothing and meets both.
 #[tokio::test]

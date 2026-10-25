@@ -1,9 +1,12 @@
 //! What a plan reads out of a `[scaffold]` command: its program, when that can be told.
 //!
-//! Roadmap task **T78b**. A command is a line for `cmd.exe` or `sh`, and the one thing a plan can
-//! decide about it up front is whether the program its first word names is there to be run. Only
-//! that, and only when the first word is a bare name — every doubt resolves to *not judging*,
-//! because a false `blocked` stops a blueprint that would have worked (the design's D2).
+//! A command is a line for `cmd.exe` or `sh`, and the one thing a plan can decide about it up front
+//! is whether the program its first word names is there to be run. Only that, and only when the
+//! first word is a bare name — every doubt resolves to *not judging*, because a false `blocked`
+//! stops a blueprint that would have worked (D2).
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-09-08-t78b-a-scaffold-program-checked-at-plan-time-design.md`.
 
 use std::collections::BTreeSet;
 use std::ffi::OsStr;
@@ -43,15 +46,14 @@ pub fn bare_name(command: &str) -> Option<&str> {
 /// [`crate::blueprints::plan::not_an_npm_name`] judges.
 const NPM_FAMILY: &[&str] = &["npx", "npm", "yarn", "pnpm"];
 
-/// Whether `command` runs one of the npm family — roadmap task **T120c**.
+/// Whether `command` runs one of the npm family.
 ///
 /// **A guess, and admitted to be one**, which is why nothing that *blocks* anybody uses it: the
-/// design's D3 has the blueprint declare `needs_npm_safe_dir` rather than have a plan read tea
-/// leaves out of a command string. This answers a smaller question, asked only after a scaffold has
-/// already failed — may the failure add npm's rule to what it says? A miss there costs one hint. A
-/// wrong guess costs a false sentence: `composer create-project` takes its package name from its
-/// argument, so telling somebody their folder is the problem would send them renaming it for
-/// nothing.
+/// blueprint declares `needs_npm_safe_dir` rather than a plan reading tea leaves out of a command
+/// string. This answers a smaller question, asked only after a scaffold has already failed — may
+/// the failure add npm's rule to what it says? A miss there costs one hint. A wrong guess costs a
+/// false sentence: `composer create-project` takes its package name from its argument, so telling
+/// somebody their folder is the problem would send them renaming it for nothing.
 ///
 /// [`bare_name`]'s own doubts are inherited whole. A command whose first word is quoted, a path or
 /// a shell construct is not judged, so `./node_modules/.bin/create-next-app .` is left alone.
@@ -76,13 +78,13 @@ fn shim_named(name: &str) -> Option<&'static crate::shims::Command> {
 
 /// The scaffold step's disposition: `Confirm` unless its program is a bare name nothing will
 /// answer to by the time the step runs, which is `Blocked` — decided here rather than at the end of
-/// a job (the design's D1 and D3).
+/// a job (D1 and D3).
 ///
 /// **`available` is every runtime kind there will be once the plan's runtimes are installed** —
-/// installed already, or in the blueprint's `[runtimes]`. Since T185b `bin/` fronts only what is
-/// installed, so on a fresh machine `bin/composer` is not there when the plan is made and is there
-/// when the scaffold runs: the runtime steps ahead of it put it there. Judging the PATH alone
-/// blocked every Composer entry in the gallery on exactly the machine it was meant for.
+/// installed already, or in the blueprint's `[runtimes]`. `bin/` fronts only what is installed, so
+/// on a fresh machine `bin/composer` is not there when the plan is made and is there when the
+/// scaffold runs: the runtime steps ahead of it put it there. Judging the PATH alone blocked every
+/// Composer entry in the gallery on exactly the machine it was meant for.
 #[must_use]
 pub fn disposition(
     command: &str,
@@ -135,7 +137,7 @@ pub fn disposition(
 mod tests {
     use super::*;
 
-    /// **Only a bare first word is judged** — roadmap task **T78b**, its design's D2.
+    /// **Only a bare first word is judged** (D2).
     #[test]
     fn a_bare_first_word_is_the_program() {
         assert_eq!(
@@ -168,7 +170,7 @@ mod tests {
         }
     }
 
-    /// **Which commands D8's guess is allowed to speak about** — roadmap task **T120c**.
+    /// **Which commands the npm guess is allowed to speak about.**
     #[test]
     fn the_npm_family_is_recognised_and_nothing_else_is() {
         for command in [
@@ -184,7 +186,7 @@ mod tests {
             "composer create-project laravel/laravel . --no-interaction",
             "php artisan install",
             "django-admin startproject .",
-            // Not a bare name, so nothing is known about it — and D8 stays quiet.
+            // Not a bare name, so nothing is known about it — and the guess stays quiet.
             "./node_modules/.bin/create-next-app .",
             "",
         ] {
@@ -215,9 +217,9 @@ mod tests {
         ));
     }
 
-    /// **A shim the plan's own runtimes will put in `bin/` is there to be run** — T78b as T185b
-    /// left it. `bin/` is empty on a fresh machine and holds `composer` once PHP and Composer are
-    /// installed, which the runtime steps do before the scaffold.
+    /// **A shim the plan's own runtimes will put in `bin/` is there to be run.** `bin/` is empty on
+    /// a fresh machine and holds `composer` once PHP and Composer are installed, which the runtime
+    /// steps do before the scaffold.
     #[test]
     fn a_shim_whose_runtimes_will_be_there_is_something_to_agree_to() {
         let both = BTreeSet::from([RuntimeKind::Php, RuntimeKind::Composer]);

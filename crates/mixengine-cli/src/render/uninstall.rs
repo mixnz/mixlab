@@ -3,7 +3,7 @@
 use super::size::size;
 use mixengine_proto::{Removal, UninstallReport};
 
-/// What `mix uninstall` prints when it starts waiting for the directories to go — T182b.
+/// What `mix uninstall` prints when it starts waiting for the directories to go.
 pub(crate) fn uninstall_removing(directories: usize, bytes: u64) -> String {
     let what = match directories {
         1 => "1 folder".to_owned(),
@@ -21,7 +21,7 @@ pub(crate) fn uninstall_still_removing(waited: std::time::Duration) -> String {
     format!("still removing, {}s so far", waited.as_secs())
 }
 
-/// `mix uninstall`, as a person reads it — roadmap task **T87**.
+/// `mix uninstall`, as a person reads it.
 ///
 /// **Every row, in the daemon's order, whatever it answered.** A rendering that hid the `absent`
 /// rows would leave a person unable to tell *"there was no resolver wiring"* from *"the resolver
@@ -72,7 +72,7 @@ pub(crate) fn uninstall_report(report: &UninstallReport) -> String {
 mod tests {
     use super::*;
 
-    /// T182b. The wait for the folders to go says how much is going, and then that it is still going.
+    /// The wait for the folders to go says how much is going, and then that it is still going.
     #[test]
     fn the_wait_for_a_removal_says_what_it_is_waiting_for() {
         assert_eq!(

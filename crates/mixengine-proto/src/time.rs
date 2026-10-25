@@ -9,9 +9,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 /// `docs/standards/rust.md` has none, because until now nothing needed one. A number is
 /// unambiguous, sorts, needs no parser, and is `new Date(ms)` in the GUI.
 ///
-/// Milliseconds rather than seconds because log lines (roadmap task T14) arrive faster than one a
-/// second and would otherwise all carry the same timestamp; signed rather than unsigned because a
-/// machine whose clock is set before 1970 should produce a strange number instead of a panic.
+/// Milliseconds rather than seconds because log lines arrive faster than one a second and would
+/// otherwise all carry the same timestamp; signed rather than unsigned because a machine whose
+/// clock is set before 1970 should produce a strange number instead of a panic.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
@@ -43,11 +43,11 @@ impl Timestamp {
     /// This moment as `YYYY-MM-DDTHH:MM:SSZ`, which is how `docs/architecture/data-model.md`
     /// spells an `_at` column that a person reads rather than one the daemon does arithmetic on.
     ///
-    /// **T23 is the first task that had to write one at runtime**, which is the mirror of the
-    /// discovery T22 recorded: until then every ISO-8601 moment in the schema was a literal in a
-    /// fixture, and every moment produced at runtime was a number. `runtime_installs.installed_at`
-    /// is neither — it is TEXT by the schema's own convention, and it is written the moment an
-    /// install lands.
+    /// **Recording an installed runtime was the first thing that had to write one at runtime**,
+    /// which is the mirror of what the job system found: until then every ISO-8601 moment in the
+    /// schema was a literal in a fixture, and every moment produced at runtime was a number.
+    /// `runtime_installs.installed_at` is neither — it is TEXT by the schema's own convention, and
+    /// it is written the moment an install lands.
     ///
     /// So the civil-calendar arithmetic is here, in about thirty lines, rather than bought as a
     /// dependency. That is the same trade [`crate::Millis`] made against a duration crate and the
@@ -220,9 +220,9 @@ impl Millis {
     /// `ms` is tried before `s` because `s` is a suffix of it and the shorter match would read
     /// `"500ms"` as 500 000 milliseconds worth of `"500m"`.
     ///
-    /// **Public because a client has to write this syntax too** — `mix service idle --after 30m`
-    /// (T69) — and a second parser in the CLI would be a second answer to what `2h` means, drifting
-    /// from this one the first time either gained a unit.
+    /// **Public because a client has to write this syntax too** — `mix service idle --after 30m` —
+    /// and a second parser in the CLI would be a second answer to what `2h` means, drifting from
+    /// this one the first time either gained a unit.
     #[must_use]
     pub fn parse(text: &str) -> Option<Self> {
         let text = text.trim();

@@ -1,6 +1,6 @@
 name: Leg budget
 description: >-
-  Start a leg's clock, or say how much of its budget it used (T170g). A notice past the leg's
+  Start a leg's clock, or say how much of its budget it used. A notice past the leg's
   target and a warning past 30 minutes, two thirds of the usual ceiling, while the leg is still
   green: a leg growing toward the limit should say so before the limit does. A local action runs
   only after the checkout, so the clock starts a few seconds into the job; the cache save after the
@@ -10,7 +10,7 @@ inputs:
     description: "`start` just after the checkout, `end` as the job's last step with `if: always()`."
     required: true
   target-minutes:
-    description: The leg's target, from the T170 and T171 specs' Goals.
+    description: The leg's target, from the Goals of the test-job and build designs.
     default: "15"
   ceiling-minutes:
     description: The job's `timeout-minutes`, printed for the reader.
@@ -31,7 +31,7 @@ runs:
         elapsed=$(( $(date +%s) - ${LEG_STARTED:-$(date +%s)} ))
         printf '%s (%s): %dm%02ds, target %s minutes, ceiling %s.\n' "$GITHUB_JOB" "$RUNNER_OS" $((elapsed / 60)) $((elapsed % 60)) "$TARGET_MINUTES" "$CEILING_MINUTES" >> "$GITHUB_STEP_SUMMARY"
         if [ "$elapsed" -gt 1800 ]; then
-          echo "::warning title=Leg over budget::This leg took $((elapsed / 60)) minutes; past 30 it has to be split (T170 spec, B1 and C3)."
+          echo "::warning title=Leg over budget::This leg took $((elapsed / 60)) minutes; past 30 it has to be split."
         elif [ "$elapsed" -gt $((TARGET_MINUTES * 60)) ]; then
           echo "::notice title=Leg over its target::This leg took $((elapsed / 60)) minutes against a target of $TARGET_MINUTES."
         fi

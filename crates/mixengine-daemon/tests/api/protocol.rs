@@ -148,9 +148,9 @@ async fn a_failing_method_is_still_an_http_200_because_the_request_did_arrive() 
     // The rule the whole HTTP layer is built on: the status describes the envelope, the JSON-RPC
     // error describes the call. A 4xx here would make `not_found` on a site indistinguishable from
     // `/rpc` having been mistyped.
-    // A namespace this build has not reached — `site.create` stood here until T39a made it a real
-    // method, `blueprint.apply` until T77 did and `extension.install` until T81 did, which is
-    // exactly the drift this test is worth keeping past.
+    // A namespace this build has not reached — `site.create`, `blueprint.apply` and
+    // `extension.install` each stood here until it became a real method, which is exactly the drift
+    // this test is worth keeping past.
     let answer = daemon
         .rpc(r#"{"jsonrpc":"2.0","method":"extension.open","id":1}"#)
         .await;
@@ -159,9 +159,9 @@ async fn a_failing_method_is_still_an_http_200_because_the_request_did_arrive() 
     assert_eq!(answer["error"]["data"]["code"], "not_found");
 }
 
-/// **T77's D12, one task on.** One method, two answers, and a client reads which it got from the
-/// object rather than from its own request — which is what lets `--dry-run` and a real apply stay
-/// one method now that the second one does something.
+/// One method, two answers, and a client reads which it got from the object rather than from its
+/// own request — which is what lets `--dry-run` and a real apply stay one method now that the
+/// second one does something.
 ///
 /// A blueprint nothing is filed under is still a `not_found`, and that is the point of asking for
 /// one here: what this task changed is the shape of a *successful* answer, not what a miss is.
@@ -196,9 +196,9 @@ async fn a_dry_run_and_a_real_apply_are_one_method_that_says_which_answer_it_gav
     );
 }
 
-/// **A fresh home holds the gallery and nothing else** — roadmap task **T79**. This said *no
-/// blueprints* until the gallery existed; what makes the new claim the stronger one is that it is
-/// about the set rather than about emptiness.
+/// **A fresh home holds the gallery and nothing else.** This said *no blueprints* until the gallery
+/// existed; what makes the new claim the stronger one is that it is about the set rather than about
+/// emptiness.
 #[tokio::test]
 async fn a_fresh_home_holds_the_gallery() {
     let daemon = Daemon::start().await;
@@ -250,8 +250,8 @@ async fn a_fresh_home_holds_the_gallery() {
 async fn an_endpoint_that_does_not_exist_is_a_404_in_the_shape_every_client_renders() {
     let daemon = Daemon::start().await;
     // A path this daemon has no route for at all — the body is the plain error shape rather than a
-    // JSON-RPC response, because there is no call to answer. `/metrics` stood here until T71 built
-    // it, which is the same drift the unknown-method case above is kept past.
+    // JSON-RPC response, because there is no call to answer. `/metrics` stood here until the
+    // metrics sampler built it, which is the same drift the unknown-method case above is kept past.
     let response = daemon.get("/blueprints").await;
 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
@@ -270,8 +270,8 @@ async fn an_endpoint_that_does_not_exist_is_a_404_in_the_shape_every_client_rend
 /// *service* — not one about the endpoint. The difference is what a person reads when they mistype
 /// a service id, and it is the reason this route is matched before the table of whole paths.
 ///
-/// The path has two segments since roadmap task **T78a**, which gave a job the second kind of
-/// subject: nothing has to decide whether a first segment is a package name or the word `job`.
+/// The path has two segments since a job became the second kind of subject: nothing has to decide
+/// whether a first segment is a package name or the word `job`.
 #[tokio::test]
 async fn asking_for_the_output_of_a_service_nothing_declares_names_the_service() {
     let daemon = Daemon::start().await;

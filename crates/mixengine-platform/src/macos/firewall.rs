@@ -1,4 +1,4 @@
-//! macOS' half of T74, which is to do nothing and say so.
+//! macOS' half of LAN sharing, which is to do nothing and say so.
 //!
 //! The application firewall filters applications rather than ports, and in its default
 //! configuration — the one nearly every machine is in — a socket that is already listening accepts
@@ -7,9 +7,9 @@
 //! that never happened, and not failure, which would stop a share that already works.
 //!
 //! **The packet filter is not the answer here either.** MixEngine does drive `pf` on macOS — that
-//! is how 80 and 443 reach a front end bound to 8080 and 8443 (T42) — but that is a redirect within
-//! the machine, not a permission for anyone outside it. Adding a `pass` rule would be adding one to
-//! a firewall that is not blocking, and one more root-owned artifact to remove later.
+//! is how 80 and 443 reach a front end bound to 8080 and 8443 — but that is a redirect within the
+//! machine, not a permission for anyone outside it. Adding a `pass` rule would be adding one to a
+//! firewall that is not blocking, and one more root-owned artifact to remove later.
 
 use mixengine_proto::privileged::FirewallPlan;
 

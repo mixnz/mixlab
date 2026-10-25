@@ -25,7 +25,7 @@ fn a_program_called(directory: &Path, name: &str) {
     }
 }
 
-/// **The parent table knows this process, and knows its parent** — roadmap task **T181**.
+/// **The parent table knows this process, and knows its parent.**
 ///
 /// Asserted against the process running the test because it is the one process every system
 /// guarantees is there and this account may ask about. Windows has no parent query in `std`,
@@ -45,8 +45,8 @@ fn the_parent_table_knows_this_process_and_its_parent() {
     assert!(table.len() > 1, "more than this one process is running");
 }
 
-/// **The rule is the shell's** — roadmap task **T78b**, its design's D4. A program the shell
-/// would run is found; a name nothing answers to is not.
+/// **The rule is the shell's.** A program the shell would run is found; a name nothing answers to
+/// is not.
 #[test]
 fn a_program_is_found_by_the_rule_the_shell_uses() {
     let temp = tempfile::tempdir().expect("a temporary directory");

@@ -1,4 +1,4 @@
-//! A home serving real PHP through a real front end — roadmap task **T72a**.
+//! A home serving real PHP through a real front end.
 //!
 //! **The arrangement nothing in this repository had until now.** `caddy.rs` proves a rendering the
 //! server accepts, `php_fpm.rs` proves a pool that executes a script, and neither of them ever made
@@ -47,7 +47,7 @@ pub(crate) struct Served {
     pub sites: Vec<Site>,
 
     /// The patch published after the first PHP's version from the same archive, when
-    /// [`served_with`] was asked for one — roadmap task **T193b**.
+    /// [`served_with`] was asked for one.
     pub next: Option<String>,
 }
 
@@ -67,7 +67,7 @@ pub(crate) struct Site {
     /// mistaken for another site's.
     pub says: String,
 
-    /// Its document root, which is also its project root — roadmap task **T124**.
+    /// Its document root, which is also its project root.
     ///
     /// **Carried rather than rebuilt by a caller.** The directory is named after the *project* and
     /// the site after its domain, so a suite deriving one from the other would be a second place
@@ -198,10 +198,10 @@ fn packing() -> Packing {
 /// callers need: one is about to ask a site for something, and the other is about to wait for the
 /// sweeper to stop the pools.
 ///
-/// **Which front end is an argument since roadmap task T124a.** The claim a caller makes about what
-/// a site answers is a claim about both servers, and the two render that answer with different
-/// directives — nginx's is the one that had to be written twice before it stopped leaking. A fixture
-/// that could only be Caddy would have left the second rendering asserted and never served.
+/// **Which front end is an argument.** The claim a caller makes about what a site answers is a
+/// claim about both servers, and the two render that answer with different directives — nginx's is
+/// the one that had to be written twice before it stopped leaking. A fixture that could only be
+/// Caddy would have left the second rendering asserted and never served.
 pub(crate) async fn served(front: &'static FrontEnd, roots: &[PathBuf]) -> Served {
     served_with(front, roots, false).await
 }
@@ -226,9 +226,9 @@ pub(crate) async fn served_with(
     let mut packages = vec![{
         let url = registry.publish_asset(&caddy.path(), caddy.bytes.clone());
 
-        // **The fixture's own map and never a second copy of it** — T124a. nginx's artifact
-        // publishes `mime.types` and `fastcgi_params` beside the binary, and a recipe that cannot
-        // find them renders a configuration nginx refuses to start.
+        // **The fixture's own map and never a second copy of it.** nginx's artifact publishes
+        // `mime.types` and `fastcgi_params` beside the binary, and a recipe that cannot find them
+        // renders a configuration nginx refuses to start.
         entry(
             front.package,
             front.version,
@@ -401,7 +401,7 @@ fn site(home: &Home, version: &str) -> Site {
 /// The `FrontEnd` this fixture serves through, re-exported so a caller need not name two modules.
 pub(crate) const FRONT: &FrontEnd = &CADDY;
 
-/// The patch after `version`: `8.3.33` → `8.3.34` — roadmap task **T193b**.
+/// The patch after `version`: `8.3.33` → `8.3.34`.
 pub(crate) fn next(version: &str) -> String {
     let (head, last) = version
         .rsplit_once('.')

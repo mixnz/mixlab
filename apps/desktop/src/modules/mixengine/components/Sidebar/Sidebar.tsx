@@ -19,11 +19,11 @@ import type { MixEngineScreen } from "../../tabState";
 import styles from "./Sidebar.module.css";
 
 /**
- * Twelve screens, five groups — T119, decision D11.
+ * Twelve screens, five groups.
  *
  * **Ordered by what people do, not by the shape of the API.** Eleven flat items have to be read in
- * full before you find anything, and two of them used to have almost the same name — T118 renamed
- * the *Extensions* label to *Add-ons* so PHP Extensions could stand under its own name.
+ * full before you find anything, and two of them used to have almost the same name — the
+ * *Extensions* label became *Add-ons* so PHP Extensions could stand under its own name.
  *
  * **Static headings, not collapsible.** A collapsible group is a place for exactly the thing people
  * are looking for to hide in, and a collapsed state is something to store, migrate and then get
@@ -38,7 +38,7 @@ import styles from "./Sidebar.module.css";
  * `docs/specs/2026-09-07-mixengine-metrics-settings-design.md`).
  *
  * **Neither is `phpExtensions`** — `client-surface.md` puts the extension toggles inside the
- * Packages screen, and they are still there: the same component, drawn in two places (T118). The
+ * Packages screen, and they are still there: the same component, drawn in two places. The
  * *Environment* group is the second place, because that is where people go looking for it.
  *
  * This table is still the **only** place that decides the order, just as when it was flat.

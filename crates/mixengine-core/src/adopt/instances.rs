@@ -1,4 +1,4 @@
-//! Service data an earlier home left under `data/` — roadmap task **T182g**, spec D4.
+//! Service data an earlier home left under `data/` — spec D4.
 //!
 //! A data directory MixEngine bootstrapped carries [`READY_MARKER`], holding the version of the
 //! server that made it. That file is what makes adopting one safe: a new row pointing at the

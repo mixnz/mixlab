@@ -40,10 +40,10 @@ pub(super) async fn register(
     let registered = projects::records(store).await?;
     let here = mixengine_platform::paths::in_full(root);
 
-    // **Resumption is a re-plan** (the T78 design, D2). A project of this name *at this root* is
-    // this apply's own first step, already taken, and calling that a collision would make a failed
-    // apply impossible to run again. Both halves have to match: anything narrower is two projects
-    // colliding, which is what the blocks below are for.
+    // **Resumption is a re-plan.** A project of this name *at this root* is this apply's own first
+    // step, already taken, and calling that a collision would make a failed apply impossible to run
+    // again. Both halves have to match: anything narrower is two projects colliding, which is what
+    // the blocks below are for.
     //
     // **Already taken only while its directory is still there.** This step is the one that makes
     // the directory, so a row whose folder somebody has since deleted is work again: planned
@@ -97,7 +97,7 @@ pub(super) async fn register(
     ))
 }
 
-/// Whether a site this apply describes is already made — roadmap task **T204a**, D4.
+/// Whether a site this apply describes is already made.
 pub(super) enum Made {
     /// Nothing of this project answers to its names.
     No,
@@ -175,8 +175,8 @@ fn answered_service(answers: &[VersionAnswer], id: &ServiceId) -> Option<Mismatc
 
 /// One `[runtimes]` entry against what is installed, and the pin the project gets from it.
 ///
-/// **The pin is half of the answer** (D7). Without it "install 8.2.23" and "use the installed
-/// 8.2.29" would leave identical machines behind and the question would be theatre.
+/// **The pin is half of the answer.** Without it "install 8.2.23" and "use the installed 8.2.29"
+/// would leave identical machines behind and the question would be theatre.
 pub(super) async fn runtime(
     store: &Store,
     kind: RuntimeKind,
@@ -277,10 +277,11 @@ pub(super) fn identity(package: &str, instance: &str) -> Option<ServiceId> {
 
 /// Whether the package an instance would run is on this disk at all.
 ///
-/// **T77 planned this for languages and not for services** (D8), and `service.create` refuses with
-/// `precondition_failed` when the version it is asked for is not installed — a plan discovering the
-/// impossible five actions into a project directory, which is the whole thing a plan exists to
-/// prevent, and the ordinary case for a blueprint that came from somebody else's machine.
+/// **The first planner did this for languages and not for services**, and `service.create` refuses
+/// with `precondition_failed` when the version it is asked for is not installed — a plan
+/// discovering the impossible five actions into a project directory, which is the whole thing a
+/// plan exists to prevent, and the ordinary case for a blueprint that came from somebody else's
+/// machine.
 ///
 /// **It never asks a question.** A version mismatch is a question about an *instance* that already
 /// exists, and [`ensure`] is where it is asked; where there is no instance yet there is nothing to
@@ -331,8 +332,8 @@ pub(super) async fn ensure(
         dedicated,
     };
 
-    // **D10.** A pair no id can be spelled from is decided here, with the reason, rather than at
-    // the moment T78 tries to write the row.
+    // A pair no id can be spelled from is decided here, with the reason, rather than at the moment
+    // the executor tries to write the row.
     let Some(id) = identity(package, instance) else {
         return Ok(blocked(
             action,
@@ -360,7 +361,7 @@ pub(super) async fn ensure(
                 // version is a database upgrade under somebody's data directory, and this build has
                 // no method for it: `service.create` and `service.delete` are the two ends of a
                 // row's life with nothing between them. Said here, which is where every other
-                // impossibility is said (D10).
+                // impossibility is said.
                 Some(MismatchAnswer::Install) => blocked(
                     action,
                     format!(
@@ -386,12 +387,12 @@ pub(super) async fn ensure(
 
 /// The database and the account, or the reason neither can be made under this name.
 ///
-/// **Asks the function that owns the rule** — roadmap task **T120**, its design's D2. This used to
-/// check the account's length against a copy of MySQL's limit and nothing else, so a name the server
-/// would refuse outright planned as `Create` and failed after the directory, the runtimes and the
-/// packages were already on disk. [`crate::generate::databases::validated_identifier`] is the same
-/// call `database.create` makes, so a plan and an apply now agree by construction rather than by two
-/// people keeping two rules in step.
+/// **Asks the function that owns the rule.** This used to check the account's length against a copy
+/// of MySQL's limit and nothing else, so a name the server would refuse outright planned as
+/// `Create` and failed after the directory, the runtimes and the packages were already on disk.
+/// [`crate::generate::databases::validated_identifier`] is the same call `database.create` makes,
+/// so a plan and an apply now agree by construction rather than by two people keeping two rules in
+/// step.
 pub(super) fn database_step(package: &str, instance: &str, database: &str, user: &str) -> PlanStep {
     let action = PlanAction::CreateDatabase {
         package: package.to_owned(),
@@ -431,9 +432,9 @@ pub(super) async fn domain_step(
         primary,
     };
 
-    // **A domain is checked before it is looked up** — roadmap task **T120**, its design's D2.
-    // Asking who holds a name that is not a name at all answers "nobody", and the step then plans as
-    // `Create` for something `site.create` will refuse — a plan promising what it has not checked.
+    // **A domain is checked before it is looked up.** Asking who holds a name that is not a name at
+    // all answers "nobody", and the step then plans as `Create` for something `site.create` will
+    // refuse — a plan promising what it has not checked.
     if let Some(reason) = unexpanded(domain).or_else(|| {
         crate::domains::normalised(domain, false)
             .err()
@@ -443,9 +444,9 @@ pub(super) async fn domain_step(
     }
 
     Ok(match sites::by_domain(store, domain).await? {
-        // Already ours, which is what a resumed apply looks like from here (D2). Narrower than "the
-        // name is taken" by exactly one condition, and that condition is the whole difference
-        // between running an apply twice and being told to go away.
+        // Already ours, which is what a resumed apply looks like from here. Narrower than "the name
+        // is taken" by exactly one condition, and that condition is the whole difference between
+        // running an apply twice and being told to go away.
         Some(holder)
             if project.is_some_and(|project| {
                 holder.owner == crate::sites::SiteOwner::Project(project)
@@ -464,8 +465,8 @@ pub(super) async fn domain_step(
                     .map_or("another site", |primary| primary.as_str())
             ),
         ),
-        // Writing the hosts file is what needs the prompt, and saying so before anything starts is
-        // the point of D11.
+        // Writing the hosts file is what needs the prompt, and a plan says so before anything
+        // starts.
         None => PlanStep {
             action,
             disposition: Disposition::Create,

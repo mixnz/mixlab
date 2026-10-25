@@ -1,6 +1,6 @@
 //! `service.set_front_end`: moving a home from one web server to the other.
 //!
-//! Roadmap task **T97**, designed by
+//! Designed by
 //! [ADR 0026](https://github.com/mixnz/mixlab/blob/master/docs/decisions/0026-the-active-front-end-is-a-row-and-switching-it-is-a-job.md).
 //! Its own file rather than more of [`super::create`], which is already two methods read forwards
 //! and backwards, and beside it rather than in [`super::rpc`] because everything here is those two
@@ -9,11 +9,12 @@
 //!
 //! # The grant is asked for before anything is touched
 //!
-//! **T42 writes the port-80 grant into the `security.capability` attribute of the binary**, so a home
-//! that switches from Caddy to nginx is a home whose new front end has no grant. macOS redirects by
-//! port and carries over; Windows reserves nothing. The outcome ADR 0026 forbids is *a home whose
-//! sites are rendered for a server that cannot answer* — so the question is asked while there is
-//! still nothing to undo, and a machine that will not grant leaves the home **where it was**.
+//! **On Linux, port access writes the port-80 grant into the `security.capability` attribute of the
+//! binary**, so a home that switches from Caddy to nginx is a home whose new front end has no
+//! grant. macOS redirects by port and carries over; Windows reserves nothing. The outcome ADR 0026
+//! forbids is *a home whose sites are rendered for a server that cannot answer* — so the question
+//! is asked while there is still nothing to undo, and a machine that will not grant leaves the home
+//! **where it was**.
 //!
 //! **The rule is *do not make it worse*, not *require a grant*.** A Linux home where nobody ever
 //! granted has a front end that cannot bind 80 and therefore does not start; refusing to move it
@@ -479,7 +480,7 @@ impl Api {
     ///
     /// [`None`] means go: the grant is there, this system grants nothing at all, or the front end
     /// the home is on cannot answer either — in which case the change takes nothing away. Shared by
-    /// a switch (T97) and a front end's update within its line (T193c, D6 step 2).
+    /// a switch and a front end's update within its line.
     pub(super) async fn would_lose_the_grant(
         &self,
         grant: bool,
@@ -509,7 +510,7 @@ impl Api {
             tracing::warn!(%error, "a front end's port grant could not be put in the queue");
         }
 
-        // **Only when asked.** What is about to be allowed is read before it is allowed (T64), so a
+        // **Only when asked.** What is about to be allowed is read before it is allowed, so a
         // caller that did not ask for the prompt gets the operation left waiting and the reason —
         // and `mix elevation grant` followed by the same command works.
         // **Inside this job and not as one of its own**, which is what `grant_within` exists for:
@@ -794,7 +795,7 @@ mod tests {
         }
     }
 
-    /// **T97.** A switch installs nothing, so a server that is not here is a refusal with the
+    /// A switch installs nothing, so a server that is not here is a refusal with the
     /// command that would put it here — not a job that downloads forty megabytes.
     #[tokio::test]
     async fn a_switch_to_a_server_that_is_not_installed_is_refused_with_the_way_to_install_it() {
@@ -816,7 +817,7 @@ mod tests {
         );
     }
 
-    /// **T97.** Asking for the server a home is already on is a question with an answer, and not a
+    /// Asking for the server a home is already on is a question with an answer, and not a
     /// refusal: a switch clicked on the option that is already selected is an ordinary thing to
     /// happen, and refusing it would make a client suppress the call.
     #[tokio::test]
@@ -841,7 +842,7 @@ mod tests {
         );
     }
 
-    /// **T97, and ADR 0026's hardest sentence.** A machine that has granted port 80 to the front end
+    /// **ADR 0026's hardest sentence.** A machine that has granted port 80 to the front end
     /// this home is on and not to the one it is being asked to move to **stays where it was**.
     ///
     /// The outcome a switch must never produce is a home whose sites are rendered for a server that
@@ -901,7 +902,7 @@ mod tests {
         );
     }
 
-    /// **T97.** The rule is *do not make it worse*, not *require a grant*.
+    /// The rule is *do not make it worse*, not *require a grant*.
     ///
     /// A Linux home where nobody ever granted has a front end that cannot bind 80 and therefore does
     /// not start. Refusing to move it would trap somebody on a server that cannot answer in order to
@@ -935,7 +936,7 @@ mod tests {
         );
     }
 
-    /// **T97.** The row moves, what is about the home's front end travels with it, and what belonged
+    /// The row moves, what is about the home's front end travels with it, and what belonged
     /// to the program that is going is named rather than silently dropped.
     #[tokio::test]
     async fn a_switch_carries_the_home_s_own_settings_and_names_what_it_left() {

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { base64Bytes, call, type ErrorBody, signedUp } from "./client.js";
 
 // A move re-registers on another server with the password just typed; this is how it learns the
-// password is right before it builds on it (T178c, C3). It needs a session, as `/v1/account/delete`
-// does, and a wrong answer is counted where a wrong password is counted.
+// password is right before it builds on it. It needs a session, as `/v1/account/delete` does, and
+// a wrong answer is counted where a wrong password is counted.
 
 const check = (token: string, a: string) =>
   call<Partial<ErrorBody>>("/v1/account/check", { method: "POST", token, body: { a } });

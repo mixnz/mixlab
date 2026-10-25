@@ -1,4 +1,4 @@
-//! Readings in, minutes out — roadmap task **T71**.
+//! Readings in, minutes out.
 //!
 //! **The minute being assembled lives here and not in SQL.** Sixty readings against a
 //! read-modify-write would be sixty transactions for one row, once a minute, for as long as somebody

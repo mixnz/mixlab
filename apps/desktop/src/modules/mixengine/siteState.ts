@@ -55,7 +55,7 @@ export function parseDomains(raw: string): string[] {
  * The remainder of an absolute path after removing the project root — used right after the
  * directory-picker dialog (which always returns an absolute path) returns, so the Doc root field
  * holds only the part the daemon really stores (`SiteSummary.doc_root`), written with the operating
- * system's separator as the daemon sends it back (T191), so the field holds the same string whether
+ * system's separator as the daemon sends it back, so the field holds the same string whether
  * it came from Browse or from the daemon. Not under the root keeps the absolute path —
  * `SiteCreate.doc_root` accepts both, and this is a rare case not worth blocking.
  */
@@ -73,7 +73,7 @@ export function relativeToRoot(
   return absolute;
 }
 
-/** Joins the root with the remainder for display, using the operating system's separator (T191) —
+/** Joins the root with the remainder for display, using the operating system's separator —
  *  for reading only, not the value sent to the daemon (that is still the remainder on its own).
  *  `""` is the root itself, exactly as `SiteSummary.doc_root` describes. */
 export function joinDocRoot(root: string, relative: string, style: PathStyle = PATH_STYLE): string {
@@ -92,7 +92,7 @@ export function formatRemaining(untilMs: number, nowMs: number = Date.now()): st
 }
 
 /**
- * The openable address of a site — T117.
+ * The openable address of a site.
  *
  * `SiteSummary` carries the domain and an `https` flag, not a URL: the daemon returns *what the
  * site is*, and turning it into an address is a display matter. In exactly one place because two

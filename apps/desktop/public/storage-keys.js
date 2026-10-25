@@ -1,7 +1,7 @@
-// Moves the window's own localStorage keys from the names the standalone client gave them —
-// roadmap task T176g. A classic script of its own, loaded first by both index.html and tray.html:
-// theme-preload.js, theme.ts on import and the tray page all read these keys before any module
-// could call a function, and the tray may be the first page of a run.
+// Moves the window's own localStorage keys from the names the standalone client gave them. A
+// classic script of its own, loaded first by both index.html and tray.html: theme-preload.js,
+// theme.ts on import and the tray page all read these keys before any module could call a function,
+// and the tray may be the first page of a run.
 //
 // For each pair: the new key keeps its value when it has one, the old value is copied across when
 // it does not, and the old key is removed either way — so after one page load there is one prefix.

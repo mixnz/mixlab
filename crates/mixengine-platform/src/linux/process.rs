@@ -6,13 +6,12 @@
 //! directory" rule exists for.
 //!
 //! **It is a guard, not a guarantee**, and the difference is written down in
-//! `docs/decisions/0007-supervised-child-owns-a-process-group.md` rather than quietly averaged
-//! into the Windows promise. `PR_SET_PDEATHSIG` reaches the process we started and nothing it
-//! starts, so a php-fpm master dies and its pool workers are reparented to init; it is keyed to the
-//! parent *thread*, so in a daemon with a thread pool it arrives when whichever worker did the spawn
-//! exits rather than when the daemon does; and it is cleared across a setuid `exec`. What covers the
-//! rest is crash recovery at the next boot (roadmap task T18), which has to exist anyway for the
-//! machine that lost power.
+//! `docs/decisions/0007-supervised-child-owns-a-process-group.md` rather than quietly averaged into
+//! the Windows promise. `PR_SET_PDEATHSIG` reaches the process we started and nothing it starts, so
+//! a php-fpm master dies and its pool workers are reparented to init; it is keyed to the parent
+//! *thread*, so in a daemon with a thread pool it arrives when whichever worker did the spawn exits
+//! rather than when the daemon does; and it is cleared across a setuid `exec`. What covers the rest
+//! is crash recovery at the next boot, which has to exist anyway for the machine that lost power.
 
 use std::io;
 use std::os::unix::process::CommandExt as _;
@@ -129,7 +128,7 @@ fn unreadable_start_time(field: &str) -> Error {
     }
 }
 
-/// Every process's parent — roadmap task **T181**, see `crate::process::parent_table`.
+/// Every process's parent — see `crate::process::parent_table`.
 ///
 /// One `stat` per numeric entry of `/proc`, where `sysinfo` reads several files for each. An entry
 /// that is gone by the time it is read, or whose line does not parse, is left out: it is a process
@@ -231,11 +230,10 @@ fn die_with_the_parent(command: &mut Command) {
 
 /// What this machine caps a supervised service with: a cgroup, when it will lend one.
 ///
-/// **[`None`] is an ordinary answer, not a failure.** A machine with no systemd, a container with no
-/// delegated subtree, a WSL distribution started without `systemd=true` — all three arrive here, all
-/// three run services perfectly well, and all three are told what they cannot do through
-/// [`ResourceControl`](crate::ResourceControl) rather than by a start that refuses. The T68 design,
-/// D6.
+/// **[`None`] is an ordinary answer, not a failure.** A machine with no systemd, a container with
+/// no delegated subtree, a WSL distribution started without `systemd=true` — all three arrive here,
+/// all three run services perfectly well, and all three are told what they cannot do through
+/// [`ResourceControl`](crate::ResourceControl) rather than by a start that refuses.
 #[derive(Debug)]
 pub(crate) struct Attachment(Option<super::cgroup::Cgroup>);
 
@@ -282,9 +280,9 @@ impl Attachment {
 
 /// Remove the cgroups a daemon that was killed left behind.
 ///
-/// Called once, at daemon start, beside the stale socket and pidfile cleanup roadmap task T18 put
-/// there. **An empty cgroup is removable and a non-empty one is not**, so this needs no list of what
-/// it expects to find: a directory that still holds a process belongs to a service this daemon is
+/// Called once, at daemon start, beside crash recovery's stale socket and pidfile cleanup.
+/// **An empty cgroup is removable and a non-empty one is not**, so this needs no list of what it
+/// expects to find: a directory that still holds a process belongs to a service this daemon is
 /// about to adopt, and the kernel refuses to take it away.
 pub(crate) fn sweep_stale_groups() {
     if let Ok(delegation) = super::cgroup::Delegation::discover() {

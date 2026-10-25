@@ -37,7 +37,7 @@ use crate::{Error, Keyring, Result};
 mod file;
 mod vault;
 
-/// The keyring a [`crate::Host`] hands out, for the store it was built with — T184, T186.
+/// The keyring a [`crate::Host`] hands out, for the store it was built with.
 ///
 /// On macOS the OS store keeps each home's `mixengine` credentials in one item (`vault`): one
 /// Keychain question per home after an update rather than one per password.
@@ -131,11 +131,12 @@ fn failure(action: &'static str, service: &str, key: &str, source: KeyringError)
 
 /// The characters a generated secret is made of.
 ///
-/// ASCII letters and digits and nothing else. **Not a nod to compatibility — an escaping decision.**
-/// A generated password is interpolated into a SQL string literal by the MariaDB recipe's bootstrap
-/// step (T33), carried on an environment variable, and never written to a file at all; the first of
-/// those is the one that would need quoting, and an alphabet with no quote, no backslash and no
-/// newline in it is what makes the interpolation safe without an escaper to get wrong.
+/// ASCII letters and digits and nothing else. **Not a nod to compatibility — an escaping
+/// decision.** A generated password is interpolated into a SQL string literal by the MariaDB
+/// recipe's bootstrap step, carried on an environment variable, and never written to a file at all;
+/// the first of those is the one that would need quoting, and an alphabet with no quote, no
+/// backslash and no newline in it is what makes the interpolation safe without an escaper to get
+/// wrong.
 ///
 /// Sixty-two characters is 5.95 bits each, so the 32 the MariaDB recipe asks for is 190 bits.
 const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

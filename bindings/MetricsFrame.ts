@@ -20,7 +20,7 @@ at: Timestamp,
  */
 samples: Array<MetricsSample>, 
 /**
- * How many logical processors this machine has — roadmap task **T190c**.
+ * How many logical processors this machine has.
  *
  * What a client divides [`MetricsSample::cpu_percent`] by to show a share of the whole
  * machine, as Task Manager does. The same count as

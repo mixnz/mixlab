@@ -31,7 +31,7 @@ export function stateLabel(t: Translate, state: string | null | undefined, stopp
 }
 
 /** The sentence the short label leaves out, for the pill's tooltip — and for a failed service,
- *  why it failed (T200b, D6). */
+ *  why it failed. */
 export function stateHint(
   t: Translate,
   state: string | null | undefined,

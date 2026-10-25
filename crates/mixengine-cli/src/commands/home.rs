@@ -14,7 +14,7 @@ use crate::confirm::unanswered;
 use crate::output::{emit, rendered};
 use crate::{confirm, render};
 
-/// `mix home …` — what an earlier install left a copy of, and bringing it back (T182h).
+/// `mix home …`: what an earlier install left a copy of, and bringing it back.
 #[derive(Debug, Subcommand)]
 pub(crate) enum HomeCommand {
     /// Say what the copy an earlier install left in its kept folders holds, if there is one.

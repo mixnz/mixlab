@@ -26,13 +26,12 @@ const DAEMON: &str = "mixengined";
 /// The program to start a daemon with: where this machine really has it, otherwise the bare name
 /// for `PATH`.
 ///
-/// **The list this module used to keep for itself now belongs to `mixengine-platform`** — roadmap
-/// task **T107**. The measurement that justified it still holds and went over with it: on the
-/// machine this module was written on, MixEngine lives in `%LOCALAPPDATA%\Programs\MixEngine` and
-/// is **not** on this process's `PATH`, because the Windows installer is a per-user one that edits
-/// the user's `PATH`, while a running process carries the `PATH` it inherited when it opened. What
-/// is new is that the daemon, the packaging scripts and this window now read **one** answer instead
-/// of three.
+/// **The list this module used to keep for itself now belongs to `mixengine-platform`.** The
+/// measurement that justified it still holds and went over with it: on the machine this module was
+/// written on, MixEngine lives in `%LOCALAPPDATA%\Programs\MixEngine` and is **not** on this
+/// process's `PATH`, because the Windows installer is a per-user one that edits the user's `PATH`,
+/// while a running process carries the `PATH` it inherited when it opened. What is new is that the
+/// daemon, the packaging scripts and this window now read **one** answer instead of three.
 ///
 /// The bare name stays as the last resort: a `PATH` entry that appeared after this process started
 /// is still worth one spawn, and a failed spawn is reported in words.
@@ -50,7 +49,7 @@ pub enum Presence {
     NotInstalled,
 }
 
-/// What the tab's gate draws, and when nothing was found, where we looked — roadmap task **T111**.
+/// What the tab's gate draws, and when nothing was found, where we looked.
 ///
 /// `searched` is the list [`mixengine_platform::install::program_path`] went through, in order, and
 /// is only filled for [`Presence::NotInstalled`]: the other three states search nothing, so an
@@ -77,7 +76,7 @@ const HEALTH_TIMEOUT: Duration = Duration::from_secs(2);
 /// normally. The question "is anyone there" is already inside `/health`'s answer, so asking it
 /// separately adds nothing but a bug.
 ///
-/// **Since T111 the answer carries where we looked for the daemon**, when it was not found.
+/// **The answer carries where we looked for the daemon**, when it was not found.
 pub async fn presence() -> PresenceReport {
     let presence =
         match tokio::time::timeout(HEALTH_TIMEOUT, rpc::request("GET", "/health", None)).await {
@@ -115,16 +114,15 @@ fn searched() -> Vec<String> {
 
 /// Whether `mixengined` is on this machine. Only asked once we know we cannot dial.
 ///
-/// **A few disk reads, not a process** — roadmap task **T107**. The previous version ran
-/// `mixengined --version` and threw the output away: one process creation, one console window to
-/// hide by hand, and up to a second while the tab opens, to answer a question a single `stat`
-/// answers — and `program_path` asks `PATH` by reading it, not by running a program on it.
+/// **A few disk reads, not a process.** The previous version ran `mixengined --version` and threw
+/// the output away: one process creation, one console window to hide by hand, and up to a second
+/// while the tab opens, to answer a question a single `stat` answers — and `program_path` asks
+/// `PATH` by reading it, not by running a program on it.
 fn installed() -> bool {
     mixengine_platform::install::program_path(DAEMON).is_some()
 }
 
-/// The four directories the user chose a location for, in the form the start command takes —
-/// roadmap task **T146**.
+/// The four directories the user chose a location for, in the form the start command takes.
 ///
 /// **Only the keys someone actually changed**, not all four every time: the daemon treats a value
 /// equal to what `config.toml` already holds as a silent no-op, but sending four keys for a
@@ -154,8 +152,7 @@ impl ChosenPaths {
     }
 }
 
-/// Where the daemon keeps its growing directories, and whether that can still be changed — roadmap
-/// task **T146**.
+/// Where the daemon keeps its growing directories, and whether that can still be changed.
 ///
 /// **Answerable before any daemon exists**, which is the whole reason it runs a process instead of
 /// calling JSON-RPC: the screen inviting the user to pick a drive is drawn *before* the first
@@ -197,9 +194,9 @@ pub async fn storage() -> Result<Value, AppError> {
 /// stdout — so there is no backoff loop here. The waiting belongs to the process that knows whether
 /// its child is still alive, and that is not this process.
 ///
-/// `chosen` is the four directories the user just picked at the gate, if any — roadmap task
-/// **T146**. They go straight onto the command line rather than being written here: whether they
-/// are allowed is a question about rows in the database, and this process opens no database.
+/// `chosen` is the four directories the user just picked at the gate, if any. They go straight onto
+/// the command line rather than being written here: whether they are allowed is a question about
+/// rows in the database, and this process opens no database.
 pub async fn start_daemon(chosen: Option<ChosenPaths>) -> Result<String, AppError> {
     let output = tauri::async_runtime::spawn_blocking(move || {
         let mut command = Command::new(program());
@@ -235,7 +232,7 @@ mod tests {
     ///
     /// **The per-OS half of this assertion has moved.** It used to spell out
     /// `programs\mixengine\mixengined.exe` here, next to a list this module kept for itself; since
-    /// T107 that list is `mixengine_platform::install::program_dirs`, and so is the test naming it.
+    /// then that list is `mixengine_platform::install::program_dirs`, and so is the test naming it.
     #[test]
     fn the_daemon_is_looked_for_where_the_platform_says_mixengine_is() {
         let program = program();
@@ -274,8 +271,8 @@ mod tests {
         );
     }
 
-    /// The search starts right next to this program — the first step of T107, and also exactly
-    /// the directory `npm run dev:app` copies the daemon into (T111).
+    /// The search starts right next to this program — the platform's first step, and also exactly
+    /// the directory `npm run dev:app` copies the daemon into.
     #[test]
     fn where_it_looked_begins_beside_this_program() {
         let running = std::env::current_exe().expect("this test has a path");

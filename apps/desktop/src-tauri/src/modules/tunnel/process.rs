@@ -1,5 +1,5 @@
-//! One tunnel's process — T203, D3 and D4: what is read from its output, and the record macOS needs
-//! to end it after a crash. Pure, so each rule is a test rather than a run of cloudflared.
+//! One tunnel's process: what is read from its output, and the record macOS needs to end it after a
+//! crash. Pure, so each rule is a test rather than a run of cloudflared.
 
 /// Something the row should suggest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]

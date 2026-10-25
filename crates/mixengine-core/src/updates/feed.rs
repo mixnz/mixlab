@@ -1,4 +1,4 @@
-//! What a release says about itself — roadmap task **T88**.
+//! What a release says about itself.
 //!
 //! **A third [`Document`](crate::index::Document) and not a second client.** The three properties an
 //! update feed needs are the three [`crate::index::Client`] already does and already has tests for:
@@ -52,8 +52,7 @@ pub struct Feed {
     /// What changed, as the tag's own commit subjects.
     ///
     /// Written by `packaging/feed.sh` from `git log` rather than by GitHub: this document is signed
-    /// before the draft release exists, so `--generate-notes` cannot reach it. See the T88 design,
-    /// D13.
+    /// before the draft release exists, so `--generate-notes` cannot reach it.
     pub notes: String,
 
     /// Where the notes somebody may have edited afterwards live.
@@ -68,19 +67,19 @@ pub struct Feed {
     /// [`Artifact`] itself rather than a type of this module's own, which is what lets
     /// [`crate::install::Installer`] apply one unchanged: `provides` says where the binaries are
     /// inside the archive, `sha256` is what binds the payload to this signed document, and
-    /// `requires` carries the glibc floor the packaging pipeline already measures. See the T88
-    /// design, D3.
+    /// `requires` carries the glibc floor the packaging pipeline already measures.
     pub artifacts: Vec<Artifact>,
 
-    /// One `mixengine-elevate` per machine — roadmap task **T88a**.
+    /// One `mixengine-elevate` per machine.
     ///
     /// `default`, so a feed published before this field existed still reads and [`SCHEMA`] does not
     /// move: this module's own rule is that adding an optional field is not a bump.
     #[serde(default)]
     pub helpers: Vec<HelperArtifact>,
 
-    /// One installer per machine — roadmap task **T88f**. Today only the macOS `.pkg`, listed under
-    /// both architectures, which a copy the `.pkg` installed is updated with (ADR 0050).
+    /// One installer per machine and flavour: the macOS `.pkg`, listed under both architectures,
+    /// which a copy the `.pkg` installed is updated with (ADR 0050), and the Linux `.deb` and
+    /// `.rpm`.
     ///
     /// `default`, so a feed published before this field existed still reads and [`SCHEMA`] does not
     /// move, on [`Feed::helpers`]' rule.
@@ -88,12 +87,12 @@ pub struct Feed {
     pub installers: Vec<InstallerArtifact>,
 }
 
-/// Where one machine's `mixengine-elevate` is published — roadmap task **T88a**.
+/// Where one machine's `mixengine-elevate` is published.
 ///
 /// **Its own release asset rather than a file inside the payload archive.** The signing key exists
 /// only in the `release` job, after every build leg has uploaded, so nothing signed can be inside an
 /// artifact a build leg produced — and a detached signature is precisely what the elevated process
-/// needs in order to check a replacement for itself. See the T88a design, D6.
+/// needs in order to check a replacement for itself.
 ///
 /// Not an [`Artifact`]: there is no archive, no `provides` and no `requires`, and the check is the
 /// `.minisig` beside the file rather than a SHA-256 inside this document — which is the one place
@@ -112,18 +111,18 @@ pub struct HelperArtifact {
     /// How big it is, for the sentence a person reads before it is fetched.
     pub size: u64,
 
-    /// The helper's own version, which is not the release's — roadmap task **T182b**, D1.
+    /// The helper's own version, which is not the release's.
     ///
-    /// Optional on the wire, so a feed from before T182b still reads: there the helper carried the
-    /// release's version, and [`None`] means exactly that.
+    /// Optional on the wire, so a feed from before the helper had a version still reads: there the
+    /// helper carried the release's version, and [`None`] means exactly that.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
 }
 
-/// Where one machine's installer is published — roadmap task **T88f**.
+/// Where one machine's installer is published.
 ///
-/// **Bound by a SHA-256 inside this signed document**, as an [`Artifact`] is (T88's D3), and unlike
-/// a [`HelperArtifact`], whose detached signature is for the elevated process to check. No second
+/// **Bound by a SHA-256 inside this signed document**, as an [`Artifact`] is, and unlike a
+/// [`HelperArtifact`], whose detached signature is for the elevated process to check. No second
 /// key-handling path is added (ADR 0050, decision 2).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct InstallerArtifact {
@@ -145,8 +144,8 @@ pub struct InstallerArtifact {
     /// What its bytes hash to, which is what binds it to this signed document.
     pub sha256: String,
 
-    /// `window` or `headless` — T182b, D5. [`None`] is the window's, which is all a feed from
-    /// before T182b listed.
+    /// `window` or `headless`. [`None`] is the window's, which is all a feed from before the
+    /// headless package listed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flavour: Option<String>,
 }
@@ -177,8 +176,7 @@ impl Feed {
     /// The payload for one machine, or [`None`] when this release has no build for it.
     ///
     /// macOS publishes one *universal* archive under two rows, one per architecture, so a caller
-    /// asks with the pair it already has rather than learning what "universal" means — the T88
-    /// design, D6.
+    /// asks with the pair it already has rather than learning what "universal" means.
     #[must_use]
     pub fn artifact(&self, os: Os, arch: Arch) -> Option<&Artifact> {
         self.artifacts
@@ -188,8 +186,9 @@ impl Feed {
 
     /// The privileged helper for one machine, or [`None`] when this release published none for it.
     ///
-    /// A release from before T88a has an empty list and answers [`None`] for every pair, which is
-    /// the honest answer: there is nothing to fetch, and the daemon leaves the helper as it is.
+    /// A release from before helpers were published has an empty list and answers [`None`] for
+    /// every pair, which is the honest answer: there is nothing to fetch, and the daemon leaves the
+    /// helper as it is.
     #[must_use]
     pub fn helper(&self, os: Os, arch: Arch) -> Option<&HelperArtifact> {
         self.helpers
@@ -197,13 +196,14 @@ impl Feed {
             .find(|helper| helper.os == os && helper.arch == arch)
     }
 
-    /// The installer for one machine, or [`None`] when this release published none for it — roadmap
-    /// task **T88f**. A release from before it has an empty list and answers [`None`] for every pair.
+    /// The installer for one machine, or [`None`] when this release published none for it. A
+    /// release from before installers were published has an empty list and answers [`None`] for
+    /// every pair.
     #[must_use]
     ///
-    /// **And for the flavour this copy is** — T182b, D5: `headless` for a copy with no window, which
-    /// the headless package installs, and the window's package otherwise. A row with no `flavour` is
-    /// the window's, which is all a feed from before T182b published.
+    /// **And for the flavour this copy is**: `headless` for a copy with no window, which the
+    /// headless package installs, and the window's package otherwise. A row with no `flavour` is
+    /// the window's, which is all a feed from before the headless package published.
     ///
     /// `kind` is `pkg`, `deb` or `rpm`: a copy a package manager owns is updated by the next
     /// package of the same kind (`updates::placement::installer_kind`).
@@ -286,8 +286,8 @@ mod tests {
         serde_json::from_value::<Feed>(document).expect("an unknown field is ignored");
     }
 
-    /// T88a. The helper is never swapped by an update and cannot be, so the release publishes it as
-    /// its own asset and the signed feed is what names it.
+    /// The helper is never swapped by an update and cannot be, so the release publishes it as its
+    /// own asset and the signed feed is what names it.
     #[test]
     fn the_feed_names_a_helper_for_each_machine() {
         let mut document = document();
@@ -306,7 +306,7 @@ mod tests {
         assert_eq!(helper.size, 812_345);
         assert_eq!(
             helper.version, None,
-            "a feed from before T182b names no helper version"
+            "a feed from before the helper had a version names none"
         );
         assert!(
             feed.helper(Os::Linux, Arch::X86_64).is_none(),
@@ -314,7 +314,7 @@ mod tests {
         );
     }
 
-    /// T182b, D1. The helper carries a version of its own, which is not the release's.
+    /// The helper carries a version of its own, which is not the release's.
     #[test]
     fn a_helper_names_its_own_version() {
         let mut document = document();
@@ -346,7 +346,7 @@ mod tests {
     }
 
     /// `notes_url` is what a person follows when somebody edited the draft's notes after the tag
-    /// was signed (the T88 design, D13). A feed written before that field existed still reads.
+    /// was signed. A feed written before that field existed still reads.
     #[test]
     fn a_feed_with_no_notes_url_still_reads() {
         let mut document = document();
@@ -373,8 +373,8 @@ mod tests {
         );
     }
 
-    /// T182b, D5. A copy is offered the package of its own flavour: the headless one when it has no
-    /// window, the window's otherwise — and a row naming no flavour is the window's.
+    /// A copy is offered the package of its own flavour: the headless one when it has no window,
+    /// the window's otherwise — and a row naming no flavour is the window's.
     #[test]
     fn each_flavour_is_offered_its_own_package() {
         let row = |flavour: Option<&str>, name: &str| {
@@ -407,7 +407,7 @@ mod tests {
         assert!(url(true).ends_with("-headless.pkg"));
     }
 
-    /// One universal `.pkg`, listed under both Mac rows as the payload is (the T88f design, D2).
+    /// One universal `.pkg`, listed under both Mac rows as the payload is.
     #[test]
     fn the_universal_pkg_is_found_under_either_mac_row() {
         let row = |arch: &str| {
@@ -437,9 +437,8 @@ mod tests {
         );
     }
 
-    /// The fixture MixLab's own reader is tested against (T187, spec D2). A field this reader
-    /// starts needing that the fixture lacks, or a shape it stops accepting, fails here as well as
-    /// there.
+    /// The fixture MixLab's own reader is tested against. A field this reader starts needing that
+    /// the fixture lacks, or a shape it stops accepting, fails here as well as there.
     #[test]
     fn the_fixture_mixlab_reads_is_a_feed_this_reader_reads() {
         let fixture = include_str!("../../../../packaging/testdata/latest.json");

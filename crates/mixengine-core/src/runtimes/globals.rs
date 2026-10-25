@@ -1,4 +1,4 @@
-//! Tools somebody installed into a runtime — roadmap task **T131**.
+//! Tools somebody installed into a runtime.
 //!
 //! `npm install -g yarn`, `pip install poetry`, `gem install rails`. Each of the three package
 //! managers has a *bindir* it writes programs into, that directory is **inside the runtime's own
@@ -71,9 +71,8 @@ const RUNNABLE_ON_WINDOWS: &[&str] = &["exe", "cmd", "bat", "com"];
 ///
 /// [`None`] for PHP: Composer's global bindir is `~/.composer/vendor/bin`, outside every install
 /// directory and therefore a different question — see the spec's *Out of scope*. [`None`] for Go
-/// too, for the same reason: `go install` writes into `GOBIN` or `GOPATH/bin`, which every installed
-/// Go shares (roadmap task **T27d**). And for Java: Maven and Gradle keep their programs outside
-/// every install (roadmap task **T27e**).
+/// too, for the same reason: `go install` writes into `GOBIN` or `GOPATH/bin`, which every
+/// installed Go shares. And for Java: Maven and Gradle keep their programs outside every install.
 #[must_use]
 pub fn directory(kind: RuntimeKind, install_path: &Path) -> Option<PathBuf> {
     match kind {
@@ -148,9 +147,8 @@ pub fn scan(
 
 /// Every tool every installed runtime holds, with the language that decides which copy runs.
 ///
-/// **The pass the daemon repeats and the shape `bin_commands` is recorded in** — roadmap task
-/// **T131**. Each installed version is scanned against its own `provides`, and the union is taken
-/// by name.
+/// **The pass the daemon repeats and the shape `bin_commands` is recorded in.** Each installed
+/// version is scanned against its own `provides`, and the union is taken by name.
 ///
 /// A name two languages both hold goes to the one whose kind comes first in
 /// [`RuntimeKind::ALL`](mixengine_proto::RuntimeKind::ALL). Arbitrary, and the same answer on every

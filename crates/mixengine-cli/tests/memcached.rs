@@ -1,4 +1,4 @@
-//! The Memcached recipe against a **real** memcached — roadmap task **T35**.
+//! The Memcached recipe against a **real** memcached.
 //!
 //! `#[ignore]`d rather than skipped, for `caddy.rs`' reason: a test that quietly returns when it
 //! cannot find a memcached is a green suite that proved nothing on the day the download broke. The
@@ -188,7 +188,7 @@ async fn created() -> (Home, harness::Daemon, MockRegistry, u16) {
     (home, daemon, registry, port)
 }
 
-/// **The whole of T35's memcached half, in the order a user meets it.**
+/// **The whole of the recipe, in the order a user meets it.**
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real memcached — see the module note, and the `memcached` step in _services.yml"]
 async fn a_cache_with_no_configuration_file_is_started_written_to_and_stopped() {
@@ -196,9 +196,9 @@ async fn a_cache_with_no_configuration_file_is_started_written_to_and_stopped() 
 
     // --- started, on flags alone -----------------------------------------------------------------
     //
-    // A memcached given a flag it does not understand exits rather than ignoring it, so a start that
-    // completes is a command line this build accepted — which is the only validation this recipe
-    // has and the reason it needs none of T30's.
+    // A memcached given a flag it does not understand exits rather than ignoring it, so a start
+    // that completes is a command line this build accepted — which is the only validation this
+    // recipe has and the reason it needs none of the generator's.
     let started = json(&home.mix(&["service", "start", SERVICE, "--json"]));
     assert_eq!(
         started["complete"],

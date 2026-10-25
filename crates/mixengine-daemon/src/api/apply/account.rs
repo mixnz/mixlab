@@ -1,10 +1,13 @@
-//! The account a blueprint's database step ends up with — roadmap task **T202**, D1.
+//! The account a blueprint's database step ends up with (D1).
 //!
-//! **Routes around a foreign account, never through it.** `database.create` refuses an account
-//! that is on the server and that this home holds no credential for (T77a, D3: a keyring entry is
-//! the deed of ownership), and a blueprint has nobody at the keyboard to pick another name. So the
-//! step picks one: the plan's, then `-2` … `-9`, against the same database, and takes the first
-//! the server does not have or MixEngine owns. What it did is said in the step's note (D2).
+//! **Routes around a foreign account, never through it.** `database.create` refuses an account that
+//! is on the server and that this home holds no credential for (a keyring entry is the deed of
+//! ownership), and a blueprint has nobody at the keyboard to pick another name. So the step picks
+//! one: the plan's, then `-2` … `-9`, against the same database, and takes the first the server
+//! does not have or MixEngine owns. What it did is said in the step's note (D2).
+//!
+//! The D-numbers here are those of
+//! `docs/specs/2026-10-08-t202-what-the-removal-walk-found-design.md`.
 
 use mixengine_core::generate::databases::IDENTIFIER_LIMIT;
 use mixengine_proto::{DatabaseAccount, DatabaseCreate, Error, Made};
@@ -56,7 +59,8 @@ pub(crate) fn nth_name(base: &str, n: usize) -> String {
 /// # Errors
 ///
 /// Every refusal that is not a foreign account, as `database.create` would have returned it; and
-/// T77a's refusal with the last name tried in the hint when all [`TRIES`] names are foreign.
+/// `database.create`'s refusal with the last name tried in the hint when all [`TRIES`] names are
+/// foreign.
 pub(crate) async fn with_a_free_name(
     maker: &impl MakesDatabases,
     asked: &DatabaseCreate,
@@ -260,7 +264,7 @@ mod tests {
         );
     }
 
-    /// D1. Nine foreign names end in T77a's refusal, naming the last one tried.
+    /// D1. Nine foreign names end in `database.create`'s refusal, naming the last one tried.
     #[tokio::test]
     async fn nine_foreign_names_are_the_refusal_with_the_last_name_in_the_hint() {
         let server = Server::new(&[

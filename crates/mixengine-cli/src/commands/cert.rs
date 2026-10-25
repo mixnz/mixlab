@@ -20,20 +20,11 @@ use crate::{confirm, render};
 /// `mix cert …` — one subcommand per `cert.*` method, and nothing that is not one.
 ///
 /// **`ca-status` and not `status`.** `docs/features/tls.md` gives the short name to the per-site
-/// diagnostics with a live TLS handshake, which is roadmap task **T53**, and names this command's
-/// siblings `ca-uninstall` and `ca-rotate`. Taking the short name here would mean renaming it later,
-/// or giving one command two unrelated jobs.
+/// diagnostics with a live TLS handshake, `mix cert status`, and names this command's siblings
+/// `ca-uninstall` and `ca-rotate`. Taking the short name here would mean renaming it later, or
+/// giving one command two unrelated jobs.
 #[derive(Debug, Subcommand)]
 pub(crate) enum CertCommand {
-    /// Say what this home's certificate authority is: its name, its fingerprint, how long it has.
-    ///
-    /// **Not whether this machine trusts it.** That is a question about the operating system's own
-    /// certificate stores rather than about the authority, this build does not yet ask it, and
-    /// nothing printed here implies an answer to it.
-    // Roadmap task T49 is what will answer it, and `mix cert ca-install` is where that will live.
-    // Kept out of the help text above on purpose: a task number means nothing to whoever typed
-    // `--help`, and clap prints every line of a doc comment.
-
     /// Give a site the certificate its names need, or every HTTPS site one.
     ///
     /// Idempotent: a certificate that still covers the right names, has more than thirty days left
@@ -55,6 +46,10 @@ pub(crate) enum CertCommand {
         #[arg(long, value_name = "DOMAIN")]
         site: Option<String>,
     },
+    /// Say what this home's certificate authority is, and where this machine trusts it.
+    ///
+    /// Its name, its fingerprint and how long it has, then whether the system's certificate store
+    /// trusts it and which browser databases hold it.
     CaStatus,
 
     /// Replace this home's certificate authority with a new one.
@@ -190,11 +185,12 @@ pub(crate) async fn cert(
 
 /// Say what a command is about to change, name anything else already queued, and ask.
 ///
-/// **T64's rule, adapted to a command that queues its own work.** `mix elevation grant` can read the
-/// batch before it asks, because the batch is already there; `cert.ca_uninstall` builds its own
-/// batch inside the job, so what this puts in front of a person is the command's own sentence — plus
-/// whatever was *already* waiting, because one grant spends one prompt on all of it and a person who
-/// typed a certificate command should not discover afterwards that their hosts file moved.
+/// **What is about to be allowed is shown before it is allowed, adapted to a command that queues
+/// its own work.** `mix elevation grant` can read the batch before it asks, because the batch is
+/// already there; `cert.ca_uninstall` builds its own batch inside the job, so what this puts in
+/// front of a person is the command's own sentence — plus whatever was *already* waiting, because
+/// one grant spends one prompt on all of it and a person who typed a certificate command should not
+/// discover afterwards that their hosts file moved.
 async fn agreed(client: &mut Client, what: &str, json: bool) -> Result<bool, Error> {
     if json {
         return Err(unanswered());
@@ -225,10 +221,10 @@ async fn agreed(client: &mut Client, what: &str, json: bool) -> Result<bool, Err
 /// Follow a job to its end and render whatever it produced, or print the job when it produced
 /// nothing this command knows how to read.
 ///
-/// **The result is decoded here and not in [`render::job::job_status`].** That function tries several
-/// types in turn against one `serde_json::Value`, and T54's two reports are similar enough — an
-/// `outcome` and a `status` apiece — that adding them to that chain is how a rotation gets rendered
-/// as a removal. A command knows its own type.
+/// **The result is decoded here and not in [`render::job::job_status`].** That function tries
+/// several types in turn against one `serde_json::Value`, and a rotation's and an uninstall's
+/// reports are similar enough — an `outcome` and a `status` apiece — that adding them to that chain
+/// is how a rotation gets rendered as a removal. A command knows its own type.
 async fn job_answering(
     client: &mut Client,
     started: JobSummary,

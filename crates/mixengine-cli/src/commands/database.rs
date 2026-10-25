@@ -108,9 +108,9 @@ pub(crate) enum DatabaseCommand {
 ///
 /// **`create`, `client` and `open` never print a password**: what comes back is the address the
 /// credential is stored under, because a password on a terminal is a password in scrollback, in a
-/// tmux buffer and in a CI log. Handing one to a program that needs it is `open` (roadmap task
-/// **T83**), and the daemon puts it in that program's environment alone. `credentials` is the one
-/// exception — its whole purpose is to print one, for a project's `.env` — roadmap task **T77b**.
+/// tmux buffer and in a CI log. Handing one to a program that needs it is `open`, and the daemon
+/// puts it in that program's environment alone. `credentials` is the one exception: its whole
+/// purpose is to print one, for a project's `.env`.
 pub(crate) async fn database(
     command: DatabaseCommand,
     endpoint: &Endpoint,
@@ -215,9 +215,9 @@ pub(crate) async fn database(
     Ok(ExitCode::SUCCESS)
 }
 
-/// Which store the daemon keeps passwords in, for a sentence that says where one is — roadmap task
-/// T194. Asked only for a person: `--json` hands back the daemon's own answer and needs no more.
-/// A daemon that cannot say, or predates the member, is answered as it always was.
+/// Which store the daemon keeps passwords in, for a sentence that says where one is. Asked only for
+/// a person: `--json` hands back the daemon's own answer and needs no more. A daemon that cannot
+/// say, or predates the member, is answered as it always was.
 async fn credential_store(client: &mut Client, json: bool) -> Option<CredentialStore> {
     if json {
         return None;

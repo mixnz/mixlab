@@ -1,4 +1,4 @@
-//! Noticing that somebody installed a tool into a runtime — roadmap tasks **T131** and **T185b**.
+//! Noticing that somebody installed a tool into a runtime.
 //!
 //! `npm install -g yarn` writes a program into the Node install's own bindir and tells nobody. This
 //! is what turns that into a command: a watch on each installed runtime's bindir, and — when one
@@ -7,10 +7,10 @@
 //!
 //! # Nothing runs on a timer
 //!
-//! T131 shipped a two-second `stat` loop here. It is gone: the kernel says when a bindir changes
-//! ([`mixengine_platform::watch`]), so an idle machine pays nothing, and everything the daemon does
-//! itself — installing or removing a runtime, starting — brings `bin/` up to date before it answers
-//! rather than leaving it for a pass to find. ADR 0057 records the change.
+//! The first version was a two-second `stat` loop here. It is gone: the kernel says when a bindir
+//! changes ([`mixengine_platform::watch`]), so an idle machine pays nothing, and everything the
+//! daemon does itself — installing or removing a runtime, starting — brings `bin/` up to date
+//! before it answers rather than leaving it for a pass to find. ADR 0057 records the change.
 //!
 //! # What is watched changes with what is installed
 //!

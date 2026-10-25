@@ -14,8 +14,8 @@ slug: string,
  * The display name.
  *
  * Equal to [`Self::slug`] for a captured blueprint. The two are separate because the gallery
- * (T79) ships blueprints whose title is not a handle, and one column serving both would have
- * to pick which of the two it lies about.
+ * ships blueprints whose title is not a handle, and one column serving both would have to pick
+ * which of the two it lies about.
  */
 name: string, 
 /**
@@ -31,8 +31,8 @@ created_at: string,
  */
 source: BlueprintSource, 
 /**
- * Whether this build will offer to run the blueprint's own `[scaffold]` command — roadmap task
- * **T78a**, its design's D1.
+ * Whether this build will offer to run the blueprint's own `[scaffold]` command
+ * (`docs/specs/2026-09-01-t78a-scaffold-trust-design.md`, D1).
  *
  * Decided once, by whatever wrote the row: this build's own gallery and this machine's own
  * captures are trusted, and a blueprint somebody handed over earns it only from a signature
@@ -44,16 +44,16 @@ source: BlueprintSource,
  */
 trusted: boolean, 
 /**
- * Why [`Self::trusted`] says what it says — roadmap task **T79b**.
+ * Why [`Self::trusted`] says what it says.
  *
  * [`None`] where no signature was ever looked for — this build's own gallery and this
  * machine's own captures — and for a row written before this task, whose reason the schema
  * never recorded. Absent rather than guessed: an untrusted import from before this column is
  * *either* of the two, and the answer to which is not on disk anywhere.
  *
- * **A record of what arrived, and never a claim about the file on disk now** (the design's
- * D10). The rendering beside the row is not the artifact that was signed, and nothing
- * re-checks it — T78a's D16, which is also why trust is a column and not a promise.
+ * **A record of what arrived, and never a claim about the file on disk now**. The rendering
+ * beside the row is not the artifact that was signed, and nothing re-checks it, which is also
+ * why trust is a column and not a promise.
  */
 signature?: SignatureCheck | null, 
 /**

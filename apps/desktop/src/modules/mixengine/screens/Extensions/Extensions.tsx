@@ -67,11 +67,11 @@ function pillTone(state: string | null | undefined): StatusTone {
  * The registry, what is installed, installing (from the registry or from a local directory),
  * removing, and running what each installed extension runs.
  *
- * **One add-on, one row** (T200, D4): what is installed is listed under *Installed* and nowhere
- * else. **A `web-app` is its site** (D6): it is opened, turned on and off through `site.*`, because
- * `extension.start` refuses it by design (T81b, D10).
+ * **One add-on, one row**: what is installed is listed under *Installed* and nowhere else. **A
+ * `web-app` is its site**: it is opened, turned on and off through `site.*`, because
+ * `extension.start` refuses it by design.
  *
- * There is no "configure" screen — `extension.configure` does not exist (decision D1, spec).
+ * There is no "configure" screen — `extension.configure` does not exist.
  */
 export default function Extensions({ active }: { active: boolean }) {
   /** `null` until the first read has answered — see `extensionsScreen.ts`. */
@@ -84,7 +84,7 @@ export default function Extensions({ active }: { active: boolean }) {
   const [error, setError] = useState("");
   const [dialog, setDialog] = useState<ExtensionsDialog | null>(null);
   const [jobs, setJobs] = useState<JobRow[]>([]);
-  /** The install job each add-on is following, by extension id — T200, D3. */
+  /** The install job each add-on is following, by extension id. */
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
   const { t } = useTranslation();
 
@@ -149,7 +149,7 @@ export default function Extensions({ active }: { active: boolean }) {
       setJobs((current) => applyJob(current, raw));
       // `starting`, then `running`: a row follows its service as the Dashboard's does.
       setServiceState((current) => serviceStatesAfter(current, raw));
-      // A service that has just failed, or come back: its line under the name follows (T200b, D6).
+      // A service that has just failed, or come back: its line under the name follows.
       if (failureMayHaveChanged(raw)) void reload();
       const finished = jobFinished(raw);
       if (finished !== null && Object.values(installingJobRef.current).includes(finished.id)) {
@@ -161,7 +161,7 @@ export default function Extensions({ active }: { active: boolean }) {
 
   /** The plan was accepted and the job is running. **Asked once more, at once** — a path install
    *  can end before this id is stored, and its `job_finished` would then pass unrecognised and
-   *  leave the row installing for ever (T200, Review Focus 1). */
+   *  leave the row installing for ever. */
   async function started(id: string, job: number) {
     setDialog(null);
     setInstallingJob((current) => ({ ...current, [id]: job }));
@@ -217,7 +217,7 @@ export default function Extensions({ active }: { active: boolean }) {
     }
   }
 
-  /** A service's own page — T200a, D3. Started first when it is not running, the way Sites' Open
+  /** A service's own page. Started first when it is not running, the way Sites' Open
    *  starts a project's services; a start that fails opens nothing and says why. */
   async function openPage(row: ExtensionSummary) {
     if (!row.ui) return;
@@ -237,7 +237,7 @@ export default function Extensions({ active }: { active: boolean }) {
     }
   }
 
-  /** A `web-app` is turned on and off as its site — T200, D6. */
+  /** A `web-app` is turned on and off as its site. */
   async function switchSite(row: ExtensionSummary, site: SiteSummary, on: boolean) {
     await whilePending(row.id, on ? "turnOn" : "turnOff", () =>
       on ? api.siteStart(site.domain) : api.siteStop(site.domain),
@@ -303,7 +303,7 @@ export default function Extensions({ active }: { active: boolean }) {
     );
   }
 
-  /** Why what this add-on runs could not start — T200b, D6: a web-app's pool, a service itself. */
+  /** Why what this add-on runs could not start: a web-app's pool, a service itself. */
   function failureOf(row: ExtensionSummary, site: SiteSummary | null): Failure | null {
     if (row.kind === "web-app") {
       return serviceFailure(site?.kind.kind === "php-fpm" ? site.kind.pool : null, allServices);
@@ -388,7 +388,7 @@ export default function Extensions({ active }: { active: boolean }) {
   }
 
   /** What an offer's last cell holds: its install's progress, why it cannot be installed here, or
-   *  the button — T200, D3 and D8. */
+   *  the button. */
   function offerCell(offer: ExtensionOffer) {
     if (installingJob[offer.id] !== undefined) return progressOf(offer.id);
     if (!installable(offer.artifact)) {

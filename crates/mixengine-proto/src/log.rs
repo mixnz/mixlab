@@ -2,11 +2,11 @@
 //!
 //! Here rather than in `mixengine-supervisor`, for the reason
 //! `docs/decisions/0006-servicespec-in-proto-and-secret-free.md` gives for `ServiceSpec`: proto
-//! owns the vocabulary, and a line that is captured, kept in a ring, written to a file and served on
-//! `GET /logs/{id}` is one value rather than four descriptions of one. T14 set the same precedent
-//! for [`ServiceTransition`](crate::ServiceTransition) — the row that is persisted and the event
-//! that is emitted are the same value, so an event describing something that did not happen cannot
-//! be built.
+//! owns the vocabulary, and a line that is captured, kept in a ring, written to a file and served
+//! on `GET /logs/{id}` is one value rather than four descriptions of one. The service state machine
+//! set the same precedent for [`ServiceTransition`](crate::ServiceTransition) — the row that is
+//! persisted and the event that is emitted are the same value, so an event describing something
+//! that did not happen cannot be built.
 //!
 //! What is *not* here is the service the line came from. A capture belongs to one service, and
 //! repeating its id on every line would spend a field per line on an answer the caller already had;
@@ -76,7 +76,7 @@ pub struct LogLine {
     pub text: String,
 }
 
-/// Whose output a log stream carries — roadmap task **T78a**, its design's D13.
+/// Whose output a log stream carries.
 ///
 /// **A second kind of subject rather than a second surface.** The ring, the frames, the [`Gap`] a
 /// slow reader is told about and the per-connection back-pressure are the ones

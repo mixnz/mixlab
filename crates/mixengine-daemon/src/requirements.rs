@@ -1,5 +1,4 @@
-//! What an install needs of this machine, answered before anybody has to ask twice — roadmap task
-//! **T149**.
+//! What an install needs of this machine, answered before anybody has to ask twice.
 //!
 //! **The judgement is core's** (`mixengine_core::requirements`), pure and tested there. What lives
 //! here is what a daemon adds to it: reading the machine *now*, and turning a judgement into a
@@ -16,8 +15,8 @@ use crate::runtimes::Fetcher;
 
 /// This machine, now.
 ///
-/// Read for every question rather than kept (T148 design, D1): somebody told to install a runtime
-/// installs it and asks again, and a daemon that remembered the machine would refuse them again.
+/// Read for every question rather than kept: somebody told to install a runtime installs it and
+/// asks again, and a daemon that remembered the machine would refuse them again.
 pub(crate) fn facts() -> MachineFacts {
     mixengine_platform::host().machine().facts()
 }
@@ -56,8 +55,8 @@ pub(crate) fn refusal(
     unmet: &[Requirement],
     install_prerequisites: bool,
 ) -> Option<Error> {
-    // **A warning is said by whoever asked, and refuses nothing** — roadmap task **T27e**, D16. It
-    // is dropped here rather than at each caller so that "what stands in the way" means one thing.
+    // **A warning is said by whoever asked, and refuses nothing.** It is dropped here rather than
+    // at each caller so that "what stands in the way" means one thing.
     let unmet: Vec<Requirement> = unmet
         .iter()
         .filter(|requirement| !requirements::is_advisory(requirement))
@@ -129,7 +128,7 @@ pub(crate) async fn gate(
     refusal(subject, &unmet, install_prerequisites).map_or(Ok(()), Err)
 }
 
-/// Install every redistributable `unmet` asks for, once each — roadmap task **T150**.
+/// Install every redistributable `unmet` asks for, once each.
 ///
 /// Called only inside a job, only after a person agreed. What it does not do is judge again; the
 /// caller does that, on a machine read again, because an exit code is the installer's claim.
@@ -157,8 +156,8 @@ pub(crate) async fn satisfy(
             .await
             .map_err(|error| error.to_wire())?;
 
-        // **Said before it starts, because it cannot be taken back once it has** (D6): nothing here
-        // may stop a process that holds administrator rights.
+        // **Said before it starts, because it cannot be taken back once it has**: nothing here may
+        // stop a process that holds administrator rights.
         handle
             .progress(
                 0,
@@ -296,7 +295,7 @@ mod tests {
         }
     }
 
-    /// **A library the distribution provides refuses nothing** — roadmap task **T27e**, D16.
+    /// **A library the distribution provides refuses nothing.**
     #[test]
     fn a_missing_library_alone_refuses_nothing() {
         assert!(refusal(&subject(), &[advisory()], false).is_none());

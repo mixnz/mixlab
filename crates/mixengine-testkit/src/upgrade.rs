@@ -1,4 +1,4 @@
-//! The frozen databases T89's suite migrates: a `mixengine.db` captured at an older schema,
+//! The frozen databases the upgrade suite migrates: a `mixengine.db` captured at an older schema,
 //! committed, and never regenerated.
 //!
 //! **There is deliberately no accessor returning a committed fixture's own path.** `Store::open`

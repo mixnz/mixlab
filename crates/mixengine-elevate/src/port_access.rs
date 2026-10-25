@@ -1,10 +1,10 @@
 //! What port access may be granted, decided by the binary that will grant it.
 //!
 //! **The helper validates the request itself rather than trusting the daemon** —
-//! `docs/architecture/security-model.md`, and the T42 design, D5. If the daemon is compromised it
-//! *is* the attacker, so nothing the request asserts can be believed: not the binary, not the ports,
-//! not the numbers a redirect names. This module is the whole of that decision, next door to
-//! `hosts.rs`, which is the same shape for the same reason.
+//! `docs/architecture/security-model.md`. If the daemon is compromised it *is* the attacker, so
+//! nothing the request asserts can be believed: not the binary, not the ports, not the numbers a
+//! redirect names. This module is the whole of that decision, next door to `hosts.rs`, which is the
+//! same shape for the same reason.
 //!
 //! **Ownership by the caller is the strongest assertion available.** The helper cannot be told where
 //! `MIXENGINE_HOME` is, because the daemon is what would be telling it and the daemon is the thing
@@ -15,9 +15,10 @@
 //! into a file root owns is built from them by `mixengine_platform::port_access`, so there is no
 //! string in the request that could become a packet-filter rule of somebody else's choosing.
 //!
-//! What this cannot stop is a compromised daemon pointing the grant at a binary of its own choosing:
-//! nothing here can tell that binary from a real front end. The control is T64 — the whole path is
-//! printed before the user approves it, which is what that task was built for. See D11.
+//! What this cannot stop is a compromised daemon pointing the grant at a binary of its own
+//! choosing: nothing here can tell that binary from a real front end. The control is the rule every
+//! elevation follows: the whole path is printed before the user approves it. D11 of
+//! `docs/specs/2026-08-23-t42-port-access-design.md` is why that bound is enough.
 
 use std::path::Path;
 
@@ -261,8 +262,8 @@ mod tests {
     }
 
     /// A file anybody may rewrite is a file whose bytes root approved and somebody else replaced —
-    /// except that the kernel clears the capability on any write, which is what bounds D11 and why
-    /// this is a refusal rather than the whole story.
+    /// except that the kernel clears the capability on any write, which is what bounds that risk
+    /// and why this is a refusal rather than the whole story.
     #[cfg(unix)]
     #[test]
     fn a_binary_anybody_can_rewrite_is_refused() {
@@ -284,7 +285,7 @@ mod tests {
     }
 
     /// The other plan's policy. The helper renders the rule text itself from these numbers and
-    /// **never accepts text** — D5 — so these three are the whole of what a redirect may say.
+    /// **never accepts text**, so these three are the whole of what a redirect may say.
     #[test]
     fn what_this_helper_will_not_redirect() {
         let (_directory, _binary, caller) = a_binary();

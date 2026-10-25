@@ -4,7 +4,7 @@
  * `cert.ca_status` takes no options, and says so in a type.
  *
  * An empty struct with `deny_unknown_fields` rather than no parameters at all: a caller who
- * misspells something is told, instead of being silently given the default — the reasoning T40
- * established for every parameterless method since.
+ * misspells something is told, instead of being silently given the default — the reasoning every
+ * parameterless method follows.
  */
 export type CaStatusQuery = Record<symbol, never>;

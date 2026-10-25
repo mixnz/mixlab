@@ -28,10 +28,10 @@
 //! # One of the four sources reads something that is often not there
 //!
 //! A `mixengine.toml` is optional, and most directories have none. A project record is the other
-//! half of the same walk and **is** reachable now: T39 gave this build `project.*`, so step 3 stops
-//! being a step nothing has ever taken. Both are walked to the top before the next one starts,
-//! which is the order the feature spec lists and not the same thing as one walk asking both
-//! questions per directory.
+//! half of the same walk and **is** reachable: this build has `project.*`, so step 3 is a step
+//! that is taken. Both are walked to the top before the next one starts, which is the
+//! order the feature spec lists and not the same thing as one walk asking both questions per
+//! directory.
 
 use std::path::{Path, PathBuf};
 
@@ -43,7 +43,7 @@ use crate::{Error, ProjectError, Result, RuntimeError, Store, runtimes};
 
 /// The file a project pins its runtimes in, checked into the user's repository.
 ///
-/// Owned by [`crate::manifest`] since T39, and still named here because this is where every caller
+/// Owned by [`crate::manifest`], and still named here because this is where every caller
 /// learned it.
 pub use crate::manifest::FILE_NAME as MANIFEST_FILE_NAME;
 
@@ -64,8 +64,8 @@ pub struct Question<'a> {
     pub explicit: Option<&'a VersionConstraint>,
 }
 
-/// What puts a missing runtime back, or forgets it — roadmap task **T206d**. One sentence for the
-/// daemon's hint and the shim's, so a terminal and MixLab say the same thing.
+/// What puts a missing runtime back, or forgets it. One sentence for the daemon's hint and the
+/// shim's, so a terminal and MixLab say the same thing.
 #[must_use]
 pub fn restore_command(kind: RuntimeKind, version: &PackageVersion) -> String {
     format!(
@@ -114,8 +114,8 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
                 kind: question.kind,
             }))?;
 
-        // **Said, never replaced** — roadmap task **T206d**, D2: another version standing in for a
-        // default whose folder vanished would change what a project runs behind its back.
+        // **Said, never replaced**: another version standing in for a default whose folder vanished
+        // would change what a project runs behind its back.
         if default.is_missing() {
             return Err(gone(&default));
         }
@@ -130,8 +130,8 @@ pub async fn runtime(store: &Store, question: &Question<'_>) -> Result<ResolvedR
     // The newest of everything that matches, rather than the first: `8.10.0` and `8.9.0` both answer
     // `^8.3`, and only one of them is what somebody pinning a range meant.
     //
-    // **What is there answers first** — roadmap task **T206d**, D2: a version whose folder is gone
-    // is skipped, and said only when nothing that is there matches.
+    // **What is there answers first**: a version whose folder is gone is skipped, and said only
+    // when nothing that is there matches.
     let (present, absent): (Vec<_>, Vec<_>) = installed
         .into_iter()
         .filter(|runtime| asked.constraint.matches(&runtime.version))
@@ -325,7 +325,7 @@ mod tests {
     }
 
     /// Write the rows an install would have written, over empty folders, without the eighty
-    /// megabytes. Real folders since T206d: a row whose folder is gone resolves to nothing.
+    /// megabytes. Real folders, because a row whose folder is gone resolves to nothing.
     async fn install(root: &Path, store: &Store, kind: RuntimeKind, versions: &[&str]) {
         for version in versions {
             let path = root.join("runtimes").join(kind.as_str()).join(version);
@@ -589,7 +589,7 @@ mod tests {
         );
     }
 
-    /// **One sentence, exactly** — roadmap task **T206d**. The daemon's hint and the shim's read it.
+    /// **One sentence, exactly.** The daemon's hint and the shim's read it.
     #[test]
     fn the_restore_command_names_both_ways_out() {
         assert_eq!(
@@ -602,7 +602,7 @@ mod tests {
         );
     }
 
-    /// **A missing default is said, never replaced** — roadmap task **T206d**, D2.
+    /// **A missing default is said, never replaced.**
     #[tokio::test]
     async fn a_default_whose_folder_is_gone_is_refused_by_name() {
         let (home, store) = store().await;
@@ -629,7 +629,7 @@ mod tests {
     }
 
     /// **Under a constraint, the newest version that is there answers**, and only a constraint
-    /// nothing present matches is refused as missing — roadmap task **T206d**, D2.
+    /// nothing present matches is refused as missing.
     #[tokio::test]
     async fn a_constraint_skips_a_version_whose_folder_is_gone() {
         let (home, store) = store().await;

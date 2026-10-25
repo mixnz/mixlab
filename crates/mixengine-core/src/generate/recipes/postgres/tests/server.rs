@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// What a failed start is diagnosed against — roadmap task **T38**.
+/// What a failed start is diagnosed against.
 #[test]
 fn the_spec_declares_the_port_the_cluster_will_bind() {
     let context = context("{}");
@@ -27,7 +27,7 @@ fn rendered(name: &str, overrides: &str) -> String {
 }
 
 /// Two clusters in one home, so the id carries an `@`.
-/// **A database is woken at the addresses it listens on itself** — T70a's D4.
+/// **A database is woken at the addresses it listens on itself.**
 ///
 /// On a system with Unix sockets that is *two* addresses and not one, and the difference is a
 /// client's habit rather than a configuration: a generated `.env` names `127.0.0.1`, and the
@@ -55,7 +55,7 @@ fn a_stopped_server_is_woken_at_its_port_and_at_its_socket() {
 }
 
 /// **The socket file PostgreSQL would have created, named by the recipe that knows the
-/// convention** — T70a's D4.
+/// convention.**
 ///
 /// `unix_socket_directories` takes a directory and the server creates `.s.PGSQL.<port>` inside
 /// it, so [`Endpoints::socket`] holds a directory here and a *file* for MariaDB — which is why
@@ -171,7 +171,7 @@ fn the_configuration_says_what_the_overrides_said() {
     assert!(rendered.contains("shared_buffers = 512MB"), "{rendered}");
 }
 
-/// **A development machine's durability, which is not the server's** — roadmap task **T73**.
+/// **A development machine's durability, which is not the server's.**
 ///
 /// The commit barrier and nothing else: `synchronous_commit = off` costs the last second of
 /// committed transactions and cannot leave a cluster that will not open. `fsync = off` would,

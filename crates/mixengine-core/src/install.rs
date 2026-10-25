@@ -25,13 +25,11 @@
 //!
 //! # What is not here
 //!
-//! **No job, and no method.** This is the mechanism; `runtime.install` is [T23]'s, on the same split
-//! T19a/T19b and T22 used, and [`Watcher`] is shaped exactly like the daemon's `JobHandle` so that
-//! wiring the two together is an impl and not an adapter. **No per-runtime knowledge** either: what
-//! to run as a smoke test arrives as a [`SmokeTest`], because "which flag prints the version" is a
-//! fact about PHP and Node, not about downloading.
-//!
-//! [T23]: ../../../docs/roadmap/phase-2-runtimes.md
+//! **No job, and no method.** This is the mechanism; `runtime.install` is the daemon's, on the same
+//! split the service methods and the job system use, and [`Watcher`] is shaped exactly like the
+//! daemon's `JobHandle` so that wiring the two together is an impl and not an adapter. **No
+//! per-runtime knowledge** either: what to run as a smoke test arrives as a [`SmokeTest`], because
+//! "which flag prints the version" is a fact about PHP and Node, not about downloading.
 
 mod error;
 
@@ -59,8 +57,7 @@ pub use installer::Installer;
 /// has never seen this file pays for that once.
 const SMOKE_TIMEOUT: Duration = Duration::from_secs(60);
 
-/// What a URL that is not one of the three archive formats means to whoever asked for it — roadmap
-/// task **T82**, the design's D3.
+/// What a URL that is not one of the three archive formats means to whoever asked for it.
 ///
 /// **The package index publishes archives and nothing else** — `mkindex.py`'s `ARCHIVE_SUFFIXES` —
 /// so a fourth suffix there names an artifact this build has no decompressor for, and refusing it
@@ -117,8 +114,8 @@ pub struct SmokeTest {
     /// `-v` for PHP, `--version` for Node.
     pub args: Vec<String>,
 
-    /// Variables removed from the child's environment — a JVM's own option variables, for Java
-    /// (roadmap task **T27e**, its design's D3). Empty for every other kind.
+    /// Variables removed from the child's environment — a JVM's own option variables, for Java.
+    /// Empty for every other kind.
     pub unset: &'static [&'static str],
 }
 
@@ -133,7 +130,7 @@ pub struct Installed {
 }
 
 /// Run `smoke` against the build in `dir` — the check an install makes before the rename, and the
-/// one [`crate::adopt`] makes of a directory an earlier home left without a marker (T182f).
+/// one [`crate::adopt`] makes of a directory an earlier home left without a marker.
 ///
 /// # Errors
 ///
@@ -181,7 +178,8 @@ pub async fn check_runs(artifact: &Artifact, dir: &Path, smoke: &SmokeTest) -> R
         Ok(Ok(output)) => output,
         // Where a missing VC++ redistributable, a glibc floor, an unloadable architecture and a
         // machine whose application control policy refuses the image all arrive: the OS refuses
-        // to start it and says why. The last of those needs a sentence of its own — T94.
+        // to start it and says why. The last of those needs a sentence of its own, which
+        // `why_it_would_not_start` writes.
         Ok(Err(source)) => return Err(failed(why_it_would_not_start(&source))),
         Err(_) => {
             return Err(failed(format!(
@@ -206,10 +204,10 @@ pub async fn check_runs(artifact: &Artifact, dir: &Path, smoke: &SmokeTest) -> R
 /// What a smoke test says when the operating system would not start the program at all.
 ///
 /// **A function rather than a `to_string()` at the call site**, so the one interesting case can be
-/// exercised without a download — roadmap task **T94**. Every other failure here is transient or is
-/// the packaging's fault; an application control policy refusing the image is neither, and the OS
-/// message for it is a sentence about *this file* that says nothing about why every MixEngine
-/// binary meets the same wall.
+/// exercised without a download. Every other failure here is transient or is the packaging's fault;
+/// an application control policy refusing the image is neither, and the OS message for it is a
+/// sentence about *this file* that says nothing about why every MixEngine binary meets the same
+/// wall.
 fn why_it_would_not_start(source: &std::io::Error) -> String {
     if mixengine_platform::refused_by_app_control(source) {
         format!("{source}; {}", mixengine_platform::APP_CONTROL_REFUSAL)
@@ -225,13 +223,13 @@ fn why_it_would_not_start(source: &std::io::Error) -> String {
 /// names the file, while the same bug found later is a runtime that is missing something at the
 /// moment somebody needs it.
 ///
-/// **A directory is a legitimate answer, and it has to be** — roadmap task **T106**. macOS wraps a
-/// windowed application in one, `packaging/feed.sh` names that directory in the macOS payload's
-/// `provides`, and a check demanding a file would refuse the whole payload — taking the four ordinary
-/// binaries with it and reporting the window. An *empty* directory is still refused: that is the
-/// shape a bundle copied by something that did not follow it takes, and it is what the strictness
-/// here was really buying. The one entry whose shape matters beyond existing is the smoke-test
-/// executable, and that one is proved by being run.
+/// **A directory is a legitimate answer, and it has to be.** macOS wraps a windowed application in
+/// one, `packaging/feed.sh` names that directory in the macOS payload's `provides`, and a check
+/// demanding a file would refuse the whole payload — taking the four ordinary binaries with it and
+/// reporting the window. An *empty* directory is still refused: that is the shape a bundle copied
+/// by something that did not follow it takes, and it is what the strictness here was really buying.
+/// The one entry whose shape matters beyond existing is the smoke-test executable, and that one is
+/// proved by being run.
 ///
 /// # Errors
 ///
@@ -241,7 +239,7 @@ pub fn present(artifact: &Artifact, dir: &Path) -> Result<()> {
 }
 
 /// [`present`], for a `provides` map read from somewhere other than an artifact — the marker an
-/// earlier install left, which [`crate::adopt`] checks before it records a directory (T182f).
+/// earlier install left, which [`crate::adopt`] checks before it records a directory.
 ///
 /// # Errors
 ///
@@ -300,8 +298,8 @@ where
 }
 
 /// The SHA-256 of a file, as lowercase hex — for a caller holding a file this pipeline downloaded
-/// earlier, which it checks again before trusting: roadmap task **T88f**, a `.pkg` reused after a
-/// person cancelled Installer.app.
+/// earlier, which it checks again before trusting: a `.pkg` reused after a person cancelled
+/// Installer.app.
 ///
 /// # Errors
 ///

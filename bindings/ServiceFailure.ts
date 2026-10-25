@@ -20,8 +20,8 @@ service: ServiceId,
  */
 reason?: StateReason | null, 
 /**
- * What the runner wrote about it — the same sentence `ServiceSummary.last_failure` carries
- * (T200b) — so the first thing a client prints is the runner's and not the state machine's.
- * Roadmap task **T202a**, D3. [`None`] where the reason is, and for a daemon from before it.
+ * What the runner wrote about it — the same sentence `ServiceSummary.last_failure` carries —
+ * so the first thing a client prints is the runner's and not the state machine's. [`None`]
+ * where the reason is, and for a daemon from before the field.
  */
 detail?: string | null, };

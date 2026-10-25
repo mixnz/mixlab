@@ -4,9 +4,9 @@ use mixengine_proto::{ElevationStatus, GrantOutcome, privileged::ElevationOutcom
 
 /// `mix elevation status`, for a person.
 ///
-/// **The list is the point, and it comes before any offer to raise a prompt.** T64 is what turns
-/// this into the screen that explains every operation and what it will literally change *before*
-/// somebody is asked to allow it; what is here already prints the operations' own descriptions,
+/// **The list is the point, and it comes before any offer to raise a prompt.** It is also the top
+/// of [`elevation_prompt`], the screen that explains every operation and what it will literally
+/// change *before* somebody is asked to allow it. It prints the operations' own descriptions,
 /// because the daemon renders them and a client that composed its own would be composing the
 /// sentence a person judges the change by.
 pub(crate) fn elevation_status(status: &ElevationStatus) -> String {
@@ -23,10 +23,10 @@ pub(crate) fn elevation_status(status: &ElevationStatus) -> String {
         );
     }
 
-    // T88a. The daemon composed this sentence, because what to do about an old helper differs by
-    // *which* old helper it is — one that can replace itself is pointed at a command and one that
-    // cannot is pointed at the installer — and choosing between those here would be a client
-    // deciding what runs as root.
+    // The daemon composed this sentence, because what to do about an old helper differs by *which*
+    // old helper it is — one that can replace itself is pointed at a command and one that cannot is
+    // pointed at the installer — and choosing between those here would be a client deciding what
+    // runs as root.
     if let Some(said) = status
         .installed_helper
         .as_ref()
@@ -91,7 +91,7 @@ fn waiting(status: &ElevationStatus) -> String {
     rendered
 }
 
-/// The screen `mix elevation grant` shows **before** it raises anything — roadmap task **T64**.
+/// The screen `mix elevation grant` shows **before** it raises anything.
 ///
 /// The same list [`elevation_status`] prints, and then the one thing that screen cannot say: a
 /// prompt is about to appear, it will appear once, and it will name this program. What is
@@ -188,8 +188,8 @@ mod tests {
         }
     }
 
-    /// The screen T64 will build on: every operation, and what each will literally change, before
-    /// anybody raises a prompt.
+    /// The list `mix elevation grant` builds on: every operation, and what each will literally
+    /// change, before anybody raises a prompt.
     #[test]
     fn a_pending_list_says_what_each_operation_will_change() {
         let rendered = elevation_status(&ElevationStatus {
@@ -211,7 +211,8 @@ mod tests {
         );
     }
 
-    /// T64's screen: the same list, and one sentence about the prompt that is about to be raised.
+    /// `mix elevation grant`'s screen: the same list, and one sentence about the prompt that is
+    /// about to be raised.
     ///
     /// The assertion that matters is the negative one. `mix elevation status` ends by telling a
     /// person to run `mix elevation grant`; this is printed *by* that command, so repeating the
@@ -238,8 +239,8 @@ mod tests {
         assert!(!rendered.contains("mix elevation grant"), "{rendered}");
     }
 
-    /// T88a. The sentence about an old helper comes from the daemon, so what this asserts is that
-    /// it reaches the screen — not what it says.
+    /// The sentence about an old helper comes from the daemon, so what this asserts is that it
+    /// reaches the screen — not what it says.
     #[test]
     fn an_old_privileged_helper_is_reported_where_the_queue_is() {
         let rendered = elevation_status(&ElevationStatus {
@@ -460,7 +461,7 @@ mod tests {
         assert!(!rendered.to_lowercase().contains("error"), "{rendered}");
     }
 
-    /// **A grant that did nothing says why** — roadmap task **T147**.
+    /// **A grant that did nothing says why.**
     ///
     /// The regression this pins is not a crash. It is a person granting the same operation eight
     /// times because the only thing they were shown was *0 applied, 1 still waiting*, while the

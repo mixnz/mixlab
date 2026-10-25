@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// **The whole of T33, in the order a user meets it.**
+/// **The whole of the recipe, in the order a user meets it.**
 ///
 /// One test rather than eight, deliberately: each step is the previous one's precondition, and eight
 /// tests would be eight real bootstraps performed to re-reach the state this one is already in.
@@ -14,8 +14,9 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
 
     // --- started, which is where the bootstrap happens -------------------------------------------
     //
-    // Nothing here asked for a first run. The start did, because the data directory is empty — which
-    // is the half of T33 that is invisible from inside the daemon and obvious from out here.
+    // Nothing here asked for a first run. The start did, because the data directory is empty —
+    // which is the half of a first run that is invisible from inside the daemon and obvious from
+    // out here.
     at("starting the service, which is where the first run bootstraps");
     let started = expect(&home, &["service", "start", SERVICE, "--json"]);
     assert_eq!(
@@ -97,8 +98,8 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
     // --- a database and an account for it ---------------------------------------------------------
     //
     // **Nothing here reads a credential**, which is the whole reason the proof that the account's
-    // password *works* is a step inside the daemon rather than an assertion here — roadmap task
-    // T77a, design D13. See this file's module note for what reading one costs on macOS.
+    // password *works* is a step inside the daemon rather than an assertion here. See this file's
+    // module note for what reading one costs on macOS.
     at("creating a database and an account for it");
     let created = expect(
         &home,
@@ -106,15 +107,15 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
     );
     assert_eq!(created["made"]["database"], "created", "{created}");
     assert_eq!(created["made"]["user"], "created", "{created}");
-    // **Both halves of the address** — roadmap task **T84**. The namespace is on the wire so that
-    // an application reading this entry does not have to hardcode MixEngine's constant.
+    // **Both halves of the address.** The namespace is on the wire so that an application reading
+    // this entry does not have to hardcode MixEngine's constant.
     assert_eq!(created["secret"]["service"], "mixengine", "{created}");
 
-    // **And the key begins with this home's id** — roadmap task **T126**. Asserted by shape rather
-    // than by value, because the id is minted per home by `0001_initial.sql` and a suite that knew
-    // it would be reading the home's database to find out. What matters here is that it is there:
-    // without it this entry is the same one every other MIXENGINE_HOME on the machine writes to,
-    // and the run before this one proved that the hard way by taking a working home's password.
+    // **And the key begins with this home's id** (ADR 0032). Asserted by shape rather than by
+    // value, because the id is minted per home by `0001_initial.sql` and a suite that knew it would
+    // be reading the home's database to find out. What matters here is that it is there: without it
+    // this entry is the same one every other MIXENGINE_HOME on the machine writes to, and the run
+    // before this one proved that the hard way by taking a working home's password.
     let key = created["secret"]["key"].as_str().expect("an address");
     let (home_id, rest) = key.split_once('/').unwrap_or_default();
     assert_eq!(rest, "mariadb@main/blog", "{created}");
@@ -131,7 +132,7 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
     );
 
     // **Asking twice changes nothing**, which is what makes a failed apply resumable rather than
-    // restartable — and what `blueprint.apply` will lean on in T78.
+    // restartable — and what `blueprint.apply` leans on.
     at("creating the same database a second time");
     let again = expect(
         &home,
@@ -167,9 +168,8 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
 
     // --- a chosen password ---------------------------------------------------------------------
     //
-    // Roadmap task **T77b**. Success against the real server *is* the proof the daemon stored and
-    // used exactly the password given — T77a's D13 reasoning, extended to a value nobody
-    // generated.
+    // Success against the real server *is* the proof the daemon stored and used exactly the
+    // password given — the reasoning above, extended to a value nobody generated.
     at("creating an account with a chosen password");
     let chosen = expect(
         &home,
@@ -340,22 +340,22 @@ async fn a_database_is_bootstrapped_started_queried_stopped_and_not_bootstrapped
 }
 
 /// **The only test in the workspace in which a real credential reaches a real process through the
-/// handoff** — roadmap task **T83**, its design's D2, on the window since **T165**. A copy of the
-/// daemon runs out of a directory of this test's own, with a script named as MixLab's window beside
-/// it; the script records its first argument and *whether* the variable is set — never its value,
-/// which is the module note's rule at one more address.
+/// handoff**, on the window since it became the only desktop client. A copy of the daemon runs out
+/// of a directory of this test's own, with a script named as MixLab's window beside it; the script
+/// records its first argument and *whether* the variable is set — never its value, which is the
+/// module note's rule at one more address.
 ///
 /// Linux only: a script can be an executable named `mixlab` there, where Windows needs an `.exe`
 /// and macOS a bundle.
 ///
 /// # Why this service is not `mariadb@main`
 ///
-/// A name of its own, so this test and the one above, which run at once in two homes, read apart
-/// in a log. It used to carry weight. A Unix bootstrap named two things after the service id
-/// alone: the keyring entry the root password lives in, until roadmap task T126, and the
-/// space-free view `/tmp/mixengine-init-<id>`, until T33b. Two homes bootstrapping one id shared
-/// the view, and the second ritual's first step, `rm -rf` on it, killed the first with
-/// `[ERROR] Aborting`. Both names now carry the home id.
+/// A name of its own, so this test and the one above, which run at once in two homes, read apart in
+/// a log. It used to carry weight. A Unix bootstrap named two things after the service id alone:
+/// the keyring entry the root password lives in, until addresses named their home, and the
+/// space-free view `/tmp/mixengine-init-<id>`. Two homes bootstrapping one id shared the view, and
+/// the second ritual's first step, `rm -rf` on it, killed the first with `[ERROR] Aborting`. Both
+/// names now carry the home id.
 #[cfg(target_os = "linux")]
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real MariaDB — see the module note, and the `mariadb` step in _services.yml"]
@@ -442,9 +442,9 @@ async fn the_root_credential_reaches_the_client_through_its_environment_and_not_
         )),
         "{received}"
     );
-    // **Roadmap task T84, the design's D5.** The key half is on the wire so a saved connection can
-    // point at MixEngine's entry; the namespace never is, because a `mixlab://` URL is something a
-    // web page can produce and a namespace on it would name any secret on the machine.
+    // The key half is on the wire so a saved connection can point at MixEngine's entry; the
+    // namespace never is, because a `mixlab://` URL is something a web page can produce and a
+    // namespace on it would name any secret on the machine.
     assert!(!received.contains("secret_service"), "{received}");
     assert!(received.contains("password=present"), "{received}");
     assert!(!received.contains("password=absent"), "{received}");

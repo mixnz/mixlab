@@ -56,7 +56,7 @@ export interface SavedConnection {
    *  its staging twin as a MySQL one is. */
   readOnly?: boolean;
   /** The key half of this connection's address in MixEngine's keyring entry — `service="mixengine"`
-   *  is a constant on the Rust side that reads it and is never stored here (T84's D5); this is the
+   *  is a constant on the Rust side that reads it and is never stored here; this is the
    *  `<service-id>/<user>` half, e.g. `"mariadb@main/root"`.
    *
    *  Safe to keep in `connections.json` in plain text, unlike a password: it is a name, not a
@@ -230,8 +230,7 @@ export interface SqlTableStructure {
   /** Always empty outside ClickHouse — see {@link SqlSkipIndex}. */
   skipIndexes: SqlSkipIndex[];
   /** The table's storage engine, or `null` outside ClickHouse. Used to guard the sorting-key
-   *  rebuild against engines it was never verified against (`Replicated*`) — see the design doc's
-   *  D11. */
+   *  rebuild against engines it was never verified against (`Replicated*`). */
   engine: string | null;
 }
 

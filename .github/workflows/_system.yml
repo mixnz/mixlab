@@ -1,5 +1,5 @@
-# What only a privileged process can prove (T40).
-# Called from ci.yml, never run on its own (T172e); the triggers, the `jobs` choice and
+# What only a privileged process can prove.
+# Called from ci.yml, never run on its own; the triggers, the `jobs` choice and
 # concurrency live there. `inputs.jobs` below is the caller's choice, passed through.
 name: system
 
@@ -17,13 +17,13 @@ env:
   CARGO_TERM_COLOR: always
   # CI builds are never incremental: it only costs cache size and hurts a cold runner.
   CARGO_INCREMENTAL: 0
-  # T170l: line tables only in debug builds. Set in every workflow rather than per job because
+  # Line tables only in debug builds. Set in every workflow rather than per job because
   # rust-cache hashes the `CARGO_*` environment into its key.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   RUST_BACKTRACE: 1
 
 jobs:
-  # T40: what only a privileged process can prove. On every run, because a dispatch has no diff
+  # What only a privileged process can prove. On every run, because a dispatch has no diff
   # to filter on. 45 minutes since the certificate and uninstall suites joined.
   system:
     # **`inputs` is empty for a tag push**, which is what the first arm is for: a release
@@ -52,7 +52,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: system
-          # See the note on `test`'s cache (T170a).
+          # See the note on `test`'s cache.
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Fetch dependencies
@@ -65,11 +65,11 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test -p mixengine-elevate --test system --locked --offline --no-run
 
-      # This leg already holds a full administrator token (T2b, asserted in the `test` job), so there
-      # is nothing to raise: running the binary directly is running it elevated.
-      # `--test-threads=1`: every test in this suite writes the one audit directory this machine has,
-      # which is the whole point of it being a system suite. Run in parallel they interleave on that
-      # one directory and assert about each other's half-finished work rather than about the code.
+      # This leg already holds a full administrator token (asserted in the `test` job), so there is
+      # nothing to raise: running the binary directly is running it elevated. `--test-threads=1`:
+      # every test in this suite writes the one audit directory this machine has, which is the whole
+      # point of it being a system suite. Run in parallel they interleave on that one directory and
+      # assert about each other's half-finished work rather than about the code.
       - name: Elevated suite (Windows)
         if: runner.os == 'Windows'
         env:
@@ -89,10 +89,10 @@ jobs:
           echo "running $suite as root"
           sudo -E "$suite" --ignored --nocapture --test-threads=1
 
-      # T40a's launchers, which are in `mixengine-platform` rather than in the helper: what is under
-      # test is the thing that *raises* the prompt. The helper is built explicitly rather than left to
-      # the step above, because this suite finds it beside the test binary and a reordering of these
-      # steps should not silently turn that into a skip.
+      # The elevation launchers, which are in `mixengine-platform` rather than in the helper: what
+      # is under test is the thing that *raises* the prompt. The helper is built explicitly rather
+      # than left to the step above, because this suite finds it beside the test binary and a
+      # reordering of these steps should not silently turn that into a skip.
       - name: Build the launcher suite
         env:
           CARGO_NET_OFFLINE: "true"
@@ -110,9 +110,10 @@ jobs:
 
       # `timeout-minutes` of its own, rather than the job's 20. The macOS leg is a **measurement**:
       # whether `do shell script … with administrator privileges` authenticates on a process that is
-      # already root is not something this project can settle by reading. If it prompts, it hangs, and
-      # this is the clock that ends it — see the T40a design, "Testing". The Linux leg needs no token
-      # at all and asserts the opposite: that a machine with no authentication agent says so.
+      # already root is not something this project can settle by reading. If it prompts, it hangs,
+      # and this is the clock that ends it — see `docs/specs/2026-08-22-t40a-elevation-design.md`,
+      # "Testing". The Linux leg needs no token at all and asserts the opposite: that a machine with
+      # no authentication agent says so.
       - name: Launchers (Unix)
         if: runner.os != 'Windows'
         timeout-minutes: 5
@@ -125,7 +126,7 @@ jobs:
           echo "running $suite as root"
           sudo -E "$suite" --ignored --nocapture --test-threads=1
 
-      # T41's hosts engine, against the machine's own `/etc/hosts`. Its unit tests drive the same
+      # The hosts engine, against the machine's own `/etc/hosts`. Its unit tests drive the same
       # `apply` against files they own; what only a real machine can answer is whether the replace
       # keeps the file's owner and its ACL, and whether an ordinary token is refused. The test takes
       # a copy first and asserts the file came back byte for byte, so a runner is left as it was.
@@ -152,7 +153,7 @@ jobs:
           echo "running $suite as root"
           sudo -E "$suite" --ignored --nocapture --test-threads=1
 
-      # T42: port access against each machine's own mechanism; the tests restore what they touch.
+      # Port access against each machine's own mechanism; the tests restore what they touch.
       # No Windows leg: that system only refuses, which `test` asserts.
       - name: Build the port-access suite
         if: runner.os != 'Windows'
@@ -174,7 +175,7 @@ jobs:
           echo "running $suite as root"
           sudo -E "$suite" --ignored --nocapture --test-threads=1
 
-      # T45: every test that concludes from a failed name first proves its DNS server answers (D14).
+      # Every test that concludes from a failed name first proves its DNS server answers.
       - name: Build the resolver suite
         env:
           CARGO_NET_OFFLINE: "true"
@@ -198,7 +199,7 @@ jobs:
           echo "running $suite as root"
           sudo -E "$suite" --ignored --nocapture --test-threads=1
 
-      # T49a, T54: the only tests that touch this machine's trust store, gated on
+      # The only tests that touch this machine's trust store, gated on
       # `MIXENGINE_SYSTEM_TESTS=1` as well as `#[ignore]` (docs/standards/testing.md, rule 1).
       - name: Fetch a real Caddy
         if: runner.os != 'Linux'
@@ -264,8 +265,8 @@ jobs:
           echo "running $suite as root"
           sudo -E "$suite" --ignored --nocapture --test-threads=1
 
-      # T85b: a real logon task and systemd user unit under scratch names, removed afterwards. The
-      # Linux leg asserts register-or-refuse-with-a-reason. Ordinary user, one test at a time.
+      # A real logon task and systemd user unit under scratch names, removed afterwards. The Linux
+      # leg asserts register-or-refuse-with-a-reason. Ordinary user, one test at a time.
       - name: The daemon's autostart entry
         if: runner.os != 'macOS'
         env:
@@ -282,7 +283,7 @@ jobs:
             *)       ls -la ~/.config/systemd/user/ 2>/dev/null || echo "no user units, which is how a runner starts" ;;
           esac
 
-      # T87: the clean-VM smoke test. Last of the suites, because it takes the machine apart.
+      # The clean-VM smoke test. Last of the suites, because it takes the machine apart.
       - name: Build the uninstall suite
         env:
           CARGO_NET_OFFLINE: "true"
@@ -334,7 +335,7 @@ jobs:
           cat /etc/pf.conf
           ls -l /etc/pf.anchors/ /Library/LaunchDaemons/ | grep -i mixengine || echo "nothing of ours"
 
-      # T49a: whether the certificate is in the keychain and whether it is trusted are two facts.
+      # Whether the certificate is in the keychain and whether it is trusted are two facts.
       - name: The trust store this job left behind
         if: always()
         shell: bash
@@ -358,9 +359,9 @@ jobs:
           esac
 
       # What the suite left behind, so a failure has the evidence beside it.
-      # T85. The privileged helper this job installed, and where. `always()` for the reason every
-      # step in this block has it: what an elevated job left on a machine is worth printing whether
-      # or not the assertions about it held.
+      # The privileged helper this job installed, and where. `always()` for the reason every step in
+      # this block has it: what an elevated job left on a machine is worth printing whether or not
+      # the assertions about it held.
       - name: The privileged helper this job installed
         if: always()
         shell: bash
@@ -374,7 +375,7 @@ jobs:
           esac
           if [ -e "$helper" ]; then ls -l "$helper"; else echo "no helper at $helper"; fi
 
-      # T87: prints what the uninstall suite left; Windows includes its pending-rename queue (D8).
+      # Prints what the uninstall suite left; Windows includes its pending-rename queue.
       - name: What the uninstall suite left behind
         if: always()
         shell: bash

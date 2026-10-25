@@ -1,8 +1,8 @@
 //! `project.*`: the directories this home has been told about, and the versions they pin.
 //!
-//! Roadmap task **T39**. [`crate::packages`]' shape one namespace across, minus everything a
-//! download needs: a project is rows and one file in somebody else's repository, so there is no
-//! index, no fetcher and no job here.
+//! [`crate::packages`]' shape one namespace across, minus everything a download needs: a project is
+//! rows and one file in somebody else's repository, so there is no index, no fetcher and no job
+//! here.
 //!
 //! # The checks come first, in order of how specific they are
 //!
@@ -14,8 +14,8 @@
 //!
 //! # A create does not write into the user's repository
 //!
-//! Spec D1. `project.export` is the one method that touches `mixengine.toml`, and it exists because
-//! the point of that file is that a colleague gets it. A daemon that wrote to a checked-out working
+//! `project.export` is the one method that touches `mixengine.toml`, and it exists because the
+//! point of that file is that a colleague gets it. A daemon that wrote to a checked-out working
 //! tree on every update would be a daemon producing diffs nobody asked for, in a directory it does
 //! not own.
 
@@ -57,8 +57,8 @@ impl Projects {
         let root = directory(&create.root)?;
         let manifest = manifest::read(&manifest::at(&root)).map_err(|error| error.to_wire())?;
 
-        // **The fall-through, and the whole of what an import is** (spec D2): the argument, then
-        // the manifest, then the directory's own name.
+        // **The fall-through, and the whole of what an import is**: the argument, then the
+        // manifest, then the directory's own name.
         let name = match &create.name {
             Some(name) => name.clone(),
             None => manifest
@@ -271,7 +271,7 @@ impl Projects {
 
     /// One record, with the pins it actually resolves by and the sites its manifest declares.
     async fn detail(&self, project: projects::ProjectRecord) -> Result<ProjectDetail, Error> {
-        // Read once, for both halves — roadmap task **T204**.
+        // Read once, for both halves.
         let manifest =
             manifest::read(&manifest::at(&project.root)).map_err(|error| error.to_wire())?;
         let pins = projects::effective_pins_with(&self.store, &project, manifest.as_ref())
@@ -284,7 +284,7 @@ impl Projects {
             None => Vec::new(),
         };
 
-        // **Read through the project's blueprint** — roadmap task **T205**, D5.
+        // **Read through the project's blueprint.**
         let next_steps = mixengine_core::blueprints::steps::of_project(&self.store, &project)
             .await
             .map_err(|error| error.to_wire())?;

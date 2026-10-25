@@ -38,9 +38,9 @@ pub trait DirectoryAccess: std::fmt::Debug + Send + Sync {
 
     /// Is the restriction [`restrict_to_owner`](Self::restrict_to_owner) applies still in force?
     ///
-    /// For `mix doctor` (T47), which reports rather than repairs: a home that was moved onto
-    /// another volume, restored from a backup, or copied by hand arrives with the destination's
-    /// permissions and nobody is told.
+    /// For `mix doctor`, which reports rather than repairs: a home that was moved onto another
+    /// volume, restored from a backup, or copied by hand arrives with the destination's permissions
+    /// and nobody is told.
     ///
     /// What counts as "in force" is per-OS and deliberately narrow — see each implementation. It
     /// answers "is what we applied still there", not "is this directory secure by every measure".

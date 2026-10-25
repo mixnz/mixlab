@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// T182d: this home's passwords are a row of the plan, and a kept home keeps them.
+/// This home's passwords are a row of the plan, and a kept home keeps them.
 ///
 /// A development daemon keeps its credentials in `<home>/credentials.json` (ADR 0052), which is what
 /// lets this run on any workstation: the file is seeded the way the daemon would have written it,
@@ -62,9 +62,9 @@ async fn a_kept_home_keeps_its_passwords() {
     );
 }
 
-/// T182a: `--package` is a flag of the plan too. A development daemon was placed by no installer,
-/// so here the row is absent (or, on a Windows checkout, kept); on a `.pkg` install it is `planned`.
-/// What must not happen is an unknown flag, or a dry run that claims a removal.
+/// `--package` is a flag of the plan too. A development daemon was placed by no installer, so here
+/// the row is absent (or, on a Windows checkout, kept); on a `.pkg` install it is `planned`. What
+/// must not happen is an unknown flag, or a dry run that claims a removal.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_dry_run_with_package_shows_the_package_row_and_removes_nothing() {
     let home = Home::new();

@@ -1,4 +1,4 @@
-//! Finding this install's window and starting it — roadmap tasks **T83**, **T107** and **T165**.
+//! Finding this install's window and starting it.
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
@@ -26,7 +26,7 @@ pub enum Located {
     },
 }
 
-/// What became of a started application after one second — the T83 design's D8.
+/// What became of a started application after one second.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Started {
     /// Still up.
@@ -57,8 +57,7 @@ pub enum Started {
 ///
 /// `launch` blocks for its one-second judgement and is called through `spawn_blocking`.
 pub trait DesktopApps: std::fmt::Debug + Send + Sync {
-    /// The desktop application **this MixEngine install** has, if it has one — roadmap task
-    /// **T107**.
+    /// The desktop application **this MixEngine install** has, if it has one.
     ///
     /// `executable` and `bundle` are what `packaging/common.sh` declares as `MIX_WINDOW` and
     /// `MIX_WINDOW_APP`; two arguments and not zero, for

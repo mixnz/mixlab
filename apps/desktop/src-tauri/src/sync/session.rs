@@ -38,7 +38,7 @@ mod recovery;
 /// on the way.
 const RENEW_BEFORE: i64 = 60;
 
-/// The running app. A record skipped under one version is asked for again under the next (T178d).
+/// The running app. A record skipped under one version is asked for again under the next.
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// What the account screen draws from.
@@ -74,7 +74,7 @@ pub struct PushedChanges {
     pub replaced: Incoming,
     pub token: Option<String>,
     /// The first refusal, of one entry or of a whole request. What landed is already agreed; the
-    /// shell reports this once it has written `replaced` (T178c, C2).
+    /// shell reports this once it has written `replaced`.
     pub error: Option<AppError>,
     /// This account's collection was never pulled, so nothing was sent: a push trusts that a
     /// record it never saw is one the server does not have, which holds only after a pull. The
@@ -95,7 +95,7 @@ struct Held {
     agreements: Vec<Agreement>,
     /// A pulled page's cursor; `None` for a lost conflict's winners, which move no cursor.
     fetched: Option<Fetched>,
-    /// On the page that ends a resync: what it never met, forgotten on commit (T178b, M2).
+    /// On the page that ends a resync: what it never met, forgotten on commit.
     unmet: Vec<String>,
 }
 

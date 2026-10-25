@@ -1,17 +1,20 @@
 //! The jobs this daemon is running, and the only thing that starts, watches or cancels one.
 //!
-//! **The division is T19's, one table across.** `mixengine_core::jobs` owns the row and the state
-//! machine and has no loop, no clock and no task; what owns the timing, the [`CancellationToken`]
-//! each job hangs off and the `Events` every move is announced on is the daemon — so it is here,
-//! for the same reason the service runner is and not in `mixengine-supervisor`.
+//! **The division is the service runner's, one table across.** `mixengine_core::jobs` owns the row
+//! and the state machine and has no loop, no clock and no task; what owns the timing, the
+//! [`CancellationToken`] each job hangs off and the `Events` every move is announced on is the
+//! daemon — so it is here, for the same reason the service runner is and not in
+//! `mixengine-supervisor`.
 //!
-//! **`runtime.install` is the first and, in this build, only producer** — see [`crate::runtimes`].
-//! T22 shipped this registry with none at all, which was the deliberate position rather than an
-//! oversight: T19 built the service runner before anything could declare a service, for the same
+//! **`runtime.install` was the first producer** — see [`crate::runtimes`]; installs of packages and
+//! extensions, applies, cleanups, uninstalls and the certificate authority's work are jobs too now.
+//! This registry shipped with none at all, which was the deliberate position rather than an
+//! oversight: the service runner was built before anything could declare a service, for the same
 //! reason, and the alternative is writing the loop twice — once inside the first producer and once
-//! properly afterwards. What T21 left behind for this is [`mixengine_core::install::Watcher`],
-//! shaped after [`JobHandle`] rather than invented separately, so that wiring the two together is
-//! the `impl` at the bottom of this file and not an adapter.
+//! properly afterwards. What the download pipeline left behind for this is
+//! [`mixengine_core::install::Watcher`], shaped after [`JobHandle`] rather than invented
+//! separately, so that wiring the two together is the `impl` at the bottom of this file and not an
+//! adapter.
 //!
 //! **A job's work is a task, so it does not survive this process**, which is the whole difference
 //! between recovery here and the adoption in [`crate::services`]: there is nothing to adopt.
@@ -60,7 +63,7 @@ pub(crate) struct JobHandle {
     /// Cancelled by `job.cancel`, and by the daemon's own shutdown.
     cancel: CancellationToken,
 
-    /// Where this handle's own 0–100 lands on the job's bar — roadmap task **T78**.
+    /// Where this handle's own 0–100 lands on the job's bar.
     ///
     /// `(0, 100)` for the handle a job is started with, and narrower for a [`JobHandle::slice`] of
     /// one. What it exists for is work made of *other* work: an apply's fourth step out of ten is an
@@ -144,7 +147,7 @@ impl JobHandle {
 
 /// What lets an install report to a job without knowing there is one.
 ///
-/// **The whole of T21's "the wiring is an impl and not an adapter".**
+/// **The whole of the download pipeline's "the wiring is an impl and not an adapter".**
 /// [`mixengine_core::install::Watcher`] was shaped after this type rather than invented on its own,
 /// so there is nothing to translate: reporting is one call, cancellation is one question, and the
 /// crate that downloads eighty megabytes still knows nothing about the `jobs` table, the event
@@ -270,10 +273,11 @@ impl Jobs {
         tokio::spawn(async move {
             let produced = work(handle).await;
 
-            // **A job that finished while being cancelled has finished.** The same reading T15a's
-            // stop command takes: an outcome is judged by what the work actually produced, and only
-            // work that gave up is reported as cancelled. Otherwise a download that completed in the
-            // instant somebody clicked cancel would be recorded as though it had not.
+            // **A job that finished while being cancelled has finished.** The same reading a
+            // service's stop command takes: an outcome is judged by what the work actually
+            // produced, and only work that gave up is reported as cancelled. Otherwise a download
+            // that completed in the instant somebody clicked cancel would be recorded as though it
+            // had not.
             let outcome = match produced {
                 Ok(result) => JobOutcome::Succeeded { result },
                 Err(_) if cancel.is_cancelled() => JobOutcome::Cancelled,
@@ -486,8 +490,8 @@ mod tests {
         (home, store)
     }
 
-    /// **A slice of a handle is still a handle** — roadmap task T78, its design's D13. A producer
-    /// reports 0–100 of itself, and this is what decides where that lands on the job's own bar.
+    /// **A slice of a handle is still a handle.** A producer reports 0–100 of itself, and this is
+    /// what decides where that lands on the job's own bar.
     #[tokio::test]
     async fn a_producers_own_percentage_lands_inside_the_slice_it_was_given() {
         let (_home, store) = store().await;
@@ -632,8 +636,8 @@ mod tests {
         );
     }
 
-    /// The same reading T15a's stop command takes: work that finished while being asked to stop has
-    /// finished, and recording it as cancelled would erase a download that completed.
+    /// The same reading a service's stop command takes: work that finished while being asked to
+    /// stop has finished, and recording it as cancelled would erase a download that completed.
     #[tokio::test]
     async fn work_that_finished_while_being_cancelled_is_reported_as_having_finished() {
         let (_home, jobs, _events, _root) = jobs().await;

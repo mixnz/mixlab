@@ -1,4 +1,4 @@
-/** What the Updates pane and the corner panel draw, decided from values alone: T187 spec D9, T188 spec D1. */
+/** What the Updates pane and the corner panel draw, decided from values alone. */
 
 export type PlacementKind = "development" | "swap" | "installer" | "elsewhere";
 
@@ -60,7 +60,7 @@ export function updateView(input: ViewInput): View {
 export type Panel = "hidden" | "offer" | "downloading" | "ready" | "installing" | "failed";
 
 /**
- * The corner panel: T188 D1. *Later* hides it until the next window start, except while a download
+ * The corner panel. *Later* hides it until the next window start, except while a download
  * or an install somebody started is running: stopping MixEngine and swapping can take half a
  * minute, and a panel that vanished on the click would read as nothing happening. A failed download
  * or install replaces the offer it came from.

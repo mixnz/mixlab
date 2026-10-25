@@ -356,7 +356,7 @@ impl Runner {
     }
 
     /// How long this service may actually take to stop: what its spec asks for, or what a shutdown
-    /// has left once the kill after it is paid for, whichever is less — roadmap task **T9a**.
+    /// has left once the kill after it is paid for, whichever is less.
     ///
     /// **The two numbers answer different questions and neither is wrong.** A spec's grace period is
     /// what *this* service needs in order to shut down cleanly, and it stays true whether the daemon
@@ -408,7 +408,7 @@ impl Runner {
         allowed
     }
 
-    /// What is left of a shutdown's budget for something that wants `wants` — roadmap task **T9a**.
+    /// What is left of a shutdown's budget for something that wants `wants`.
     ///
     /// The other half of [`Runner::grace_for`], for the parts of a stop that are not a grace period
     /// at all: the log drain in [`Runner::kill`], the watch in [`Runner::stop_adopted`], and the
@@ -426,7 +426,7 @@ impl Runner {
             .map_or(wants, |left| wants.min(left))
     }
 
-    /// How long the poll after the kill in [`Runner::stop_adopted`] gets — roadmap task **T9a**.
+    /// How long the poll after the kill in [`Runner::stop_adopted`] gets.
     ///
     /// [`Runner::within_budget`] with a floor under it, and the floor is the whole of what this adds:
     /// see [`GONE_FLOOR`] for why zero is the one answer this particular wait cannot be given, and
@@ -579,12 +579,12 @@ fn plan_stop(behaviour: &StopBehaviour, can_ask: bool) -> StopPlan<'_> {
 
 /// A process the runner can ask to stop and then watch for.
 ///
-/// **Two implementations, and the trait exists to keep one `StopBehaviour` reading rather than two.**
-/// A `Supervised` child is this daemon's own and a survivor it adopted (roadmap task T18) is not,
+/// **Two implementations, and the trait exists to keep one `StopBehaviour` reading rather than
+/// two.** A `Supervised` child is this daemon's own and a survivor crash recovery adopted is not,
 /// but the grace period a spec asks for is about the *service* — the seconds MariaDB needs to flush
-/// — and is the same either way. What differs is only what a request travels on and where the answer
-/// comes from: a status the kernel keeps for a child of ours, and the process's identity for one
-/// that was somebody else's.
+/// — and is the same either way. What differs is only what a request travels on and where the
+/// answer comes from: a status the kernel keeps for a child of ours, and the process's identity for
+/// one that was somebody else's.
 ///
 /// Deliberately the two calls [`Runner::ask_to_stop`] makes and no more. The kill afterwards is not
 /// here because the two are genuinely different — a group whose ownership this process holds, and a
@@ -666,10 +666,10 @@ mod tests {
 
     /// A spec whose stop command is a `fakeservice` that runs until something kills it.
     ///
-    /// **`Command` and not `Signal`, for the reason T9a's own budget test gives**: Windows sends no
-    /// request to stop at all (ADR 0008), so a `Signal` spec spends no grace period there and every
-    /// assertion below would pass without the clamp existing — green on the one system whose
-    /// console clock motivated the task.
+    /// **`Command` and not `Signal`, for the reason the shutdown budget's own test gives**: Windows
+    /// sends no request to stop at all (ADR 0008), so a `Signal` spec spends no grace period there
+    /// and every assertion below would pass without the clamp existing — green on the one system
+    /// whose console clock motivated the task.
     fn stopped_by_a_command(id: &str, grace: Millis, command: &FakeService) -> ServiceSpec {
         spec(id)
             .stop(StopBehaviour::Command {
@@ -682,7 +682,7 @@ mod tests {
     }
 
     /// **A grace period the budget clamps still leaves room for the kill after it** — the half of
-    /// T9a's promise the first implementation did not keep.
+    /// the budget's promise the first implementation did not keep.
     ///
     /// The budget is a deadline for the whole walk, and asking a service to stop is not the whole of
     /// stopping one: the kill afterwards drains the service's pipes, or watches a survivor leave the
@@ -761,7 +761,7 @@ mod tests {
         );
 
         // Already elapsed: the walk reached this service with the whole of its budget spent on the
-        // ones before it, which is the case T9a's budget exists to bound.
+        // ones before it, which is the case the shutdown budget exists to bound.
         runner.budget.narrow_to(Instant::now());
 
         assert_eq!(

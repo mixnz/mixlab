@@ -13,23 +13,24 @@ export type UninstallQuery = {
  * **Defaults to `false`**, which is the complete removal the command exists for. The flag is
  * here because a home holds `data/` — the MySQL and Postgres instances somebody may have spent
  * a week filling — and a product whose only exit destroys them is one people do not try in the
- * first place (the T87 design, D10).
+ * first place (`docs/specs/2026-09-04-t87-uninstall-design.md`, D10).
  */
 keep_home: boolean, 
 /**
- * Leave every directory `[paths]` has moved out of the root where it is — roadmap task **T182**.
+ * Leave every directory `[paths]` has moved out of the root where it is.
  *
- * **Its own choice and not part of `keep_home`** (the T182 design, D2): those directories are
- * moved to another disk because they are large, and a person may want the home gone and the
- * databases on the other disk kept, or the reverse. A directory that was never moved lies inside
- * the home and follows `keep_home`.
+ * **Its own choice and not part of `keep_home`**: those directories are moved to another disk
+ * because they are large, and a person may want the home gone and the databases on the other
+ * disk kept, or the reverse. A directory that was never moved lies inside the home and follows
+ * `keep_home`.
  */
 keep_relocated: boolean, 
 /**
  * Flush the elevation queue in this same call, raising the one prompt.
  *
  * **Defaults to `false`**, and ignored by `daemon.uninstall_plan`, which raises nothing. The
- * two-call path is T64's rule: what is about to be allowed is read before it is allowed.
+ * two-call path is the rule every elevation follows: what is about to be allowed is shown
+ * before it is allowed.
  */
 grant: boolean, 
 /**
@@ -46,7 +47,7 @@ by_hand?: boolean,
  */
 over_ssh?: boolean, 
 /**
- * Leave out what other programs hold in the folders that would go — roadmap task **T182e**.
+ * Leave out what other programs hold in the folders that would go.
  *
  * **Defaults to `false`**: every plan and every act looks, because something stuck found before
  * the prompt is something the person can close while nothing has changed. `true` is for a caller
@@ -55,7 +56,7 @@ over_ssh?: boolean,
  */
 skip_holders: boolean, 
 /**
- * Also remove the program the macOS `.pkg` placed — roadmap task **T182a**.
+ * Also remove the program the macOS `.pkg` placed.
  *
  * **Defaults to `false`**: `mix uninstall` keeps meaning *undo what MixLab did*, and the
  * `Package` row then says how the program itself goes. Ignored where no `.pkg` placed the copy.

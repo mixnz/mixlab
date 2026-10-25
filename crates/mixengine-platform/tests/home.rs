@@ -2,6 +2,9 @@
 //!
 //! This reads the environment but never writes it, and never creates a directory — `default_home`
 //! answers a question, it does not act on the machine.
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-09-06-t95-a-build-that-is-not-a-release-keeps-its-own-home-design.md`.
 
 use mixengine_platform::{Host as _, host, mock};
 
@@ -19,10 +22,10 @@ fn the_default_root_follows_this_os_convention() {
     } else {
         "MixEngine"
     };
-    // **This suite is compiled by cargo and so never carries the release marker** — T95. Written
-    // against `RELEASE` rather than against the development name, because a test that asserted the
-    // released one could only pass in a build no test run produces, and a test that asserted the
-    // development one would stop describing the product.
+    // **This suite is compiled by cargo and so never carries the release marker.** Written against
+    // `RELEASE` rather than against the development name, because a test that asserted the released
+    // one could only pass in a build no test run produces, and a test that asserted the development
+    // one would stop describing the product.
     let expected = if mixengine_platform::RELEASE {
         released.to_owned()
     } else {

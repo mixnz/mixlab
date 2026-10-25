@@ -1,6 +1,6 @@
 // The MixEngine API contract: every request, response, event and error the daemon speaks.
 //
-// Generated from `mixengine-proto` by `packaging/bindings.sh` — roadmap task T56.
+// Generated from `mixengine-proto` by `packaging/bindings.sh`.
 // Do not edit anything in this directory; every file in it is rewritten from the Rust types.
 
 export * from "./Action";

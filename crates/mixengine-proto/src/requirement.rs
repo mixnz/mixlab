@@ -1,4 +1,4 @@
-//! What an artifact asks of the machine that this machine does not have — roadmap task **T149**.
+//! What an artifact asks of the machine that this machine does not have.
 //!
 //! **Values, because a client draws them.** The wire [`Error`](crate::Error) carries a message
 //! nobody may parse, and MixLab has to put a button beside a requirement and say it in the reader's
@@ -73,7 +73,7 @@ pub enum Need {
         found: Option<String>,
     },
 
-    /// A processor feature this machine's processor lacks — roadmap task **T153**.
+    /// A processor feature this machine's processor lacks.
     ///
     /// Nothing installs one, so its remedy is a release that does not need it, or none.
     Cpu {
@@ -81,8 +81,7 @@ pub enum Need {
         feature: String,
     },
 
-    /// A shared library the build links and this machine's loader does not list — roadmap task
-    /// **T27e**.
+    /// A shared library the build links and this machine's loader does not list.
     ///
     /// **The one need that never refuses.** Every Linux JDK links `libz`, `freetype`, X11 and ALSA
     /// from the distribution, and a headless server runs without three of the four — so this is
@@ -175,8 +174,7 @@ pub enum Remedy {
     /// Nothing can be installed, and no published release of the kind runs here.
     Unavailable,
 
-    /// The distribution's package manager has it, and nothing is refused meanwhile — roadmap task
-    /// **T27e**.
+    /// The distribution's package manager has it, and nothing is refused meanwhile.
     ///
     /// **No package name.** `libasound.so.2` is `libasound2` on Debian and `alsa-lib` on Fedora,
     /// and a daemon that guessed would be naming something it did not measure.
@@ -230,7 +228,7 @@ mod tests {
     use super::*;
 
     /// **A processor feature is named the way the index names it**, and said the way a person reads
-    /// it — roadmap task **T153**.
+    /// it.
     #[test]
     fn a_missing_processor_feature_is_said_in_capitals_and_sent_as_published() {
         let need = Need::Cpu {
@@ -248,8 +246,7 @@ mod tests {
         );
     }
 
-    /// **A library is named by its soname, and what to do about it names no package** — roadmap
-    /// task **T27e**, its design's D15.
+    /// **A library is named by its soname, and what to do about it names no package.**
     #[test]
     fn a_missing_library_is_said_by_soname_and_sent_as_published() {
         let need = Need::SharedLibrary {

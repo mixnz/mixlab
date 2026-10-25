@@ -5,7 +5,6 @@
  *
  * **Closed rather than a string**, for [`ProblemId`](crate::ProblemId)'s reason: a client that
  * matches on wording is a client that silently stops matching. Nothing here is advice — what to do
- * about each is the client's to say, and for most of them it is `mix cert ca-rotate`, which T54
- * builds.
+ * about each is the client's to say, and for most of them it is `mix cert ca-rotate`.
  */
 export type Unusable = "key_missing" | "certificate_missing" | "key_unreadable" | "certificate_unreadable" | "key_and_certificate_disagree";

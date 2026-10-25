@@ -1,7 +1,7 @@
 import type { SiteSummary } from "@mixengine/api";
 
 /**
- * Whether the Dashboard invites the user to build their first site — T117.
+ * Whether the Dashboard invites the user to build their first site.
  *
  * **It is the home's state, not a saved flag.** A "skipped" flag is something to store, to migrate,
  * and someone will edit it by hand wrongly; reading from `site.list`, a machine that has just
@@ -11,7 +11,7 @@ import type { SiteSummary } from "@mixengine/api";
  * card even in front of someone with twenty sites, every time the tab opens.
  *
  * **Projects do not count.** Someone with three projects and no site still has no website — that
- * is exactly the complaint T117 was written to answer.
+ * is exactly the complaint the Quick Start card answers.
  */
 export function shouldOfferQuickStart(sites: SiteSummary[] | null): boolean {
   return sites !== null && sites.length === 0;

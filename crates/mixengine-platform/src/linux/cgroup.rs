@@ -1,7 +1,6 @@
 //! The cgroup v2 a supervised service is capped in, and the subtree it is allowed to live in.
 //!
-//! Roadmap task **T68**. Three facts shape every line here, and none of them is true on the other
-//! two systems:
+//! Three facts shape every line here, and none of them is true on the other two systems:
 //!
 //! 1. **An unprivileged process may only write the cgroups delegated to it.** systemd's user manager
 //!    delegates a subtree to `user@N.service`; a machine with no systemd delegates nothing. Both are
@@ -15,8 +14,8 @@
 //!    child put itself in between `fork` and `exec` — see [`Cgroup::procs_fd`] — instead of being
 //!    put in by the daemon after it is already running and possibly already forking.
 //!
-//! Everything that can fail here fails into a *sentence*, not an error: a machine that will not lend
-//! the mechanism still runs the service, uncapped, and says why. The T68 design, D6.
+//! Everything that can fail here fails into a *sentence*, not an error: a machine that will not
+//! lend the mechanism still runs the service, uncapped, and says why.
 
 use std::fs;
 use std::io::Write as _;

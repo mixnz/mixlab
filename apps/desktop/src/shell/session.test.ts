@@ -109,7 +109,7 @@ describe("parseSession", () => {
     expect(parseSession(stored(session), MODULE_IDS)?.tabs).toEqual([SESSION.tabs[0]]);
   });
 
-  /* T108: a tab of a module the profile hides is dropped on the way in, exactly as a tab of a
+  /* A tab of a module the profile hides is dropped on the way in, exactly as a tab of a
      module that no longer exists is. One code path, one behaviour — `readSession` is simply handed
      the visible ids instead of every id. */
   it("drops a tab whose module is hidden", () => {

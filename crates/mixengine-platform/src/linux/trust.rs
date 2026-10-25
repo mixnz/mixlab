@@ -1,11 +1,11 @@
 //! Linux: an anchor file, and a command that folds it into the bundle everything else reads.
 //!
-//! **Two families, and neither is the platform** — the T49a design, D7. Debian keeps machine-added
-//! anchors in `/usr/local/share/ca-certificates` and refreshes with `update-ca-certificates`; Red
-//! Hat keeps them in `/etc/pki/ca-trust/source/anchors` and refreshes with `update-ca-trust`. A
-//! machine with neither directory has no system store MixEngine knows how to write, which is
+//! **Two families, and neither is the platform.** Debian keeps machine-added anchors in
+//! `/usr/local/share/ca-certificates` and refreshes with `update-ca-certificates`; Red Hat keeps
+//! them in `/etc/pki/ca-trust/source/anchors` and refreshes with `update-ca-trust`. A machine with
+//! neither directory has no system store MixEngine knows how to write, which is
 //! [`TrustStoreMethod::None`] and a supported mode rather than a failure — browsers here read NSS
-//! anyway, which is T49b's.
+//! anyway, which is `crate::browsers`' job.
 //!
 //! **Detected by probing for the directories, never by parsing `/etc/os-release`.**
 //! `docs/features/tls.md` asks for that in a sentence of its own, and a version string is a thing
@@ -15,6 +15,8 @@
 //! checks two things. A file that was written and never folded in — the refresh command failed, or
 //! an image was built with one and not the other — is a certificate `curl` does not accept, and
 //! reporting it as installed would report a home as working when its HTTPS does not.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-24-t49a-system-trust-store-design.md`.
 
 #[cfg(feature = "elevated")]
 use crate::trust::Change;
@@ -137,10 +139,10 @@ fn contains(bundle: &[u8], der: &[u8]) -> bool {
 
 /// Where the refresh command lives, and its one fixed argument vector.
 ///
-/// **One fixed command with no argument from the request** — the shape T42 established with `pfctl`
-/// and T45 kept with `systemctl`. This binary never runs an *arbitrary* command; a constant argument
-/// vector is not one, and there is no API for this that does not go through the distribution's own
-/// tool.
+/// **One fixed command with no argument from the request**, the shape port access has with `pfctl`
+/// and the resolver with `systemctl`. This binary never runs an *arbitrary* command; a constant
+/// argument vector is not one, and there is no API for this that does not go through the
+/// distribution's own tool.
 #[cfg(feature = "elevated")]
 const DEBIAN_REFRESH: [&str; 1] = ["update-ca-certificates"];
 

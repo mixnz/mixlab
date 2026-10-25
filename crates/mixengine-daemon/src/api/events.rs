@@ -35,8 +35,8 @@ pub(super) const HEARTBEAT: Duration = Duration::from_secs(15);
 /// The publishing half: what the rest of the daemon holds.
 ///
 /// One stream per daemon, and a clone is another handle onto **the same** stream rather than a
-/// second one — which is what T19's registry needs: a runner outlives every request and cannot
-/// borrow from the [`Api`](super::Api) that serves one. The last handle dropping ends every
+/// second one — which is what the runner's registry needs: a runner outlives every request and
+/// cannot borrow from the [`Api`](super::Api) that serves one. The last handle dropping ends every
 /// subscription, which is what shutdown wants and what [`Subscription::next`] reports as the end of
 /// the stream.
 ///
@@ -123,16 +123,16 @@ impl Subscription {
 
 /// One chunk written to a client.
 ///
-/// Not [`Eq`], because [`DaemonEvent`] stopped being so at T22: a job's result is whatever the
-/// method that produced it documents, so it travels as a `serde_json::Value` and a float has no
-/// total equality. Nothing here ever needed more than [`PartialEq`].
+/// Not [`Eq`], because [`DaemonEvent`] stopped being so with the job system: a job's result is
+/// whatever the method that produced it documents, so it travels as a `serde_json::Value` and a
+/// float has no total equality. Nothing here ever needed more than [`PartialEq`].
 ///
 /// **The size difference between the two variants is the point of the type, not a defect in it** —
 /// one carries an event and the other carries nothing, and `clippy::large_enum_variant` began
-/// noticing at T76, when [`DaemonEvent::SiteSharingChanged`] made the larger variant three times
-/// what it was. Boxing would trade a real allocation, on every event written to every subscriber,
-/// for a notional saving on a value that is built, encoded and dropped in the same three lines and
-/// never sits in a collection.
+/// noticing when [`DaemonEvent::SiteSharingChanged`] made the larger variant three times what it
+/// was. Boxing would trade a real allocation, on every event written to every subscriber, for a
+/// notional saving on a value that is built, encoded and dropped in the same three lines and never
+/// sits in a collection.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(
     clippy::large_enum_variant,

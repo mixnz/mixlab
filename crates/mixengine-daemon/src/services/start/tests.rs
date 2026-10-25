@@ -56,10 +56,9 @@ fn crashes_after_coming_up(id: &str) -> ServiceSpec {
 /// A provisioning statement goes to a *running* server, so the method that provisions starts one
 /// — and starting one that is already up is not a failure to report to anybody.
 ///
-/// Roadmap task **T77a**. What this is really asserting is the second call: `ensure_running` is
-/// reached on every `database.create`, including the ones on a home where everything is already
-/// up, and a version of it that answered "already started" as an error would make the ordinary
-/// case the failing one.
+/// What this is really asserting is the second call: `ensure_running` is reached on every
+/// `database.create`, including the ones on a home where everything is already up, and a version of
+/// it that answered "already started" as an error would make the ordinary case the failing one.
 #[tokio::test]
 async fn ensuring_a_service_is_running_is_idempotent() {
     let (_home, paths, store) = home(&["caddy"]).await;
@@ -132,9 +131,9 @@ async fn a_service_starts_runs_and_stops() {
     assert_eq!(pid, None, "a stopped service names no process");
 }
 
-/// T202a, D3. The detail the runner persisted with the reason reaches the walk, so the
-/// sentence a caller prints first is the runner's. A spec that names a credential nothing
-/// holds is the failure that found this.
+/// The detail the runner persisted with the reason reaches the walk, so the sentence a caller
+/// prints first is the runner's. A spec that names a credential nothing holds is the failure that
+/// found this.
 #[tokio::test]
 async fn a_walk_carries_the_detail_the_runner_wrote_with_the_reason() {
     let (_home, paths, store) = home(&["mariadb"]).await;
@@ -161,7 +160,7 @@ async fn a_walk_carries_the_detail_the_runner_wrote_with_the_reason() {
     );
 }
 
-/// T202a, D3. `ensure_running` says the detail first, and the reason when there is no detail.
+/// `ensure_running` says the detail first, and the reason when there is no detail.
 #[tokio::test]
 async fn ensure_running_says_the_runners_detail_before_the_state_machines_reason() {
     let (_home, paths, store) = home(&["mariadb"]).await;
@@ -231,8 +230,7 @@ async fn a_service_that_never_becomes_ready_fails_rather_than_waiting_forever() 
     );
 }
 
-/// Roadmap task **T38**: the failure a user can do something about, in place of the one they
-/// cannot.
+/// The failure a user can do something about, in place of the one they cannot.
 ///
 /// The same shape as the test above — a service that never becomes ready — with one difference:
 /// the machine says a program MixEngine does not manage is on the port this service declared.
@@ -510,7 +508,7 @@ async fn a_service_in_a_restart_backoff_is_not_reported_as_up() {
         .expect("every runner finished");
 }
 
-/// **The other half of that rule, and T19c.** Reading a crash-looping runner is right about the
+/// **The other half of that rule.** Reading a crash-looping runner is right about the
 /// service not being up and useless as an answer to somebody who has just *asked* for it to
 /// start: nothing in that path could shorten the backoff the runner is sitting in, so every
 /// attempt re-walked the tier, emitted two more events and spawned nothing. A start now reaches

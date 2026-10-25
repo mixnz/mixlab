@@ -1,4 +1,4 @@
-//! The leaf a managed server presents — roadmap task **T99**.
+//! The leaf a managed server presents.
 //!
 //! One certificate per service that asks for one, signed by this home's authority, under
 //! `certs/services/<service-id>.{key,crt}`. It exists because of one measurement: from 11.4 MariaDB

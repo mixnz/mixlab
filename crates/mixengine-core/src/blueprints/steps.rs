@@ -1,10 +1,12 @@
-//! What a project still needs a person to do, read through its blueprint — roadmap task **T205**,
-//! D5 and D6.
+//! What a project still needs a person to do, read through its blueprint.
 //!
 //! **A reference, not a copy.** The steps live in the blueprint row, with `{project}` unexpanded,
 //! and are expanded here each time they are read. A corrected blueprint corrects its projects, and
 //! capture never has to turn a slug back into a token — a replacement that would rewrite any word
 //! that merely contains the slug.
+//!
+//! The D-numbers below are those of
+//! `docs/specs/2026-10-08-t205-a-blueprint-ends-at-a-working-site-design.md`.
 
 use mixengine_proto::{NextStep, NextSteps};
 
@@ -30,7 +32,7 @@ pub fn expanded(steps: &[NextStep], project: &str) -> Vec<NextStep> {
             run: expand(&step.run),
             path: expand(&step.path),
             note: expand(&step.note),
-            // A domain pattern, and a client opens the domain — roadmap task **T204a**, D5.
+            // A domain pattern, and a client opens the domain.
             site: expand(&step.site),
             ..step.clone()
         })
@@ -106,7 +108,7 @@ mod tests {
         }
     }
 
-    /// **T204a, D5.** A step's site is a domain pattern, and a client opens the domain.
+    /// A step's site is a domain pattern, and a client opens the domain.
     #[test]
     fn a_steps_site_is_expanded_with_the_rest() {
         let mut step = once("npm run dev");

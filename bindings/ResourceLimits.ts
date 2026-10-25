@@ -5,10 +5,10 @@ import type { Priority } from "./Priority";
  * Per-service CPU and memory caps.
  *
  * Applied through the platform layer, which cannot honour all of it everywhere: Windows has Job
- * Objects and Linux has cgroup v2, but **macOS has no hard memory cap**, so a limit there becomes a
- * watchdog rather than a wall. That asymmetry is a fact the GUI must show rather than hide — see
- * `docs/features/resource-isolation.md`. Enforcement is roadmap task T68; the fields exist now
- * so a spec written before it does not have to be revisited.
+ * Objects and Linux has cgroup v2, but **macOS has no hard memory cap**, so a limit there becomes
+ * a watchdog rather than a wall. That asymmetry is a fact the GUI must show rather than hide — see
+ * `docs/features/resource-isolation.md`. The fields were declared before anything enforced them,
+ * so a spec written then did not have to be revisited.
  */
 export type ResourceLimits = { 
 /**

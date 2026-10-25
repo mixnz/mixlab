@@ -27,10 +27,10 @@
 //! Clearing that flag is the only way to say it — `bInheritHandles` is per `CreateProcessW` and the
 //! flag is per handle, so there is no third place to put "this one child gets nothing". What can be
 //! narrowed is *how long* it is said for: the flag is put back as soon as the spawn returns, so a
-//! caller that goes on to start other children — `mix`, the GUI at roadmap task T10 — passes its
-//! stdio on to them exactly as it would have. The window that remains is the spawn itself, and it is
-//! the same window `bInheritHandles` already makes process-wide for every concurrent `CreateProcessW`
-//! in the program; this makes it no wider.
+//! caller that goes on to start other children — `mix`, or the GUI autostarting a daemon — passes
+//! its stdio on to them exactly as it would have. The window that remains is the spawn itself, and
+//! it is the same window `bInheritHandles` already makes process-wide for every concurrent
+//! `CreateProcessW` in the program; this makes it no wider.
 //!
 //! # The other half: a child that must *not* outlive us
 //!
@@ -371,7 +371,7 @@ pub(crate) fn started_at(pid: u32) -> Result<Option<i64>> {
     Ok(Some(ticks(created) as i64))
 }
 
-/// Every process's parent — roadmap task **T181**, see `crate::process::parent_table`.
+/// Every process's parent — see `crate::process::parent_table`.
 ///
 /// One `CreateToolhelp32Snapshot` of the whole system, walked for `th32ParentProcessID`, where
 /// `sysinfo` opens every process to read it. No process is opened here, so there is nothing this
@@ -450,7 +450,7 @@ pub(crate) fn parent_table() -> Result<std::collections::BTreeMap<u32, u32>> {
     Ok(table)
 }
 
-/// One process's CPU time and working set — roadmap task **T190**, see `crate::process::usage`.
+/// One process's CPU time and working set — see `crate::process::usage`.
 ///
 /// **The calls `sysinfo` makes, without the snapshot around them.** `GetProcessTimes` for CPU and
 /// `GetProcessMemoryInfo`'s `WorkingSetSize` for memory, so the numbers are the same quantities a
@@ -649,7 +649,7 @@ pub(crate) const fn set_priority(_pid: u32, _priority: crate::process::Priority)
 /// — there is no reference, no pointer and no enum in any of them — so all zeroes is a valid value
 /// and means "no limits set", which is what every field this code does not fill in has to say.
 ///
-/// **Generic since T68**, which brought a second such struct:
+/// **Generic, because resource limits brought a second such struct:**
 /// `JOBOBJECT_CPU_RATE_CONTROL_INFORMATION` beside `JOBOBJECT_EXTENDED_LIMIT_INFORMATION`. The
 /// caller names the type, and the sentence above is the safety condition for both.
 #[expect(
@@ -770,10 +770,10 @@ mod tests {
 
     /// Read back what was written, rather than time a busy loop.
     ///
-    /// **A CPU cap is a rate**, and asserting a rate means timing work on a shared CI runner — which
-    /// the warm-start suite already taught this project to be careful with. What T68 owes is that
-    /// the right value reached the right object; that a cap *slows anything down* is T72's, which
-    /// has a `bench` job that knows how to compare against master.
+    /// **A CPU cap is a rate**, and asserting a rate means timing work on a shared CI runner —
+    /// which the warm-start suite already taught this project to be careful with. What this test
+    /// owes is that the right value reached the right object; that a cap *slows anything down* is
+    /// for CI's budgets, whose `bench` job knows how to compare against master.
     ///
     /// A unit test rather than one in `tests/`, because the alternative is a `#[doc(hidden)]`
     /// accessor on `Supervised` that exists for no other reason — and the job is deliberately

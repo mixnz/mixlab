@@ -35,7 +35,7 @@ impl Generator {
     }
 
     /// [`declarations`](Self::declarations), with one extension that is not installed yet counted as
-    /// though it were — roadmap task **T81c**.
+    /// though it were.
     ///
     /// **The only caller is [`would_serve`](Self::would_serve)**, and the parameter exists because
     /// the question it asks cannot be asked any other way: *would this home's front end accept the
@@ -85,10 +85,10 @@ impl Generator {
         // row already fetched.
         let mut prepared = Vec::with_capacity(rows.len());
 
-        // **Read once for the whole walk** — roadmap task T81. An extension's recipe is built out
-        // of its row, and a join per service would fetch the same manifests again for every one of
-        // them. A home has a handful of extensions and none at all is the common case, so this is
-        // one query answering nothing most of the time.
+        // **Read once for the whole walk.** An extension's recipe is built out of its row, and a
+        // join per service would fetch the same manifests again for every one of them. A home has a
+        // handful of extensions and none at all is the common case, so this is one query answering
+        // nothing most of the time.
         let mut installed: BTreeMap<String, crate::extensions::store::Installed> =
             crate::extensions::store::all(&self.store)
                 .await?
@@ -100,26 +100,26 @@ impl Generator {
             installed.insert(pending.id.as_str().to_owned(), pending.clone());
         }
 
-        // **Rendered once for the whole walk, beside the manifests it comes out of** — roadmap task
-        // **T81c**. A fragment's placeholders are the extension's, so the substitution belongs where
-        // the extension's row is; what a front-end recipe is handed is text.
+        // **Rendered once for the whole walk, beside the manifests it comes out of.** A fragment's
+        // placeholders are the extension's, so the substitution belongs where the extension's row
+        // is; what a front-end recipe is handed is text.
         let fragments = Self::fragments(installed.values())?;
 
-        // **Which pools carry a credential, read once for the whole walk** — roadmap task **T82a**,
-        // that design's D4. Beside the manifests and the fragments for their reason: answering it
-        // reads the extension sites, their frozen database links and each database's recipe, and a
-        // join per service would ask those questions once per row.
+        // **Which pools carry a credential, read once for the whole walk.** Beside the manifests
+        // and the fragments for their reason: answering it reads the extension sites, their frozen
+        // database links and each database's recipe, and a join per service would ask those
+        // questions once per row.
         let credentials = crate::extensions::pools::credentials(&self.store).await?;
 
-        // **Which home this is, read once for the whole walk** — roadmap task **T126**, and beside
-        // the two above for their reason. Every spec that carries an `EnvValue::Keyring` names an
-        // address this is the first segment of, so a walk that asked per row would ask the same
-        // question of the same table once per service for ever.
+        // **Which home this is, read once for the whole walk**, and beside the two above for their
+        // reason. Every spec that carries an `EnvValue::Keyring` names an address this is the first
+        // segment of, so a walk that asked per row would ask the same question of the same table
+        // once per service for ever.
         let home = crate::home::id(&self.store).await?;
 
-        // **Whether the home saves resources, read once for the whole walk** — roadmap task
-        // **T167b**. It decides the idle policy of every row nobody set, so it is one answer for
-        // the walk rather than one read per row.
+        // **Whether the home saves resources, read once for the whole walk.** It decides the idle
+        // policy of every row nobody set, so it is one answer for the walk rather than one read per
+        // row.
         let saving = crate::services::save_resources::get(&self.store).await?;
 
         for row in rows {
@@ -137,9 +137,10 @@ impl Generator {
 
         for one in &prepared {
             if let Some(listen) = one.recipe.upstream(&one.context)? {
-                // Asked only of a service something points at, so a recipe with no upstream is never
-                // asked for an activator either — T70. The pair is inserted together, which is what
-                // makes it impossible for a site to name one service's pool and another's activator.
+                // Asked only of a service something points at, so a recipe with no upstream is
+                // never asked for an activator either. The pair is inserted together, which is what
+                // makes it impossible for a site to name one service's pool and another's
+                // activator.
                 let activator = one.recipe.activator(&one.context)?;
 
                 upstreams.insert(one.context.service.clone(), Upstreams { listen, activator });
@@ -185,7 +186,7 @@ impl Generator {
 
     /// One service's settings, merged, without rendering or installing anything.
     ///
-    /// **Read-only, and that is the whole reason it exists** — roadmap task **T53**.
+    /// **Read-only, and that is the whole reason it exists.**
     /// [`generate`](Self::generate) goes through [`declared`](Self::declared), which installs; a
     /// caller that only wants a number would rewrite this home's configuration to get it, and can
     /// reload a running server as a side effect of asking a question. This takes
@@ -217,10 +218,10 @@ impl Generator {
 
     /// What [`declared`](Self::declared) would change on disk, asked without changing it.
     ///
-    /// Roadmap task **T47b**, and the read `mix doctor`'s tenth check makes. Rendering is pure — it
-    /// builds [`Document`]s in memory — and the comparison is [`document::drift`], so nothing is
-    /// staged, nothing is validated and no directory is created. That is what lets a check whose
-    /// whole guarantee is "this writes nothing" ask the question at all.
+    /// The read `mix doctor`'s tenth check makes. Rendering is pure — it builds [`Document`]s in
+    /// memory — and the comparison is [`document::drift`], so nothing is staged, nothing is
+    /// validated and no directory is created. That is what lets a check whose whole guarantee is
+    /// "this writes nothing" ask the question at all.
     ///
     /// **A home with no rows drifts in no way**, and answers an empty list rather than an error.
     ///

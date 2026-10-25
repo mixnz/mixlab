@@ -35,8 +35,6 @@ root: string,
  * The composed path is not a surprise: it comes back in
  * [`PlanAction::RegisterProject`](crate::PlanAction), which every client renders before
  * anything is created.
- *
- * Roadmap task **T120a**.
  */
 root_is_parent: boolean, 
 /**
@@ -48,17 +46,16 @@ root_is_parent: boolean,
  */
 dry_run: boolean, 
 /**
- * Install what the plan's releases need of the machine before anything else — roadmap task
- * **T152**. What [`BlueprintApplyResponse::Planned`](crate::BlueprintApplyResponse)'s `needs`
- * asked about.
+ * Install what the plan's releases need of the machine before anything else. What
+ * [`BlueprintApplyResponse::Planned`](crate::BlueprintApplyResponse)'s `needs` asked about.
  */
 install_prerequisites?: boolean, 
 /**
- * Do not judge what the plan's releases need of the machine — T152. The smoke tests still run.
+ * Do not judge what the plan's releases need of the machine. The smoke tests still run.
  */
 ignore_requirements?: boolean, 
 /**
- * The answers to the version questions this plan raises — roadmap task **T78**.
+ * The answers to the version questions this plan raises.
  *
  * **A question is asked by a client and answered in the request**, because a daemon has no
  * keyboard: a job that stopped halfway to ask one would be a job holding a project directory
@@ -71,8 +68,7 @@ ignore_requirements?: boolean,
  */
 answers?: Array<VersionAnswer>, 
 /**
- * Agreement to run the blueprint's own `[scaffold]` command — roadmap task **T78a**, its
- * design's D4.
+ * Agreement to run the blueprint's own `[scaffold]` command.
  *
  * **Asked by a client and answered here**, exactly as a version mismatch is, and for the same
  * reason: a daemon has no keyboard, and a job that stopped halfway to ask would be a job
@@ -84,14 +80,13 @@ answers?: Array<VersionAnswer>,
  */
 scaffold?: ScaffoldConsent | null, 
 /**
- * The `.env` keys the person agreed to have written, password included — roadmap task
- * **T205a**. Apart from [`BlueprintApply::scaffold`], since a plan can carry both and one
- * consent must not answer the other. A key the plan does not write is refused before
- * anything is touched.
+ * The `.env` keys the person agreed to have written, password included. Apart from
+ * [`BlueprintApply::scaffold`], since a plan can carry both and one consent must not answer
+ * the other. A key the plan does not write is refused before anything is touched.
  */
 dotenv?: Array<string>, 
 /**
- * Whether to plan a front end where this home has none — roadmap task **T115**.
+ * Whether to plan a front end where this home has none.
  *
  * `core::sites` renders nothing for a home with no front end and succeeds while doing it, so a
  * manifest with a `[site]` applied to a fresh machine ends with a project, a database, a site
@@ -110,7 +105,7 @@ dotenv?: Array<string>,
  */
 front_end: boolean, 
 /**
- * Whether the services this apply **creates** start with the daemon — roadmap task **T116**.
+ * Whether the services this apply **creates** start with the daemon.
  *
  * **Only what it creates.** A shared MariaDB somebody deliberately leaves stopped is not
  * something a second project gets to re-decide, so a step that plans

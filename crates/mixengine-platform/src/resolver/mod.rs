@@ -1,9 +1,9 @@
-//! Routing a managed TLD to MixEngine's own DNS server — roadmap task **T45**.
+//! Routing a managed TLD to MixEngine's own DNS server.
 //!
-//! T44 built a server that answers `A 127.0.0.1` for every name under a managed TLD, and nothing
-//! that sends it a query. This is the other half: three mechanisms, one per system, none of them
-//! interchangeable — a file per TLD on macOS, a network link of our own on Linux, one registry rule
-//! on Windows.
+//! The daemon's DNS server answers `A 127.0.0.1` for every name under a managed TLD, and nothing
+//! sends it a query on its own. This is the other half: three mechanisms, one per system, none of
+//! them interchangeable — a file per TLD on macOS, a network link of our own on Linux, one registry
+//! rule on Windows.
 //!
 //! **Each system's text or values are generated in a submodule here, pure and compiled
 //! everywhere**, exactly as [`crate::port_access`] does it. That is what lets a developer on any one
@@ -57,8 +57,8 @@ pub enum Change {
 
 /// Route what `plan` asks for, under the machine-wide lock.
 ///
-/// **Whole state** — the T45 design, D4 — so a second call with the same plan is
-/// [`Change::Unchanged`] and a superseded request is a replaced artifact rather than a second one.
+/// **Whole state**, so a second call with the same plan is [`Change::Unchanged`] and a superseded
+/// request is a replaced artifact rather than a second one.
 ///
 /// # Errors
 ///

@@ -72,7 +72,8 @@ pub struct SignedIn {
     pub expires_in: i64,
     pub wrapped_mk_password: String,
     pub wrapped_mk_recovery: String,
-    /// The account's own id: random at registration, never reused (T178c, C4).
+    /// The account's own id: random at registration, never reused, so an address deleted and
+    /// registered again is another account.
     pub account_id: String,
 }
 
@@ -342,7 +343,7 @@ impl Account {
         .await
     }
 
-    /// `POST /v1/account/check`: whether `a` is this account's password (T178c, C3).
+    /// `POST /v1/account/check`: whether `a` is this account's password, asked before a move.
     pub async fn check(&self, access_token: &str, a: &[u8; 32]) -> Result<(), AppError> {
         let request = self
             .post("/v1/account/check", &json!({ "a": STANDARD.encode(a) }))?

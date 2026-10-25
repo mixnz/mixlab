@@ -37,11 +37,11 @@ function niceCeil(value: number, base: number, steps: readonly number[]): number
 }
 
 /**
- * **A scale with a floor, not a free scale.** An idle daemon at 0.03% with a scale running to
- * 0.05% draws measurement noise as mountains; the floor keeps a flat line looking flat. Since T190c
- * the chart draws a percentage of the **whole machine**, like Task Manager, so the floor is 5% of
- * the machine rather than a quarter of a core: small enough that a service using a few percent
- * still shows its shape clearly, large enough that noise does not become mountains.
+ * **A scale with a floor, not a free scale.** An idle daemon at 0.03% with a scale running to 0.05%
+ * draws measurement noise as mountains; the floor keeps a flat line looking flat. The chart draws a
+ * percentage of the **whole machine**, like Task Manager, so the floor is 5% of the machine rather
+ * than a quarter of a core: small enough that a service using a few percent still shows its shape
+ * clearly, large enough that noise does not become mountains.
  */
 const CPU_FLOOR = 5;
 
@@ -60,7 +60,7 @@ export const CPU_UNIT: Unit = {
   // `25.0000%`.
   tick: (value) => `${Number(value.toFixed(2))}%`,
   // The value is already a percentage of the whole machine (Metrics.tsx divides it beforehand), so
-  // the denominator here is 1 (T190c).
+  // the denominator here is 1.
   value: (share) => formatCpu(share, 1),
 };
 

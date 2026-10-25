@@ -1,7 +1,7 @@
 //! `mix docs` — the handbook, offline.
 //!
 //! Every test here runs with **no daemon and no home**, which is the whole point of the command:
-//! help is most wanted when the thing it describes will not start. Roadmap task T90.
+//! help is most wanted when the thing it describes will not start.
 
 use std::process::Command;
 

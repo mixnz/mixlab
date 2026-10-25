@@ -1,5 +1,5 @@
 //! The queue of privileged operations this daemon is holding, and the only thing that raises a
-//! prompt. Roadmap task **T40b**.
+//! prompt.
 //!
 //! **The division is the one [`crate::jobs`] documents, one table across.**
 //! [`mixengine_core::elevation`] owns the row, the document and the report and has no loop, no clock
@@ -8,16 +8,17 @@
 //!
 //! **This daemon never raises a prompt on its own initiative.**
 //! `docs/architecture/daemon-and-ipc.md` already carries the rule: *a method that writes outside
-//! `MIXENGINE_HOME` is never called on the daemon's own initiative* (T26). Everything the helper
+//! `MIXENGINE_HOME` is never called on the daemon's own initiative*. Everything the helper
 //! will ever do — the hosts file, the trust store, the resolver, a firewall rule — is outside the
 //! home by definition; that is why it needs root. So enqueuing and flushing have two different
 //! triggers: producers enqueue, and only a client calls `elevation.grant`. A fresh install where
 //! nobody ever does is a machine in degraded mode forever, and that is the correct behaviour.
 //!
-//! **T41's `HostsApply` is the first producer.** [`Elevation::enqueue`] ships with none, which is the
-//! deliberate position rather than an oversight — the same one T22 took with the job registry and
-//! T19 with the service runner: the alternative is writing the queue twice, once inside the first
-//! producer and once properly afterwards.
+//! **`HostsApply` was the first producer**, and the resolver, the trust store, port access, the
+//! firewall and the helper itself followed. The queue shipped with none, which was the deliberate
+//! position rather than an oversight — the same one the job registry and the service runner took:
+//! the alternative is writing the queue twice, once inside the first producer and once properly
+//! afterwards.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -38,11 +39,11 @@ mod by_hand;
 mod flush;
 mod require;
 
-/// Where this home records the firewall plan it last had applied — roadmap task **T180**.
+/// Where this home records the firewall plan it last had applied.
 ///
-/// **A memory and not a reading.** The daemon never reads a machine's rule set back (T74), so what
-/// it can honestly compare a new plan against is the last one a grant reported done. Absent means
-/// no rules, which is what a fresh home has.
+/// **A memory and not a reading.** The daemon never reads a machine's rule set back, so what it can
+/// honestly compare a new plan against is the last one a grant reported done. Absent means no
+/// rules, which is what a fresh home has.
 pub(crate) const FIREWALL_APPLIED: &str = "firewall.applied";
 
 /// The single grant slot — the runtime half of "no code path elevates in a loop".
@@ -107,14 +108,14 @@ impl Route {
     }
 }
 
-/// The two files this daemon could hand an elevation prompt — roadmap task **T85**.
+/// The two files this daemon could hand an elevation prompt.
 ///
 /// One value rather than two fields because they are one question: *which file does this machine
 /// run as root?* [`mixengine_core::elevation::helper`] answers it, and both halves have to reach it
 /// together.
 #[derive(Debug, Clone)]
 pub(crate) struct Candidates {
-    /// The program that is running, which is what a shipped helper is found beside (T40b's D9).
+    /// The program that is running, which is what a shipped helper is found beside.
     pub(crate) program: PathBuf,
 
     /// Where **this operating system** keeps an installed privileged helper.
@@ -124,13 +125,13 @@ pub(crate) struct Candidates {
     /// cannot change under a running process, which is `elevated`'s reasoning below.
     ///
     /// `None` is a machine that will not name one — and, in this module's own tests, a machine the
-    /// test is *describing* as having none, which is the only way the "nothing installed" row of
-    /// T85's D5 can be exercised on a developer machine that does have one.
+    /// test is *describing* as having none, which is the only way the "nothing installed" case can
+    /// be exercised on a developer machine that does have one.
     pub(crate) installed: Option<PathBuf>,
 }
 
 /// The queue, the machine that can be asked about it, and the only door into a prompt.
-/// What a grant does once the prompt has been answered — roadmap task **T182b**, D6.
+/// What a grant does once the prompt has been answered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Afterwards {
     /// Ask again for the hosts block this home's sites want, which the grant may have made
@@ -141,7 +142,7 @@ enum Afterwards {
     Nothing,
 }
 
-/// The helper a grant runs, and the protocol its request is written at — the T182b design, D3.
+/// The helper a grant runs, and the protocol its request is written at.
 #[derive(Debug, Clone)]
 struct Chosen {
     /// The file handed to the elevation prompt.
@@ -177,11 +178,11 @@ pub(crate) struct Elevation {
 
     /// Whether **this daemon** holds an administrative token, read once at construction.
     ///
-    /// Reported and not refused — the T40b design, D10. Read once because it cannot change under a
-    /// running process, and reading it per request would be a syscall per `mix status`.
+    /// Reported and not refused. Read once because it cannot change under a running process, and
+    /// reading it per request would be a syscall per `mix status`.
     elevated: bool,
 
-    /// Which of the two name mechanisms this home is on — roadmap task **T44**.
+    /// Which of the two name mechanisms this home is on.
     ///
     /// Read by [`require_hosts`](Elevation::require_hosts) and by nothing else here: whether a
     /// managed name resolves through DNS decides whether the hosts file needs to hold it at all.
@@ -190,7 +191,7 @@ pub(crate) struct Elevation {
     /// The grant slot and the last outcome.
     state: Mutex<State>,
 
-    /// What the installed helper answered a handshake with — roadmap task **T88a**.
+    /// What the installed helper answered a handshake with.
     ///
     /// Taken once at start, when there *is* an installed helper, by running it as an ordinary
     /// process: nothing here costs a prompt. [`None`] is a machine with nothing installed, or one
@@ -236,9 +237,9 @@ impl Elevation {
 
     /// Put an operation in the queue, and announce the batch when that changed something.
     ///
-    /// [`require_hosts`](Self::require_hosts) is the one caller, and T41 made it the first: the
-    /// queue and its event landed with T40b so that T41 would be one operation rather than an
-    /// operation plus a mechanism.
+    /// [`require_hosts`](Self::require_hosts) was the first caller: the queue and its event landed
+    /// before it, so that the hosts file would be one operation rather than an operation plus a
+    /// mechanism.
     ///
     /// # Errors
     ///
@@ -252,7 +253,7 @@ impl Elevation {
 
         // `None` is the operation that was already waiting. The machine's needs did not change, so
         // there is nothing to announce — an event per attempt would put a producer's retry loop on a
-        // client's screen. See the T40b design, D8.
+        // client's screen.
         if let Some(mut pending) = announced {
             self.word(&mut pending);
             self.events
@@ -262,8 +263,7 @@ impl Elevation {
         Ok(())
     }
 
-    /// Take an operation out of the queue, because this machine no longer needs it — roadmap task
-    /// **T179**.
+    /// Take an operation out of the queue, because this machine no longer needs it.
     ///
     /// **The producers' other answer.** Each of them reads what this home declares and what the
     /// machine holds; when those agree there is nothing to ask for, and a row queued by an earlier
@@ -319,12 +319,12 @@ impl Elevation {
         Ok(waiting)
     }
 
-    /// Record the firewall plan this machine now holds — roadmap task **T180**.
+    /// Record the firewall plan this machine now holds.
     ///
     /// **Only what landed.** `Applied`, `AlreadyDone` and `Unmanaged` all mean the queue stops
-    /// asking — that is `settle`'s own rule, and T74's for the third — so all three are what this
-    /// home now has. A refusal, an unsupported operation and a failure change nothing and record
-    /// nothing, so the next sharing change asks again.
+    /// asking — that is `settle`'s own rule, and LAN sharing's for the third — so all three are
+    /// what this home now has. A refusal, an unsupported operation and a failure change nothing and
+    /// record nothing, so the next sharing change asks again.
     ///
     /// **Never fails a grant.** The batch has already been applied by the time this runs; a record
     /// that could not be written costs a prompt somebody will see again, which is worth a line in
@@ -365,8 +365,7 @@ impl Elevation {
         }
     }
 
-    /// Ask for `op`, and for a privileged helper in front of it when this machine has none —
-    /// roadmap task **T88d**.
+    /// Ask for `op`, and for a privileged helper in front of it when this machine has none.
     ///
     /// **The four `require_*` producers use this and nothing else does.** They are where *this
     /// machine needs something done as root* is decided, which is the question a missing helper is
@@ -387,8 +386,7 @@ impl Elevation {
         self.enqueue(op).await
     }
 
-    /// Ask for a helper when this machine has none installed and ships one to install from —
-    /// roadmap task **T88d**.
+    /// Ask for a helper when this machine has none installed and ships one to install from.
     ///
     /// **Because [`require_helper`](Self::require_helper) runs at start and nowhere else**, and a
     /// `mix uninstall` that kept the home does not restart the daemon: until this, a person who
@@ -436,7 +434,7 @@ impl Elevation {
         self.enqueue(&PrivilegedOp::HelperInstall {}).await
     }
 
-    /// This machine, for the one other thing in this daemon that reads it — roadmap task **T46**.
+    /// This machine, for everything else in this daemon that reads it.
     ///
     /// **Reached through here rather than built again.** A `Host` is a handful of trait objects and
     /// a second one is cheap, but two of them are two answers to "what does this machine's hosts
@@ -453,9 +451,9 @@ impl Elevation {
             .is_some_and(Path::is_file)
     }
 
-    /// Whether this is the first time this home is asked to prompt for `version`'s helper — the
-    /// T182b design, D2. Answers `true` once per version, so a person who declines is not asked at
-    /// every start; the replacement then waits for the next prompt the product needs anyway.
+    /// Whether this is the first time this home is asked to prompt for `version`'s helper. Answers
+    /// `true` once per version, so a person who declines is not asked at every start; the
+    /// replacement then waits for the next prompt the product needs anyway.
     pub(crate) async fn first_prompt_for(&self, version: &str) -> bool {
         const KEY: &str = "helper.prompted";
 
@@ -477,7 +475,7 @@ impl Elevation {
         true
     }
 
-    /// Which helper runs this batch, and at which protocol — the T182b design, D3.
+    /// Which helper runs this batch, and at which protocol.
     ///
     /// **The installed one, unless it cannot read the batch** and the copy this release ships can.
     /// The shipped copy is only probed when the installed one's `supported_ops` are missing an
@@ -547,9 +545,9 @@ impl Elevation {
     ///
     /// [`grant`](Self::grant) answers with a job and returns; a caller with work to do *after*
     /// permission is given cannot use it, because there is no hook between one job ending and
-    /// another beginning. `cert.ca_rotate` is that caller — roadmap task **T54**: whether it
-    /// replaces this home's authority depends on what the trust store says once the prompt has been
-    /// answered, and reading it any earlier would answer a different question.
+    /// another beginning. `cert.ca_rotate` is that caller: whether it replaces this home's
+    /// authority depends on what the trust store says once the prompt has been answered, and
+    /// reading it any earlier would answer a different question.
     ///
     /// The slot is released however this ends, because [`flush`](Self::flush) holds a `Drop` guard
     /// rather than a last statement. That is what makes the split safe: a caller that panics between
@@ -574,8 +572,7 @@ impl Elevation {
         .await
     }
 
-    /// [`grant_within`](Self::grant_within) over the rows `ids` names, and nothing else waiting —
-    /// roadmap task **T182b**, D6.
+    /// [`grant_within`](Self::grant_within) over the rows `ids` names, and nothing else waiting.
     ///
     /// **An uninstall grants only what it asked for.** Everything else in the queue is somebody
     /// else's want: a daemon started on a kept home queues the wiring its sites still need, and a
@@ -636,7 +633,7 @@ impl Elevation {
         }
     }
 
-    /// What the installed helper is, as the handshake at start found it — roadmap task **T88a**.
+    /// What the installed helper is, as the handshake at start found it.
     ///
     /// The sentence is composed here rather than by a client, on `PendingOp::description`'s rule:
     /// what to do about an old helper differs by *which* old helper it is, and a client deciding
@@ -673,7 +670,7 @@ impl Elevation {
         self.facts.lock().ok()?.clone()
     }
 
-    /// The protocol to mark a request to the helper with — roadmap task **T88a**.
+    /// The protocol to mark a request to the helper with.
     ///
     /// The lower of what this daemon speaks and what the helper answered, because a fixed old binary
     /// can never be taught a newer protocol and the newer peer is therefore the one that speaks
@@ -810,8 +807,7 @@ fn may_have_changed_the_helper(waiting: &[mixengine_proto::PendingOp]) -> bool {
         .any(|pending| is_about_the_helper(&pending.op))
 }
 
-/// The helper's own operation first, everything else in the order it was queued — the T182b
-/// design, D2.
+/// The helper's own operation first, everything else in the order it was queued.
 fn put_the_helper_first(waiting: &mut [mixengine_proto::PendingOp]) {
     waiting.sort_by_key(|pending| !is_about_the_helper(&pending.op));
 }

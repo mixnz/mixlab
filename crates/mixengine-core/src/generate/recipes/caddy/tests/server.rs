@@ -2,12 +2,12 @@
 
 use super::*;
 
-/// What a failed start is diagnosed against — roadmap task **T38**.
+/// What a failed start is diagnosed against.
 ///
 /// **The admin endpoint alone, and that is not an omission.** `http_port` and `https_port` are
-/// written into the global block, but Caddy binds neither until a site tells it to — and until
-/// sites exist (roadmap task T43) a Caddy that failed to start never wanted 80. Declaring one
-/// anyway would put another program's IIS into the reason for a failure that was not about it.
+/// written into the global block, but Caddy binds neither until a site tells it to — so a Caddy
+/// with no site that failed to start never wanted 80. Declaring one anyway would put another
+/// program's IIS into the reason for a failure that was not about it.
 #[test]
 fn the_spec_declares_the_admin_endpoint_it_will_bind() {
     let context = context("{}");
@@ -26,8 +26,8 @@ fn caddy_exists_once() {
     assert_eq!(Caddy.instancing(), Instancing::Single);
 }
 
-/// And what stops it being asked for an nginx beside this one is the other answer — roadmap task
-/// **T37**. Two recipes, one job; [`Instancing`] is about a package and cannot say it.
+/// And what stops it being asked for an nginx beside this one is the other answer. Two recipes,
+/// one job; [`Instancing`] is about a package and cannot say it.
 #[test]
 fn caddy_is_a_front_end() {
     assert_eq!(
@@ -36,8 +36,9 @@ fn caddy_is_a_front_end() {
     );
 }
 
-/// An artifact that unpacks and will not run is one the user meets against their own site,
-/// which is T20a's finding and the reason `Installer::install` takes a smoke test at all.
+/// An artifact that unpacks and will not run is one the user meets against their own site, which is
+/// what the first real package showed and the reason `Installer::install` takes a smoke test at
+/// all.
 ///
 /// `caddy version` and not `caddy --version`: Caddy's is a subcommand, and the flag that is not
 /// one exits non-zero — which would fail every install of a perfectly good archive.

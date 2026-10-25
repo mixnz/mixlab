@@ -1,4 +1,5 @@
-//! Linux' half of T74: `ufw` or `firewalld` where one is running, and an honest shrug otherwise.
+//! Linux' half of LAN sharing: `ufw` or `firewalld` where one is running, and an honest shrug
+//! otherwise.
 
 use mixengine_proto::privileged::FirewallPlan;
 

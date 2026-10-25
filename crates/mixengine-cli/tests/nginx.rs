@@ -1,4 +1,4 @@
-//! The nginx recipe against a **real** nginx — roadmap task **T37**.
+//! The nginx recipe against a **real** nginx.
 //!
 //! [`caddy.rs`](../caddy.rs)'s file for the other front end, and deliberately almost all of it is
 //! this page's four constants: the sequence a front end has to walk lives in [`harness::frontend`]
@@ -36,14 +36,14 @@ mod harness;
 
 use harness::frontend;
 
-/// **The whole of T37, in the order a user meets it.**
+/// **The whole of the recipe, in the order a user meets it.**
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real nginx — see the module note, and the `nginx` step in _services.yml"]
 async fn nginx_is_generated_validated_started_reloaded_and_stopped() {
     frontend::is_generated_validated_started_reloaded_and_stopped(&frontend::NGINX).await;
 }
 
-/// **nginx judges and then serves an extension's front-end fragment** — roadmap task **T81c**.
+/// **nginx judges and then serves an extension's front-end fragment.**
 ///
 /// The parity half of Caddy's test of the same name, and the one that proves the path spelling: an
 /// nginx fragment's `{install_dir}` is forward-slashed whatever system this is, because
@@ -54,12 +54,12 @@ async fn nginx_serves_what_an_extension_s_fragment_adds() {
     frontend::serves_what_an_extension_s_fragment_adds(&frontend::NGINX).await;
 }
 
-/// **A redirecting site sends a plaintext request straight to HTTPS, against a real nginx** —
-/// roadmap task **T98**. This is the shape the T51 design's D6 did not need: nginx groups a
-/// plaintext and a TLS listener into one `server` block for HTTPS alone, but a redirect cannot
-/// share that block (see the module note this recipe's own source carries), so this suite is what
-/// proves the two-block rendering is a configuration nginx actually accepts and runs — not only one
-/// this repository's unit tests can parse.
+/// **A redirecting site sends a plaintext request straight to HTTPS, against a real nginx.** This
+/// is the shape TLS wiring did not need: nginx groups a plaintext and a TLS listener into one
+/// `server` block for HTTPS alone, but a redirect cannot share that block (see the module note this
+/// recipe's own source carries), so this suite is what proves the two-block rendering is a
+/// configuration nginx actually accepts and runs — not only one this repository's unit tests can
+/// parse.
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real nginx — see the module note, and the `nginx` step in _services.yml"]
 async fn nginx_redirects_a_site_that_asks_for_it() {

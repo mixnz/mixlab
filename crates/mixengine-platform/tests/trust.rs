@@ -6,9 +6,10 @@
 //!
 //! **These are deliberately not `#[ignore]`d.** `docs/standards/testing.md` rule 1 names the trust
 //! store, and the gate it asks for is for tests that **touch** one — these only read. Being in CI's
-//! ordinary `test` job, on all three runners and under no administrative token, is the entire point:
-//! the T49a design's D13 records that neither of the two assumptions below could be measured on the
-//! machine that design was written on, and names this file as where they are measured instead.
+//! ordinary `test` job, on all three runners and under no administrative token, is the entire
+//! point: D13 of `docs/specs/2026-08-24-t49a-system-trust-store-design.md` records that neither of
+//! the two assumptions below could be measured on the machine that design was written on, and names
+//! this file as where they are measured instead. The other D-numbers below are that design's too.
 //!
 //! If either fails, the producer in `mixengine-daemon` and `mix doctor`'s check both need a
 //! different shape, because both are built on reading a store being cheap and unprivileged.

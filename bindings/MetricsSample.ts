@@ -20,8 +20,8 @@ subject: MetricsSubject,
  * from. A zero there would draw an idle service during the second it is most expensive.
  *
  * **On the stream and in a snapshot it is the mean of the last five seconds of readings**
- * (roadmap task T190c), because one second of CPU time on Windows is a count of 15.6 ms
- * quanta. The minute history is kept from the readings themselves.
+ * because one second of CPU time on Windows is a count of 15.6 ms quanta. The minute history
+ * is kept from the readings themselves.
  */
 cpu_percent: number | null, 
 /**

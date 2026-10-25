@@ -1,4 +1,4 @@
-//! What a real daemon says it is costing — roadmap task **T71**.
+//! What a real daemon says it is costing.
 //!
 //! The arithmetic is settled against invented readings beside `metrics::minutes`, the reading itself
 //! against a table in `mixengine-platform`, and the two methods in `api::metrics`' tests.

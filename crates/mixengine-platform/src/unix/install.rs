@@ -16,7 +16,7 @@ use crate::{Error, Result};
 /// owner because the owner is root, which is the whole point of the directory this sits in.
 const EXECUTABLE: u32 = 0o755;
 
-/// Set the executable bit on a file the updater has just written — roadmap task **T88**.
+/// Set the executable bit on a file the updater has just written.
 ///
 /// The same mode [`EXECUTABLE`] names, and for a plainer reason than the helper's: these are the
 /// binaries whoever installed MixEngine runs, and an archive that did not carry a mode leaves them
@@ -97,7 +97,7 @@ pub(crate) fn own_as_root(path: &Path) -> Result<()> {
     })
 }
 
-/// `(device, inode)` of `path` — roadmap task **T88f**. [`None`] when it cannot be read.
+/// `(device, inode)` of `path`. [`None`] when it cannot be read.
 pub(crate) fn file_identity(path: &Path) -> Option<(u64, u64)> {
     use std::os::unix::fs::MetadataExt as _;
 

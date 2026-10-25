@@ -1,4 +1,4 @@
-//! What a browser gets from a site with more than one thing behind it — roadmap task **T135**.
+//! What a browser gets from a site with more than one thing behind it.
 //!
 //! The rendering assertions in the two recipes say what the files contain; this says what is
 //! *served*, which is the claim the design makes. Four things the text cannot prove on its own:
@@ -14,9 +14,9 @@
 //! directory, which is everything the prefix rules can be measured with; a php-fpm route would need
 //! a runtime download to measure a `fastcgi_pass` that `php_site.rs` already proves. What is left
 //! uncovered is that shape's *text* — the nested `location ~ \.php$` inside `location ^~ /admin/`,
-//! which `recipes::nginx` asserts and no server here reads. It is the one thing in T135 that is
-//! asserted rather than served, and it is the shape T124a's leak came from, so a suite that later
-//! has a PHP to hand should drive it.
+//! which `recipes::nginx` asserts and no server here reads. It is the one thing about routes that
+//! is asserted rather than served, and it is the shape the welcome page's source leak came from, so
+//! a suite that later has a PHP to hand should drive it.
 //!
 //! **The upstreams are two `TcpListener`s in this process**, answering the request line back. That
 //! is what makes the rewrite visible: an upstream that echoed nothing would let `/abc` → `/xyz`
@@ -82,9 +82,9 @@ fn answer(name: &'static str, mut stream: TcpStream) {
 
 /// **One site answers from four places, and the same four on both front ends.**
 ///
-/// The whole of T135 in one arc: the fallback at `/`, a proxy that passes the path through, a proxy
-/// that rewrites it, a directory off disk, and the segment boundary that keeps `/abcdef` out of
-/// `/abc`.
+/// The whole of routes in one arc: the fallback at `/`, a proxy that passes the path through, a
+/// proxy that rewrites it, a directory off disk, and the segment boundary that keeps `/abcdef` out
+/// of `/abc`.
 async fn one_site_answers_from_four_places(front: &'static FrontEnd) {
     let (home, _daemon, _registry, port, _control) = harness::frontend::declared(front).await;
 
@@ -137,8 +137,7 @@ async fn one_site_answers_from_four_places(front: &'static FrontEnd) {
         home.daemon_log()
     );
 
-    // **Match order, which is the answer `site.show` gives** — the design's D12. Longest first,
-    // whatever was typed.
+    // **Match order, which is the answer `site.show` gives.** Longest first, whatever was typed.
     let paths: Vec<&str> = created["site"]["site"]["routes"]
         .as_array()
         .expect("the routes came back")

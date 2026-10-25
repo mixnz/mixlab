@@ -1,7 +1,7 @@
 import type { ServiceFoundList } from "@mixengine/api";
 
 /**
- * `service.found` as rows to draw — roadmap task T182g.
+ * `service.found` as rows to draw.
  *
  * Pure and reading only what the daemon answered: whether a row can be adopted is `opens_with`
  * being there, and why not is the daemon's own sentence. Which version opens which data is decided

@@ -16,14 +16,14 @@ export type OpenChoice =
   | "builtInAfterEnabling";
 
 /**
- * What the *open* affordance is, for one service — T110's D4.
+ * What the *open* affordance is, for one service.
  *
  * Drawn from `database.client`: `no_client` is a state and not an error, which the panel renders as
  * the sentence it always did rather than as a failure of something the person did.
  *
- * **Never another application** (T165): the only client the daemon names is this install's own
- * window, so every choice opens in-process. Handing the service back through `database.open` would
- * start a second MixLab to forward a URL to this one.
+ * **Never another application**: the only client the daemon names is this install's own window, so
+ * every choice opens in-process. Handing the service back through `database.open` would start a
+ * second MixLab to forward a URL to this one.
  */
 export function openChoices(client: DesktopClient, builtInVisible: boolean): OpenChoice[] {
   if (client.state !== "installed") return [];
@@ -48,7 +48,7 @@ export function opensADatabase(report: Partial<Pick<DatabaseClientReport, "proto
 }
 
 /**
- * Whether to draw the Create database form for this service — roadmap task T155.
+ * Whether to draw the Create database form for this service.
  *
  * **The answer is the daemon's**: `creates_databases: false` for Redis and MongoDB, servers that do
  * not create databases this way, so the form there could only be refused. Absence means a daemon

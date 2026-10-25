@@ -45,7 +45,7 @@ pub struct Pushed {
     /// Opaque ids the server wrote as this machine had them: the only changes to agree on.
     pub landed: Vec<String>,
     /// The first refusal, of one entry or of a whole request. Its change keeps its stamp and is sent
-    /// again at the next push (T178c, C2).
+    /// again at the next push.
     pub error: Option<AppError>,
 }
 
@@ -59,14 +59,14 @@ pub struct Fetched {
     pub more: bool,
     /// This page belongs to a resync: a read that began at 0 after the server forgot this
     /// machine's cursor. The page with `more: false` ends it, and forgets whatever the resync
-    /// never met (T178b, M2).
+    /// never met.
     pub resync: bool,
 }
 
 /// The next page of `collection` after this machine's cursor. **Moves nothing**: see [`Fetched`].
-/// A `410` starts a resync (M1). Every later page of it says `resync=1`, so it is not expired
-/// halfway (M4). So does a record another `version` of the app skipped: this one may read it, and
-/// only a resync delivers it again (T178d).
+/// A `410` starts a resync. Every later page of it says `resync=1`, so it is not expired halfway.
+/// So does a record another `version` of the app skipped: this one may read it, and only a resync
+/// delivers it again.
 pub async fn fetch<R: Remote>(
     remote: &R,
     store: &Store,
@@ -100,7 +100,7 @@ fn fetched(page: Page, resync: bool) -> Fetched {
 }
 
 /// Move the cursor past a page the caller has written and landed. A resync page marks what it
-/// met; the last one forgets `unmet` and ends the resync (M2).
+/// met; the last one forgets `unmet` and ends the resync.
 pub async fn commit(
     store: &Store,
     collection: &str,
@@ -121,13 +121,13 @@ pub async fn commit(
     store.set_since(collection, fetched.next_since).await
 }
 
-/// Which of `collections` (opaque) a full run must pull (T189, D4). A cursor at 0, a resync and a
-/// record owed under another version are stale without asking: `fetch` does more than read from
-/// the cursor for each, and the server sees none of them. So is a change still stamped: its push
-/// may have landed unheard, and only the pull of that echo agrees on it. The rest are asked in as
-/// few requests as the server takes, and **a collection the answer does not name has its cursor
-/// moved to `nextSince`**: since the cursor, only this machine wrote to it, and its push
-/// remembered those writes (D3). Never backwards.
+/// Which of `collections` (opaque) a full run must pull. A cursor at 0, a resync and a record owed
+/// under another version are stale without asking: `fetch` does more than read from the cursor for
+/// each, and the server sees none of them. So is a change still stamped: its push may have landed
+/// unheard, and only the pull of that echo agrees on it. The rest are asked in as few requests as
+/// the server takes, and **a collection the answer does not name has its cursor moved to
+/// `nextSince`**: since the cursor, only this machine wrote to it, and its push remembered those
+/// writes. Never backwards.
 pub async fn stale<A: AskHeads>(
     remote: &A,
     store: &Store,
@@ -177,9 +177,9 @@ fn refused(pushed: &mut Pushed, error: AppError) {
 }
 
 /// This machine's changes, in batches, settling each conflict by D4's rule. **Every entry of every
-/// batch is read** (T178c, C2): one refused record says nothing about the others, and an entry the
-/// server wrote is remembered whatever came before it. Only a request that fails as a whole stops
-/// the push, and what it had not sent stays stamped for the next one.
+/// batch is read**: one refused record says nothing about the others, and an entry the server wrote
+/// is remembered whatever came before it. Only a request that fails as a whole stops the push, and
+/// what it had not sent stays stamped for the next one.
 pub async fn push<R: Remote>(
     remote: &R,
     store: &Store,
@@ -238,9 +238,9 @@ pub async fn push<R: Remote>(
                         pushed.landed.push(change.id.clone());
                     }
                     // This machine's own write, which the server kept before this machine could
-                    // remember it (T189, D5): the same device at the same stamp. The local item is
-                    // this device's latest word on the record, so it is written over, not handed
-                    // back as an edit that replaced it.
+                    // remember it: the same device at the same stamp. The local item is this
+                    // device's latest word on the record, so it is written over, not handed back as
+                    // an edit that replaced it.
                     (409 | 412, Some(current))
                         if current.device == device && current.updated_at == change.updated_at =>
                     {
@@ -302,7 +302,7 @@ async fn operation_for(store: &Store, change: &Outgoing) -> Result<Option<Operat
             collection: change.collection.clone(),
             id: change.id.clone(),
             if_match: seen.version,
-            // The time it was first noticed: D4 weighs a deletion like any edit (T178c, C1).
+            // The time it was first noticed: D4 weighs a deletion like any edit.
             updated_at: change.updated_at,
         }),
     })

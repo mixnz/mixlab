@@ -86,7 +86,7 @@ function browsersPill(browsers: Browsers, t: Translate): Pill {
 }
 
 /**
- * The CA's state — T2.6.
+ * The CA's state.
  *
  * **Two independent rows, not one combined green tick.** `trust` is the system store, `browsers`
  * is the Firefox/Chrome NSS database — a machine can hold the CA in the system store without any
@@ -124,10 +124,10 @@ export default function CaBlock({
   }, [reload, revision]);
 
   /**
-   * The two-pass T64 flow: enqueue first with `grant: false`, then read `elevation.status` — if
-   * something is waiting, show `ElevationDialog` for the user to see before the OS prompt comes up;
-   * if nothing is (repairing the NSS database needs no rights on this machine), just reread the
-   * state.
+   * The two passes every elevation takes: enqueue first with `grant: false`, then read
+   * `elevation.status` — if something is waiting, show `ElevationDialog` for the user to see before
+   * the OS prompt comes up; if nothing is (repairing the NSS database needs no rights on this
+   * machine), just reread the state.
    */
   async function repair() {
     setRepairing(true);

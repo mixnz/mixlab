@@ -3,9 +3,10 @@
 /**
  * What became of one *attempt to elevate* — the outcome of raising the prompt, not of the batch.
  *
- * Defined here and used by T40a, where the three launchers live. A declined prompt cannot be an exit
- * code of the helper's, because when the user clicks Cancel the helper never ran: `ERROR_CANCELLED`
- * (1223), osascript's `-128` and `pkexec`'s 126 all map onto [`ElevationOutcome::Declined`].
+ * Defined here and used by the three launchers in `mixengine-platform`. A declined prompt cannot
+ * be an exit code of the helper's, because when the user clicks Cancel the helper never ran:
+ * `ERROR_CANCELLED` (1223), osascript's `-128` and `pkexec`'s 126 all map onto
+ * [`ElevationOutcome::Declined`].
  */
 export type ElevationOutcome = { "outcome": "completed" } | { "outcome": "declined" } | { "outcome": "unavailable", 
 /**

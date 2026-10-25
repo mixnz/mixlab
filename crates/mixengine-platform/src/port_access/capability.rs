@@ -2,9 +2,8 @@
 //!
 //! **No `libcap`.** `getcap` and `setcap` come from a package that is not guaranteed present, and
 //! the read side runs on every daemon start on every Linux machine, so it may not depend on one
-//! being installed — the T42 design, D8. Once `getxattr` is being called, `setxattr` is the same
-//! quantity of `unsafe` for the write side, so both directions are syscalls and the format is
-//! decoded here.
+//! being installed. Once `getxattr` is being called, `setxattr` is the same quantity of `unsafe`
+//! for the write side, so both directions are syscalls and the format is decoded here.
 //!
 //! **Compiled on all three systems** so the codec is tested on all three, exactly as the elevation
 //! launchers' tables are: this is a byte layout with nothing OS-specific in it beyond the kernel

@@ -1,4 +1,4 @@
-//! The Caddy recipe against a **real** Caddy — roadmap task **T31**, driven through T37's harness.
+//! The Caddy recipe against a **real** Caddy, driven through the front-end harness.
 //!
 //! Everything else about this recipe is provable in one process and is proved there: the template
 //! renders, the settings merge, the spec builds, the registry hands a changed rendering to a running
@@ -15,8 +15,8 @@
 //! **The arc itself lives in [`harness::frontend`]**, and this file is what makes it Caddy's: where
 //! the archive is, what its overrides are called, and which line of a Caddyfile carries the admin
 //! port. `nginx.rs` is the same file for the other front end, and the two running the same sequence
-//! is what T37 means by a parity suite. What is Caddy's alone — the admin endpoint answering for
-//! both readiness and health — is asserted here.
+//! is what makes this a parity suite. What is Caddy's alone — the admin endpoint answering for both
+//! readiness and health — is asserted here.
 
 mod harness;
 
@@ -24,29 +24,29 @@ use std::time::{Duration, Instant};
 
 use harness::frontend::{self, CADDY};
 
-/// **The whole of T31, in the order a user meets it.**
+/// **The whole of the recipe, in the order a user meets it.**
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real Caddy — see the module note, and the `caddy` step in _services.yml"]
 async fn caddy_is_generated_validated_started_reloaded_and_stopped() {
     frontend::is_generated_validated_started_reloaded_and_stopped(&CADDY).await;
 }
 
-/// **Caddy judges and then serves an extension's front-end fragment** — roadmap task **T81c**.
+/// **Caddy judges and then serves an extension's front-end fragment.**
 ///
 /// The claim no unit test can make: a fragment is arbitrary Caddyfile text, so the only thing that
-/// can say whether one is a configuration is Caddy. The sequence is [`frontend`]'s, driven twice for
-/// T37's reason.
+/// can say whether one is a configuration is Caddy. The sequence is [`frontend`]'s, driven twice
+/// for the parity suite's reason.
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real Caddy — see the module note, and the `caddy` step in _services.yml"]
 async fn caddy_serves_what_an_extension_s_fragment_adds() {
     frontend::serves_what_an_extension_s_fragment_adds(&CADDY).await;
 }
 
-/// **Caddy accepts a rendering with TLS in it** — roadmap task **T51**.
+/// **Caddy accepts a rendering with TLS in it.**
 ///
-/// The one assertion no unit test can make. The first draft of this task rendered a single site
-/// block naming both schemes with a `tls` inside it: every unit test would have passed it, and Caddy
-/// refuses it outright — `server listening on [:80] is HTTP, but attempts to configure TLS
+/// The one assertion no unit test can make. An early draft of the templates rendered a single site
+/// block naming both schemes with a `tls` inside it: every unit test would have passed it, and
+/// Caddy refuses it outright — `server listening on [:80] is HTTP, but attempts to configure TLS
 /// connection policies`. What is proved here is that the shape the templates settled on is a shape
 /// the program will load.
 #[tokio::test(flavor = "multi_thread")]
@@ -74,7 +74,7 @@ async fn caddy_accepts_a_site_served_over_tls() {
         ],
     );
 
-    // The daemon's own producer (T50) signed the certificate as the site was created, and the walk
+    // The daemon's own leaf issuer signed the certificate as the site was created, and the walk
     // that followed rendered and installed the configuration. Nothing here asks for either.
     let site_file = home
         .path()
@@ -94,12 +94,12 @@ async fn caddy_accepts_a_site_served_over_tls() {
     assert!(rendered.contains("https://blog.test"), "{rendered}");
     assert!(rendered.contains("tls "), "{rendered}");
 
-    // **Both addresses**, the T51 design's D9: a client pointed at plaintext keeps working.
+    // **Both addresses**: a client pointed at plaintext keeps working.
     assert!(rendered.contains("http://blog.test"), "{rendered}");
 
-    // **And the global block still refuses to obtain one of its own** — D1. A later change to the
-    // preset would re-enable a public certificate request for a name resolving nowhere, and this is
-    // where that gets caught.
+    // **And the global block still refuses to obtain one of its own.** A later change to the preset
+    // would re-enable a public certificate request for a name resolving nowhere, and this is where
+    // that gets caught.
     let global = std::fs::read_to_string(
         home.path()
             .join("etc")
@@ -109,7 +109,7 @@ async fn caddy_accepts_a_site_served_over_tls() {
     .expect("the Caddyfile");
     assert!(global.contains("auto_https off"), "{global}");
 
-    // **And it installs no authority of its own — asked of Caddy rather than of the file** (T76).
+    // **And it installs no authority of its own — asked of Caddy rather than of the file.**
     //
     // The template says `skip_install_trust`, and for one release of this branch that was the whole
     // fix and it did nothing: the Caddyfile adapter applies the option to the certificate
@@ -147,10 +147,10 @@ async fn caddy_accepts_a_site_served_over_tls() {
     // at `read_to_string`, with the validator's own words in `daemon.log`.
 }
 
-/// **A redirecting site sends a plaintext request straight to HTTPS, against a real Caddy** —
-/// roadmap task **T98**. Every other T98 assertion is about a rendering; this is the one claim
-/// only the running program can make, on the test above's own precedent — and the `redir` syntax
-/// itself was never run through `caddy validate` until this suite did.
+/// **A redirecting site sends a plaintext request straight to HTTPS, against a real Caddy.** Every
+/// other redirect assertion is about a rendering; this is the one claim only the running program
+/// can make, on the test above's own precedent — and the `redir` syntax itself was never run
+/// through `caddy validate` until this suite did.
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "needs a real Caddy — see the module note, and the `caddy` step in _services.yml"]
 async fn caddy_redirects_a_site_that_asks_for_it() {
@@ -197,15 +197,16 @@ async fn caddy_redirects_a_site_that_asks_for_it() {
     assert!(answer.contains("Location: https://blog.test/"), "{answer}");
 
     // **The CA route is not a real claim here** — this site is not shared, so it renders no
-    // `/__mixengine/ca.crt` route at all (T75's own gate). `a_redirecting_shared_site_still_...`
-    // in `generate::recipes::caddy` is the unit test proving the route survives beside the
-    // redirect; the shape needed to prove *that* against a real Caddy is a shared site holding a
-    // firewall prompt, which is `T76`'s sort of fixture and not this suite's.
+    // `/__mixengine/ca.crt` route at all (only a shared site does).
+    // `a_redirecting_shared_site_still_...` in `generate::recipes::caddy` is the unit test proving
+    // the route survives beside the redirect; the shape needed to prove *that* against a real Caddy
+    // is a shared site holding a firewall prompt, which is the LAN sharing suites' sort of fixture
+    // and not this suite's.
 }
 
-/// **The first assertion in this repository that measures a green padlock** — roadmap task **T53**.
+/// **The first assertion in this repository that measures a green padlock.**
 ///
-/// Everything phase 5 asserts elsewhere is about a file: that a certificate was written, that a
+/// Every other TLS assertion is about a file: that a certificate was written, that a
 /// `tls` line names it, that the rendering validates. None of that establishes that the running
 /// server presents it to anything. This starts a real Caddy over the site MixEngine generated and
 /// then asks MixEngine itself what that server hands a client — which is the only thing a browser
@@ -261,8 +262,8 @@ async fn cert_status_measures_a_trusted_handshake_against_a_running_caddy() {
     assert_eq!(site["problem"], serde_json::Value::Null, "{answer}");
 }
 
-/// **A server still holding the certificate that was replaced under it** — roadmap task **T53**,
-/// and the report `docs/features/tls.md` says most "the padlock is broken" messages really are.
+/// **A server still holding the certificate that was replaced under it**, which is the report
+/// `docs/features/tls.md` says most "the padlock is broken" messages really are.
 ///
 /// Everything that reads files calls this machine healthy: the certificate is present, it covers
 /// the right names, it has eighty days left and `mix doctor` is green. Only the handshake sees it.
@@ -304,7 +305,7 @@ async fn cert_status_notices_a_server_holding_the_previous_certificate() {
     );
 
     // Removed and then reissued, so what lands on disk is a *different* certificate rather than the
-    // same one again — `cert.issue` reuses anything still usable, which is T50's whole guarantee.
+    // same one again — `cert.issue` reuses anything still usable, which is the leaf's reuse rule.
     let sites = home.path().join("certs").join("sites");
     std::fs::remove_file(sites.join("blog.test.crt")).expect("the certificate is removed");
     std::fs::remove_file(sites.join("blog.test.key")).expect("the key is removed");
@@ -341,20 +342,20 @@ async fn cert_status_notices_a_server_holding_the_previous_certificate() {
 const SETTLE: Duration = Duration::from_secs(30);
 
 /// **The acceptance criterion, measured** — *"`mix cert ca-rotate` completes with all sites still
-/// trusted afterwards"*, from `docs/features/tls.md`. Roadmap task **T54**.
+/// trusted afterwards"*, from `docs/features/tls.md`.
 ///
-/// Every other assertion T54 makes is about a file, a queue or a probe. This is the only one that
+/// Every other rotation assertion is about a file, a queue or a probe. This is the only one that
 /// asks the running server what it presents *after* a rotation, which is the only thing a browser
 /// ever sees — and the only way to notice a front end still holding the chain that was replaced
 /// underneath it.
 ///
 /// **Gated on `MIXENGINE_SYSTEM_TESTS=1` as well as `#[ignore]`d**, unlike everything else in this
-/// file, and rule 1 of `docs/standards/testing.md` is why: a rotation writes this *machine's*
-/// trust store, where the tests above only ever start a server. The `caddy` step in
-/// `.github/workflows/_services.yml` runs this suite with `--ignored`, so without the second gate this
-/// would install and remove a certificate authority on every macOS and Windows runner — and on
+/// file, and rule 1 of `docs/standards/testing.md` is why: a rotation writes this *machine's* trust
+/// store, where the tests above only ever start a server. The `caddy` step in
+/// `.github/workflows/_services.yml` runs this suite with `--ignored`, so without the second gate
+/// this would install and remove a certificate authority on every macOS and Windows runner — and on
 /// Windows it can raise a dialog, which a CI job has nobody to answer. That is not hypothetical: an
-/// earlier draft of the T54 suite raised a real UAC prompt in the middle of `cargo test`.
+/// earlier draft of the rotation suite raised a real UAC prompt in the middle of `cargo test`.
 ///
 /// **The job that does set it is `system`, on Windows and macOS**, and that is the whole of where
 /// this test runs. Both hold a token that can grant — Windows a full administrator one, macOS by
@@ -431,7 +432,8 @@ async fn a_rotated_authority_still_gives_every_site_a_green_padlock() {
         let site = &answer["sites"][0];
 
         // The front end was told, so it ends up serving the leaf signed by the *new* authority —
-        // which is T51's fingerprint-in-header doing its job and nothing T54 added.
+        // which is the fingerprint TLS wiring stamps in the header doing its job and nothing the
+        // rotation added.
         if site["handshake"]["trust"]["trust"] == "trusted" && site["problem"].is_null() {
             break;
         }

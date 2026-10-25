@@ -1,4 +1,6 @@
 //! Whether anything on this machine sends a managed TLD to MixEngine's own DNS server.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-23-t45-resolver-wiring-design.md`.
 
 use mixengine_proto::domains::is_wired_tld;
 use mixengine_proto::privileged::{ResolverPlan, ResolverTarget};
@@ -8,11 +10,11 @@ use crate::Result;
 /// How this machine can be made to route one TLD to a nameserver of our choosing.
 ///
 /// **Unlike [`PortAccessMethod`](crate::PortAccessMethod), this is a question asked at runtime
-/// rather than a property of the operating system** — the T45 design, D2. macOS is always a
-/// resolver directory and Windows is always NRPT, but Linux is [`SystemdLink`](Self::SystemdLink)
-/// only where `systemd-resolved` is running and `systemd-networkd` manages links, and a machine
-/// with neither has no scoped mechanism at all. That is why [`ResolverConfig::method`] returns a
-/// `Result` where `PortAccess`' equivalent is a constant.
+/// rather than a property of the operating system.** macOS is always a resolver directory and
+/// Windows is always NRPT, but Linux is [`SystemdLink`](Self::SystemdLink) only where
+/// `systemd-resolved` is running and `systemd-networkd` manages links, and a machine with neither
+/// has no scoped mechanism at all. That is why [`ResolverConfig::method`] returns a `Result` where
+/// `PortAccess`' equivalent is a constant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolverMethod {
     /// macOS: a file per TLD under `/etc/resolver`.
@@ -47,7 +49,7 @@ pub struct ResolverState {
     /// would report a home as working when none of its names resolve.
     pub wired: Vec<String>,
 
-    /// Why the rest are not, in words, for `mix doctor` (T47).
+    /// Why the rest are not, in words, for `mix doctor`.
     pub missing: Option<String>,
 
     /// Why programs on this machine never reach the mechanism, or [`None`] when they do.
@@ -96,7 +98,8 @@ impl ResolverState {
         }
 
         // Already exactly right. Asking anyway would put a row on `mix status` whose only possible
-        // outcome is `AlreadyDone` — T41's D11, one capability along.
+        // outcome is `AlreadyDone` — the hosts file's rule that the disk is read before a prompt is
+        // spent.
         if self.wired.len() == tlds.len() && tlds.iter().all(|tld| self.wired.contains(tld)) {
             return None;
         }
@@ -107,7 +110,8 @@ impl ResolverState {
                 Some(ResolverPlan::ResolverDirectory { tlds, port })
             }
             ResolverMethod::SystemdLink => Some(ResolverPlan::SystemdLink { tlds, port }),
-            // NRPT has no field for a port, which is why T44 puts the server on 53 on this system.
+            // NRPT has no field for a port, which is why the DNS server listens on 53 on this
+            // system.
             ResolverMethod::Nrpt => Some(ResolverPlan::Nrpt { tlds }),
         }
     }
@@ -115,9 +119,7 @@ impl ResolverState {
     /// What would have to be removed to undo [`plan`](Self::plan), or [`None`] on a machine with no
     /// mechanism.
     ///
-    /// **Nothing in T45 enqueues one** — D13, on T42's precedent. Uninstall (T87) is the producer.
-    /// It exists now so that uninstall has a value to build rather than a reversal to invent
-    /// against a wiring written five phases earlier.
+    /// **Nothing at a start enqueues one.** `mix uninstall` is what builds it.
     #[must_use]
     ///
     /// `port` is this home's DNS server: only what points at it is this home's to remove (ADR 0066).
@@ -131,7 +133,7 @@ impl ResolverState {
     }
 }
 
-/// Whether a managed TLD arrives at MixEngine's DNS server — roadmap task **T45**.
+/// Whether a managed TLD arrives at MixEngine's DNS server.
 ///
 /// **Reads only, and never prompts.** The write needs a token this process does not have; it is
 /// [`ResolverApply`](mixengine_proto::privileged::PrivilegedOp::ResolverApply), applied by
@@ -153,11 +155,11 @@ pub trait ResolverConfig: std::fmt::Debug + Send + Sync {
     ///
     /// **This answers "is the configuration in place", not "does a name resolve right now"**, and
     /// the difference is measurable rather than pedantic: on Linux `systemd-networkd` brings the
-    /// link up *after* the reload returns, and on Windows the DNS Client reads its policy when it is
-    /// told to — so there is a window in which this says `wired` and a lookup still fails. The
+    /// link up *after* the reload returns, and on Windows the DNS Client reads its policy when it
+    /// is told to — so there is a window in which this says `wired` and a lookup still fails. The
     /// honest end-to-end check is a real lookup through the resolver the operating system gives
-    /// programs, which is `domain.dns_status`' job (T46). `PortAccess`' macOS probe draws the same
-    /// line for the same reason.
+    /// programs, which is `domain.dns_status`' job. `PortAccess`' macOS probe draws the same line
+    /// for the same reason.
     ///
     /// # Errors
     ///

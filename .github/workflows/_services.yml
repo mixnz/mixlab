@@ -1,5 +1,5 @@
-# The suites that need a real program (T170e).
-# Called from ci.yml, never run on its own (T172e); the triggers, the `jobs` choice and
+# The suites that need a real program.
+# Called from ci.yml, never run on its own; the triggers, the `jobs` choice and
 # concurrency live there. `inputs.jobs` below is the caller's choice, passed through.
 name: services
 
@@ -17,23 +17,23 @@ env:
   CARGO_TERM_COLOR: always
   # CI builds are never incremental: it only costs cache size and hurts a cold runner.
   CARGO_INCREMENTAL: 0
-  # T170l: line tables only in debug builds. Set in every workflow rather than per job because
+  # Line tables only in debug builds. Set in every workflow rather than per job because
   # rust-cache hashes the `CARGO_*` environment into its key.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   RUST_BACKTRACE: 1
 
 jobs:
-  # T170e: the suites that need a real program, one matrix group per leg. A new suite joins a
+  # The suites that need a real program, one matrix group per leg. A new suite joins a
   # group, and a leg past 15 minutes warm becomes a new row.
   services:
-    # `jobs: test` answers "is test green yet", and after T170 that answer takes `test`, this job and
-    # `rustdoc` together, so the one option runs all three.
+    # `jobs: test` answers "is test green yet", and that answer takes `test`, this job and `rustdoc`
+    # together, so the one option runs all three.
     if: ${{ inputs.jobs == '' || inputs.jobs == 'all' || inputs.jobs == 'test' }}
     name: services (${{ matrix.os }}, ${{ matrix.group }})
     runs-on: ${{ matrix.os }}
     # The suites carry clocks of their own; this is the ceiling every job in this file shares.
     timeout-minutes: 45
-    # T184: CI builds are not releases, so their daemons would keep credentials in a file. These
+    # CI builds are not releases, so their daemons would keep credentials in a file. These
     # suites run real servers against real credentials, and are where the OS store is exercised end
     # to end — so they ask for it. A runner has no person to prompt, and Linux unlocks its keyring.
     env:
@@ -56,9 +56,9 @@ jobs:
         with:
           phase: start
 
-      # T2b: this leg holds an enabled `BUILTIN\Administrators` (a full token). Kept as an assertion
+      # This leg holds an enabled `BUILTIN\Administrators` (a full token). Kept as an assertion
       # because docs/standards/testing.md derives a rule from it.
-      - name: What this leg runs as (T2b)
+      - name: What this leg runs as
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -70,7 +70,7 @@ jobs:
             exit 1
           }
 
-      # T170k: the image turns Defender's real-time protection off; this records that it still does.
+      # The image turns Defender's real-time protection off; this records that it still does.
       # It warns and never fails: a scanner makes a leg slower, not wrong.
       - name: Defender's state
         if: runner.os == 'Windows'
@@ -95,13 +95,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           # `test`'s own entry: the same profile and features, and this job only reads it. See the
-          # note on `test`'s cache (T170a).
+          # note on `test`'s cache.
           shared-key: test
           key: test
           save-if: false
 
-      # T170a: a leg that restored nothing says so. A cold build is the first explanation for a slow
-      # leg, and it belongs in the run summary rather than in a log line nobody reads. The action's
+      # A leg that restored nothing says so. A cold build is the first explanation for a slow leg,
+      # and it belongs in the run summary rather than in a log line nobody reads. The action's
       # `cache-hit` output cannot say it: it is true only for an exact key match, and a branch whose
       # `Cargo.lock` changed restores a partial one.
       - name: Say whether the cache was cold
@@ -116,14 +116,14 @@ jobs:
       - name: Fetch dependencies
         run: cargo fetch --locked
 
-      # T31: the one test that judges a recipe against the program it configures. From our own
+      # The one test that judges a recipe against the program it configures. From our own
       # index, pinned: a fixture, not an install. Before the offline steps.
       - name: Fetch a real Caddy
         if: contains(fromJSON('["web","all"]'), matrix.group)
         shell: bash
         run: bash .github/scripts/fetch-package.sh --probe "caddy version" caddy 2.11.4 MIXENGINE_CADDY_PACKAGE
 
-      # T37: how an nginx `include` resolves is nginx's own question. The whole tree, because the
+      # How an nginx `include` resolves is nginx's own question. The whole tree, because the
       # generated `nginx.conf` includes the archive's `conf/mime.types` by absolute path.
       - name: Fetch a real nginx
         if: contains(fromJSON('["web","all"]'), matrix.group)
@@ -132,7 +132,7 @@ jobs:
         # what the recipe's smoke test runs, so a build that fails this fails an install too.
         run: bash .github/scripts/fetch-package.sh --absent-on Windows-ARM64 --probe "nginx -v" nginx 1.31.3 MIXENGINE_NGINX_PACKAGE
 
-      # T32: `php-fpm` on Unix, `php-cgi` on Windows. Only the program tells a recipe that renders
+      # `php-fpm` on Unix, `php-cgi` on Windows. Only the program tells a recipe that renders
       # from one that runs.
       - name: Fetch a real PHP
         if: contains(fromJSON('["web","all"]'), matrix.group)
@@ -153,13 +153,13 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then separator=';'; else separator=':'; fi
           echo "MIXENGINE_PHP_RUNTIMES=$RUNNER_TEMP/php-70$separator$RUNNER_TEMP/php" >> "$GITHUB_ENV"
 
-      # T33: the first recipe that creates something before it can run.
+      # The first recipe that creates something before it can run.
       - name: Fetch a real MariaDB
         if: contains(fromJSON('["sql","all"]'), matrix.group)
         shell: bash
         run: bash .github/scripts/fetch-package.sh --probe "bin/mariadbd --version" mariadb 11.4.12 MIXENGINE_MARIADB_PACKAGE
 
-      # T36: two instances at two versions; 10.6 and 11.4 differ in program names and `share/`.
+      # Two instances at two versions; 10.6 and 11.4 differ in program names and `share/`.
       - name: Fetch a second MariaDB, of an older series
         if: contains(fromJSON('["sql","all"]'), matrix.group)
         shell: bash
@@ -167,17 +167,17 @@ jobs:
         # every program it needs and this is only the smoke check.
         run: bash .github/scripts/fetch-package.sh --probe "bin/mariadbd --version" mariadb 10.6.28 MIXENGINE_MARIADB_LEGACY_PACKAGE "$RUNNER_TEMP/mariadb-legacy"
 
-      # T34c: MySQL 8.4. The 5.x lines are smoke-tested by mixengine-packages.
+      # MySQL 8.4. The 5.x lines are smoke-tested by mixengine-packages.
       - name: Fetch a real MySQL
         if: contains(fromJSON('["sql","all"]'), matrix.group)
         shell: bash
         # Neither mixengine-packages nor upstream publishes MySQL for Windows on ARM.
         run: bash .github/scripts/fetch-package.sh --absent-on Windows-ARM64 --probe "bin/mysqld --version" mysql 8.4.10 MIXENGINE_MYSQL_PACKAGE
 
-      # And a real PostgreSQL, for T34 — the recipe that made T34a necessary. It is the smaller of
-      # the two databases, and it is the one whose Windows leg only runs at all because a supervised
-      # child is now created from a restricted token: `postgres` refuses the full token the step at
-      # the top of this job asserts this runner holds.
+      # And a real PostgreSQL — the recipe that made the supervisor's restricted token necessary. It
+      # is the smaller of the two databases, and it is the one whose Windows leg only runs at all
+      # because a supervised child is now created from a restricted token: `postgres` refuses the
+      # full token the step at the top of this job asserts this runner holds.
       - name: Fetch a real PostgreSQL
         if: contains(fromJSON('["sql","all"]'), matrix.group)
         shell: bash
@@ -185,8 +185,8 @@ jobs:
         # nothing on that cell and the suite is skipped rather than failed.
         run: bash .github/scripts/fetch-package.sh --absent-on Windows-ARM64 --probe "bin/postgres --version" postgres 18.6 MIXENGINE_POSTGRES_PACKAGE
 
-      # And the two caches, for T35. Small downloads next to the two databases above, and the pair
-      # of them is one roadmap task because neither is big enough to be one on its own.
+      # And the two caches. Small downloads next to the two databases above, and the pair of them is
+      # one step because neither is big enough to be one on its own.
       - name: Fetch a real Redis
         if: contains(fromJSON('["web","all"]'), matrix.group)
         shell: bash
@@ -200,7 +200,7 @@ jobs:
         # `-V` and not `--version`: the short flag is in every line the index publishes.
         run: bash .github/scripts/fetch-package.sh --absent-on Windows-ARM64 --probe "bin/memcached -V" memcached 1.6.45 MIXENGINE_MEMCACHED_PACKAGE
 
-      # And MongoDB, for T156. The newest line: 8.x needs macOS 14 and glibc 2.34, and every leg of
+      # And MongoDB. The newest line: 8.x needs macOS 14 and glibc 2.34, and every leg of
       # this job is newer than both.
       - name: Fetch a real MongoDB
         if: contains(fromJSON('["web","all"]'), matrix.group)
@@ -208,7 +208,7 @@ jobs:
         # Upstream has never built MongoDB for Windows on ARM, at any version.
         run: bash .github/scripts/fetch-package.sh --absent-on Windows-ARM64 --probe "bin/mongod --version" mongodb 8.3.11 MIXENGINE_MONGODB_PACKAGE
 
-      # `--bins` is not optional: the harness needs `mixengined`, `mixengine-shim` and, since T185,
+      # `--bins` is not optional: the harness needs `mixengined`, `mixengine-shim` and
       # `mixengine-trampoline` beside `mix`, and `--test` builds only its own package's binaries.
       - name: Build the suites this leg runs
         shell: bash
@@ -252,9 +252,9 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: bash .github/scripts/test-no-network.sh services
 
-      # T69: the connection count against a socket that is really established, on all three
+      # The connection count against a socket that is really established, on all three
       # systems. No privilege needed, so not `system`. Outside the namespace on Linux.
-      # `--workspace --all-features` on every suite, never `-p` (T170b): `-p` recompiles.
+      # `--workspace --all-features` on every suite, never `-p`: `-p` recompiles.
       - name: Test against a real connection
         if: contains(fromJSON('["web","all"]'), matrix.group)
         env:
@@ -271,7 +271,7 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test caddy --locked --offline -- --ignored
 
-      # T76: what a shared site listens on, against the real Caddy. The firewall half is
+      # What a shared site listens on, against the real Caddy. The firewall half is
       # `mixengine-core --test firewall`. Not on Linux, which runs its front ends in a namespace.
       - name: Test what a shared site listens on
         if: runner.os != 'Linux' && contains(fromJSON('["web","all"]'), matrix.group)
@@ -279,18 +279,17 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test sharing --locked --offline -- --ignored
 
-      # T37: the same assertions as Caddy's, from `tests/harness/frontend.rs`: a parity suite.
+      # The same assertions as Caddy's, from `tests/harness/frontend.rs`: a parity suite.
       - name: Test against a real nginx
         if: runner.os != 'Linux' && env.MIXENGINE_NGINX_PACKAGE != '' && contains(fromJSON('["web","all"]'), matrix.group)
         env:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test nginx --locked --offline -- --ignored
 
-      # **One site, many backends, through both front ends** — roadmap task T135. Two steps for one
-      # suite, on the rule every pair here follows: a failure should name which server disagreed
-      # without anybody reading the log. The suite drives a proxy route, a rewriting proxy route and
-      # a files route; it needs no PHP, which is why it sits above the PHP steps rather than among
-      # them.
+      # **One site, many backends, through both front ends.** Two steps for one suite, on the rule
+      # every pair here follows: a failure should name which server disagreed without anybody
+      # reading the log. The suite drives a proxy route, a rewriting proxy route and a files route;
+      # it needs no PHP, which is why it sits above the PHP steps rather than among them.
       - name: Test one site's routes against a real Caddy
         if: runner.os != 'Linux' && contains(fromJSON('["web","all"]'), matrix.group)
         env:
@@ -313,8 +312,8 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test php_fpm --locked --offline -- --ignored
 
-      # And the ini set that PHP reads — T28. Its own step for the reason the one above has: a
-      # failure should name which half failed without anybody reading the log.
+      # And the ini set that PHP reads. Its own step for the reason the one above has: a failure
+      # should name which half failed without anybody reading the log.
       - name: Test the generated PHP ini set
         if: runner.os != 'Linux' && contains(fromJSON('["web","all"]'), matrix.group)
         env:
@@ -339,7 +338,7 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test mariadb --locked --offline -- --ignored --nocapture
 
-      # T36: the expensive half, two servers at once. Linux runs it inside `test-no-network.sh`.
+      # The expensive half, two servers at once. Linux runs it inside `test-no-network.sh`.
       - name: Test two instances of one server, at two versions
         if: runner.os != 'Linux' && contains(fromJSON('["sql","all"]'), matrix.group)
         timeout-minutes: 25
@@ -347,8 +346,8 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test instances --locked --offline -- --ignored --nocapture
 
-      # T34. Linux runs it inside `test-no-network.sh`; on Windows it relies on T34a's restricted
-      # token (ADR 0010).
+      # PostgreSQL. Linux runs it inside `test-no-network.sh`; on Windows it relies on the
+      # supervisor's restricted token (ADR 0010).
       - name: Test against a real PostgreSQL
         if: runner.os != 'Linux' && env.MIXENGINE_POSTGRES_PACKAGE != '' && contains(fromJSON('["sql","all"]'), matrix.group)
         timeout-minutes: 15
@@ -356,7 +355,7 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test postgres --locked --offline -- --ignored --nocapture
 
-      # T34c. Linux runs it inside `test-no-network.sh`; it skips where no MySQL was fetched.
+      # MySQL. Linux runs it inside `test-no-network.sh`; it skips where no MySQL was fetched.
       - name: Test against a real MySQL
         if: runner.os != 'Linux' && env.MIXENGINE_MYSQL_PACKAGE != '' && contains(fromJSON('["sql","all"]'), matrix.group)
         timeout-minutes: 15
@@ -364,8 +363,8 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test mysql --locked --offline -- --ignored --nocapture
 
-      # And the two caches — T35. Two steps rather than one for the reason the PHP pair are two: a
-      # failure should name which recipe failed without anybody reading the log.
+      # And the two caches. Two steps rather than one for the reason the PHP pair are two: a failure
+      # should name which recipe failed without anybody reading the log.
       - name: Test against a real Redis
         if: runner.os != 'Linux' && env.MIXENGINE_REDIS_PACKAGE != '' && contains(fromJSON('["web","all"]'), matrix.group)
         env:
@@ -378,7 +377,7 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test memcached --locked --offline -- --ignored --nocapture
 
-      # And MongoDB — T156. Spoken to over the wire by the suite itself, so nothing else is needed.
+      # And MongoDB. Spoken to over the wire by the suite itself, so nothing else is needed.
       - name: Test against a real MongoDB
         if: runner.os != 'Linux' && env.MIXENGINE_MONGODB_PACKAGE != '' && contains(fromJSON('["web","all"]'), matrix.group)
         timeout-minutes: 15

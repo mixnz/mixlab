@@ -1,17 +1,16 @@
-//! The arc a front end has to walk, whichever program is being asked to be one — roadmap task
-//! **T37**.
+//! The arc a front end has to walk, whichever program is being asked to be one.
 //!
-//! `docs/roadmap/phase-3-services.md` asks T37 for "a parity test suite running both generators",
+//! `docs/roadmap/phase-3-services.md` asks for "a parity test suite running both generators",
 //! and this is the parity: one sequence of assertions, driven twice. What each front end supplies is
 //! a [`FrontEnd`] — where its archive is, what its overrides are called, which line in the rendering
 //! carries its control port — and everything a *user* meets is here, once.
 //!
-//! **Why it is one sequence and not two files that look alike.** The claim T31 made for Caddy and
-//! T37 makes for nginx is the same sentence: a row becomes a configuration the server itself
+//! **Why it is one sequence and not two files that look alike.** The claim made for Caddy and the
+//! one made for nginx are the same sentence: a row becomes a configuration the server itself
 //! accepts, the server comes up, an edited override is *served* by the same process a moment later,
 //! a broken one is refused with the last good configuration still live, and a stop ends it. Two
-//! copies of that would drift — and the copy that drifted would be the one nobody was reading on the
-//! day it mattered, because both suites would still be green.
+//! copies of that would drift — and the copy that drifted would be the one nobody was reading on
+//! the day it mattered, because both suites would still be green.
 //!
 //! What is deliberately **not** shared is how each server answers its own readiness: Caddy has an
 //! admin endpoint and nginx has a `server` block MixEngine renders for the purpose. Those live in
@@ -73,14 +72,15 @@ pub(crate) struct FrontEnd {
     pub broken: fn(control: u16) -> String,
 
     /// A `[[recipe.front_end]]` for this server that serves [`FRAGMENT_SAYS`] on the port the
-    /// extension holds under `fragment_port` — roadmap task **T81c**.
+    /// extension holds under `fragment_port`.
     ///
     /// **Written in the manifest's placeholders and not in numbers**, because that is the whole of
     /// what an extension may write: `{listen}` comes from `permissions.network` and the port from
     /// `[ports]`, and an author who tried to spell either one out is refused at parse.
     pub fragment: &'static str,
 
-    /// A `[[recipe.front_end]]` this server's own checker has to refuse, for the other half of D5.
+    /// A `[[recipe.front_end]]` this server's own checker has to refuse: the half of the check that
+    /// says no.
     pub broken_fragment: &'static str,
 
     /// The line the rendering carries when the control port is `control`, which is how a test says
@@ -158,7 +158,7 @@ impl FrontEnd {
         }
     }
 
-    /// What this front end names the per-site file it renders — roadmap task **T124a**.
+    /// What this front end names the per-site file it renders.
     ///
     /// Derived from [`config`](Self::config)'s own extension rather than declared beside it: a
     /// front end that renders `nginx.conf` renders `sites/<domain>.conf`, and two fields could
@@ -173,10 +173,10 @@ impl FrontEnd {
 
     /// What this server's artifact publishes, by the names a recipe asks for them by.
     ///
-    /// **Out here rather than inside [`index`](Self::index)** since roadmap task **T124a**: a suite
-    /// that publishes a front end *beside* other packages — `php_site`, which needs a PHP in the
-    /// same index — builds its own entry and would otherwise carry a second copy of this map. One
-    /// forgotten `fastcgi_params` is an nginx that renders and will not start.
+    /// **Out here rather than inside [`index`](Self::index)**: a suite that publishes a front end
+    /// *beside* other packages — `php_site`, which needs a PHP in the same index — builds its own
+    /// entry and would otherwise carry a second copy of this map. One forgotten `fastcgi_params` is
+    /// an nginx that renders and will not start.
     pub(crate) fn provides(&self) -> serde_json::Map<String, Value> {
         let mut provides = serde_json::Map::new();
         provides.insert(self.package.to_owned(), Value::String(self.binary()));
@@ -269,9 +269,9 @@ pub(crate) fn service_log(home: &Home, service: &str) -> String {
 /// this suite on one machine would fight over.
 ///
 /// **A TCP bind alone is not enough to hand the number to a front end**, which is what this used to
-/// do. From T51 a site with a certificate makes Caddy open an **HTTP/3 listener**, which is UDP on
-/// the TLS port — and Windows keeps port exclusion ranges *per protocol*, so a number TCP is welcome
-/// on can refuse UDP outright with `An attempt was made to access a socket in a way forbidden by its
+/// do. A site with a certificate makes Caddy open an **HTTP/3 listener**, which is UDP on the TLS
+/// port — and Windows keeps port exclusion ranges *per protocol*, so a number TCP is welcome on can
+/// refuse UDP outright with `An attempt was made to access a socket in a way forbidden by its
 /// access permissions`. A server that cannot bind one of its listeners refuses its whole
 /// configuration, so what that looked like from out here was Caddy in a crash loop and
 /// `system (windows-latest)` red in `caddy.rs` — twice, hours apart, on branches that had not
@@ -418,19 +418,19 @@ pub(crate) fn request(port: u16, path: &str) -> Option<String> {
 
 /// The same again, addressed to a name rather than to the loopback address.
 ///
-/// **The `Host` header is what a site is matched on**, and it is what T43's own steps need: a site
-/// declared as `blog.test` is a Caddyfile block written `http://blog.test` and an nginx
+/// **The `Host` header is what a site is matched on**, and it is what a site's own steps need: a
+/// site declared as `blog.test` is a Caddyfile block written `http://blog.test` and an nginx
 /// `server_name blog.test`, and a request carrying any other host reaches a listening server and is
 /// answered `404` — which reads as a reload that did not happen and is a header that did not match.
 ///
-/// **The header rather than the name.** CI has no elevation, so no hosts entry exists, and what this
-/// suite is for is proving that the rendering is right and the server is reading it — not that a
-/// name resolves. Resolution is T44 and T45's, and has its own suites.
+/// **The header rather than the name.** CI has no elevation, so no hosts entry exists, and what
+/// this suite is for is proving that the rendering is right and the server is reading it — not that
+/// a name resolves. Resolution is the DNS server's and the resolver's, and has its own suites.
 pub(crate) fn request_as(port: u16, path: &str, host: &str) -> Option<String> {
     request_at(std::net::Ipv4Addr::LOCALHOST, port, path, host)
 }
 
-/// The same again, at an address that is not loopback — roadmap task **T76**.
+/// The same again, at an address that is not loopback, for LAN sharing.
 ///
 /// What a shared site is for: the request arrives at the machine's LAN address, carrying that
 /// address as its `Host`, which is what a phone handed a URL actually sends.

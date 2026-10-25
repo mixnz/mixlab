@@ -70,7 +70,7 @@ export function useTabs({ visible, visibleIds }: TabsOptions): Tabs {
   /* Tabs that were opened by turning their module on — tab id to module id. `Workspace` state and
      not the session's per-tab slot: that slot belongs to the module (`shell/module.ts`), and by
      the next launch the sentence is false anyway — the module is simply enabled, and was when the
-     session was written. T110's D2. */
+     session was written. */
   const [enabledFor, setEnabledFor] = useState<Record<string, string>>({});
 
   /* `state` is only ever given by the backend's tab requests (`useTabRequests`): it is what the
@@ -133,9 +133,9 @@ export function useTabs({ visible, visibleIds }: TabsOptions): Tabs {
 
   /* A module turned off takes its tabs with it. An effect on the visible list rather than a branch
      inside the Settings handler, because there is more than one way that list changes — the three
-     presets, the five checkboxes, and later T110's handoff — and a rule enforced at one call site
-     is a rule the second call site breaks. The confirmation happens before the setting changes, in
-     the Settings pane; by the time this runs the answer was yes.
+     presets, the five checkboxes, a tab request for a hidden module — and a rule enforced at one
+     call site is a rule the second call site breaks. The confirmation happens before the setting
+     changes, in the Settings pane; by the time this runs the answer was yes.
 
      Both updaters return their input unchanged when there is nothing to drop, so this does not
      rewrite the session on every render it happens to run in. Closing the last tab opens a fresh

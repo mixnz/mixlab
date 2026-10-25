@@ -13,8 +13,8 @@ export type ScaffoldConsent = {
  */
 command: string, 
 /**
- * The archive URL as it was shown — roadmap task **T205**, D2. Exactly one of `command` and
- * this names what the plan showed.
+ * The archive URL as it was shown. Exactly one of `command` and this names what the plan
+ * showed.
  */
 archive?: string | null, 
 /**

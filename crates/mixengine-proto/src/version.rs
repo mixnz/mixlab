@@ -2,21 +2,21 @@
 //!
 //! Not runtime-specific and never was: a [`PackageVersion`] is upstream's own string, validated
 //! because it becomes a path component, and `packages/<name>/<version>/` needs that as much as
-//! `runtimes/<kind>/<version>/` does. The `Runtime` prefix these types carried until T31a described
-//! the only caller there happened to be, not what they are about.
+//! `runtimes/<kind>/<version>/` does. The `Runtime` prefix these types carried until service
+//! packages needed them described the only caller there happened to be, not what they are about.
 //!
 //! # The version *grammar* lives here, and the resolution *order* does not
 //!
-//! T24 added [`VersionConstraint`] and [`PackageVersion::cmp_precedence`] beside the identifier they
-//! are about. They are here rather than in `mixengine_core::resolve` because a constraint travels on
+//! [`VersionConstraint`] and [`PackageVersion::cmp_precedence`] sit beside the identifier they are
+//! about. They are here rather than in `mixengine_core::resolve` because a constraint travels on
 //! the wire — `runtime.resolve` takes one — and this crate validates what it carries, on the same
 //! reasoning that made a version a validated type in the first place: `^8.3` arriving as a `String`
 //! would be refused somewhere further in, with the caller's request already half honoured.
 //!
-//! [`Execution`] joined them at T92 on the same reasoning one step further out: it is neither a
-//! version nor a constraint, but it is a property of *a published build as this machine would run
-//! it*, and both [`crate::RuntimeRelease`] and [`crate::PackageRelease`] carry it. A module of its
-//! own for one enum would be a fourth thing in the layout list to say one word.
+//! [`Execution`] joined them on the same reasoning one step further out: it is neither a version
+//! nor a constraint, but it is a property of *a published build as this machine would run it*, and
+//! both [`crate::RuntimeRelease`] and [`crate::PackageRelease`] carry it. A module of its own for
+//! one enum would be a fourth thing in the layout list to say one word.
 //!
 //! What is *not* here is which of four sources a constraint came from. That order — flag,
 //! `mixengine.toml`, project record, default — reads a file and a table, which makes it domain logic
@@ -76,7 +76,7 @@ impl fmt::Display for PackageChannel {
     }
 }
 
-/// How a machine runs the build it was offered — roadmap task **T92**.
+/// How a machine runs the build it was offered.
 ///
 /// A fact about the *pair* of a machine and an artifact rather than about either alone, computed by
 /// the daemon out of the index and the target triple it was compiled for, and reported so that a
@@ -154,9 +154,9 @@ impl PackageVersion {
     /// The characters a version may contain besides ASCII letters and digits.
     ///
     /// `+` because semantic versioning's build metadata uses it and every target allows it in a
-    /// filename; `~` is deliberately absent, because PHP's own ini parser refuses one in an unquoted
-    /// value and a path containing it would fail silently at the worst possible moment — the bug
-    /// T20a found on a runner and wrote up in the packaging notes.
+    /// filename; `~` is deliberately absent, because PHP's own ini parser refuses one in an
+    /// unquoted value and a path containing it would fail silently at the worst possible moment —
+    /// the bug found on a CI runner and written up in the packaging notes.
     const PUNCTUATION: [char; 4] = ['.', '-', '_', '+'];
 
     /// Read a version, refusing anything that could not be a directory name.
@@ -229,7 +229,7 @@ impl PackageVersion {
         precedence(&self.0).cmp(&precedence(&other.0))
     }
 
-    /// Whether this is a pre-release (`8.5.0RC1`, `1.2.3-rc.1`) — roadmap task **T193a**.
+    /// Whether this is a pre-release (`8.5.0RC1`, `1.2.3-rc.1`).
     ///
     /// **The same reading precedence makes**, so the two can never disagree: whatever follows the
     /// numbers is a pre-release tail, and build metadata after a `+` is not part of it.
@@ -585,7 +585,7 @@ impl<'de> serde::Deserialize<'de> for VersionConstraint {
 mod tests {
     use super::*;
 
-    /// One spelling for the wire, the CLI and the binding — roadmap task **T92**.
+    /// One spelling for the wire, the CLI and the binding.
     #[test]
     fn an_execution_has_one_spelling_everywhere() {
         for (execution, word) in [
@@ -791,7 +791,7 @@ mod tests {
         assert!(error.contains("does not begin with a digit"), "{error}");
     }
 
-    /// **T193a.** What decides whether a stable install may be offered a release.
+    /// What decides whether a stable install may be offered a release.
     #[test]
     fn a_version_with_a_tail_is_a_pre_release_and_build_metadata_is_not_one() {
         for (version, pre) in [

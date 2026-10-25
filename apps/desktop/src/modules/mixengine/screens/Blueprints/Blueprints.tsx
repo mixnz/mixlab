@@ -29,7 +29,7 @@ export default function Blueprints({
   terminalVisible,
 }: {
   active: boolean;
-  /** Whether this window draws the Terminal module, for the steps after an apply — T205. */
+  /** Whether this window draws the Terminal module, for the steps after an apply. */
   terminalVisible: boolean;
 }) {
   const [rows, setRows] = useState<BlueprintSummary[]>([]);

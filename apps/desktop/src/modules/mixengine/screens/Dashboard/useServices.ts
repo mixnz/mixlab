@@ -226,7 +226,7 @@ export function useServices({ active, readDisk, setError }: Options) {
       // run twice under StrictMode. `job_finished` is also a reason to reread: a finished
       // `elevation.grant` changes the "N waiting" count with no event of its own saying so (see
       // `isJobFinished`).
-      // A service that has just failed carries its sentence in `service.list` only (T200b, D6).
+      // A service that has just failed carries its sentence in `service.list` only.
       if (needsResync(raw) || isJobFinished(raw) || failureMayHaveChanged(raw)) void reload();
       // An event that changes a row, arriving while a `service.list` is on its way back, means that
       // snapshot may have been read *before* this event — the client cannot tell. Note it here so
@@ -246,7 +246,7 @@ export function useServices({ active, readDisk, setError }: Options) {
    * this whole table follows.
    *
    * Starts nothing and stops nothing, so it does not go through `busy`: what it changes is the walk
-   * at the next daemon start (T112/T113).
+   * at the next daemon start.
    */
   const setAutostart = useCallback(
     async (id: string, autostart: boolean) => {

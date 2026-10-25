@@ -1,5 +1,5 @@
-//! A `.deb` or an `.rpm`, and the software installer that opens one — roadmap task **T182b**, D5,
-//! on ADR 0050's pattern for the macOS `.pkg`.
+//! A `.deb` or an `.rpm`, and the software installer that opens one, on ADR 0050's pattern for the
+//! macOS `.pkg`.
 //!
 //! **The receipt says which database owns the file**, `dpkg:<package>` or `rpm:<package>`, because
 //! an update of a packaged copy is the next package of the same kind. **And nothing here elevates**:

@@ -63,7 +63,7 @@ function TabPanes({
             </Suspense>
           </ErrorBoundary>
         );
-        /* The module this tab was opened by turning on, if it was — T110. The two wrappers are
+        /* The module this tab was opened by turning on, if it was. The two wrappers are
            always here and are boxes only while there is a notice: a pane that changed depth when
            one appeared or was dismissed would be a fresh mount, and a database tab would drop the
            connection it was holding. `chrome.css` is where the rest of that is written down. */

@@ -1,12 +1,12 @@
 //! The ways an extension, its manifest and its registry can be wrong.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 /// The ways an extension, its manifest and its registry can be wrong.
 #[derive(Debug, thiserror::Error)]
 pub enum ExtensionError {
-    /// An `extension.toml` does not parse — roadmap task **T80**.
+    /// An `extension.toml` does not parse.
     ///
     /// **The path is here**, unlike [`BlueprintError::BlueprintManifest`], because there is a file
     /// to point at: an extension is read off disk and never out of a column.
@@ -21,8 +21,7 @@ pub enum ExtensionError {
         source: toml::de::Error,
     },
 
-    /// One entry of the published registry is not a manifest this build can read — roadmap task
-    /// **T81**.
+    /// One entry of the published registry is not a manifest this build can read.
     ///
     /// **No path, where [`Error::ExtensionManifest`] has one**: this arrived inside a signed
     /// document, so there is no file to point somebody at. It is also the one manifest failure that
@@ -37,7 +36,7 @@ pub enum ExtensionError {
         source: Box<serde_json::Error>,
     },
 
-    /// Something is already installed under that id — roadmap task **T81**.
+    /// Something is already installed under that id.
     ///
     /// Named rather than left to the primary key, on [`RuntimeError::PackageAlreadyRecorded`]'s
     /// reasoning: the collision is a real case and the sentence a person needs names the extension
@@ -67,7 +66,7 @@ pub enum ExtensionError {
         value: String,
     },
 
-    /// A `services` row points at an extension that runs no process — roadmap task **T81**.
+    /// A `services` row points at an extension that runs no process.
     ///
     /// Unreachable through this build's own writes, since only a `service` extension is given a
     /// row. Named rather than defaulted, on [`ServiceError::UnreadableServiceRow`]'s reasoning: a
@@ -82,7 +81,7 @@ pub enum ExtensionError {
         kind: &'static str,
     },
 
-    /// Nothing is published for this machine — roadmap task **T81**.
+    /// Nothing is published for this machine.
     ///
     /// A state rather than a fault: the extension exists and was simply not built for this OS and
     /// architecture, so the message names what *was* built rather than implying something is
@@ -95,8 +94,7 @@ pub enum ExtensionError {
         targets: Vec<String>,
     },
 
-    /// A `web-app` administers a database and this home runs none of the engines it named — roadmap
-    /// task **T82**.
+    /// A `web-app` administers a database and this home runs none of the engines it named.
     ///
     /// **Refused before the download**, for [`RuntimeError::RuntimeUnresolved`]'s reason: an
     /// install whose stated effect cannot happen is worse than one that never started. Like that
@@ -115,12 +113,12 @@ pub enum ExtensionError {
         engines: Vec<String>,
     },
 
-    /// A site naming the php-fpm pool that belongs to an extension — roadmap task **T82a**, its
-    /// design's D5.
+    /// A site naming the php-fpm pool that belongs to an extension.
     ///
     /// **Raised by [`crate::sites`] rather than by the daemon**, because `blueprint.apply` and
     /// `domain.add` reach `sites::update` without going through a CLI, and a refusal they could
-    /// cross is no refusal — which is T81b's D6 arriving at a second field.
+    /// cross is no refusal — the rule an extension site's own refusals follow, arriving at a second
+    /// field.
     ///
     /// What it protects is the whole reason a `web-app` has a pool of its own: that process holds a
     /// database superuser's password, read from the keyring at spawn, and a project's PHP inside it
@@ -193,7 +191,7 @@ pub enum ExtensionError {
     /// An extension id a compiled-in recipe already claims.
     ///
     /// A `service` extension's process is named by its id, so this one would be two definitions of
-    /// one service. Said here rather than discovered when T81 writes the row.
+    /// one service. Said here rather than discovered when the install writes the row.
     #[error("{id} is the name of a service MixEngine already defines")]
     ExtensionIdTaken {
         /// The id.
@@ -213,7 +211,7 @@ pub enum ExtensionError {
         source: mixengine_proto::SpecError,
     },
 
-    /// A `minisign.pub` handed to the generator is not a public key file — roadmap task **T81a**.
+    /// A `minisign.pub` handed to the generator is not a public key file.
     ///
     /// Distinct from [`Error::RegistryKeyMismatch`] because nothing was compared: `minisign -G`
     /// writes an untrusted comment and one key line, and a file with any other number of them is
@@ -228,8 +226,7 @@ pub enum ExtensionError {
         lines: usize,
     },
 
-    /// The key the packaging repository would sign with is not the key this build checks against —
-    /// roadmap task **T81a**, its design's D3.
+    /// The key the packaging repository would sign with is not the key this build checks against.
     ///
     /// The load-bearing refusal of the whole publishing chain. A signature made with a key no
     /// installed MixEngine accepts is worse than no signature, because it looks published — so a
@@ -252,7 +249,7 @@ pub enum ExtensionError {
         compiled: &'static str,
     },
 
-    /// A manifest file is not named after the id it declares — roadmap task **T81a**.
+    /// A manifest file is not named after the id it declares.
     ///
     /// The one rule the registry generator adds that [`extensions::manifest::read`] cannot have,
     /// because that reads one file and knows nothing about the directory around it. It is also what
@@ -268,13 +265,12 @@ pub enum ExtensionError {
         id: String,
     },
 
-    /// A generated registry holds an entry the build that generated it cannot read back — roadmap
-    /// task **T81a**.
+    /// A generated registry holds an entry the build that generated it cannot read back.
     ///
-    /// T81's D4 makes an unreadable entry survivable on a user's machine on purpose, because an
-    /// entry a *newer* build published should cost that entry and nothing else. Here it can only
-    /// mean the generator is older than its own inputs, and the honest place to stop is before the
-    /// signature rather than on somebody's machine.
+    /// The registry reader makes an unreadable entry survivable on a user's machine on purpose,
+    /// because an entry a *newer* build published should cost that entry and nothing else. Here it
+    /// can only mean the generator is older than its own inputs, and the honest place to stop is
+    /// before the signature rather than on somebody's machine.
     #[error("{count} generated entries cannot be read back by the build that made them")]
     RegistryUnreadable {
         /// How many.

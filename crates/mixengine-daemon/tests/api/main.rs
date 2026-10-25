@@ -227,9 +227,9 @@ impl Daemon {
 
 impl Drop for Daemon {
     fn drop(&mut self) {
-        // Killed rather than asked to stop: `daemon.shutdown` is T9's, and an interrupt cannot be
-        // delivered to a child portably. The endpoint goes with the process on Windows and with the
-        // `TempDir` on Unix, so nothing survives either way.
+        // Killed rather than asked to stop: an interrupt cannot be delivered to a child portably.
+        // The endpoint goes with the process on Windows and with the `TempDir` on Unix, so nothing
+        // survives either way.
         let _ = self.child.kill();
         let _ = self.child.wait();
     }

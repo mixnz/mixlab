@@ -3,7 +3,7 @@
 //! Two sinks, always both: `logs/daemon.log`, because the daemon normally runs detached and
 //! somebody will ask what happened hours later, and stderr, because during development somebody is
 //! watching it right now. The file never carries colour — escape codes baked into `daemon.log`
-//! would make "copy diagnostics" (T66) produce something no bug report can use.
+//! would make a diagnostics bundle carry something no bug report can use.
 //!
 //! Format and level are decided at `main` and passed in. Nothing below this module reads the
 //! environment.
@@ -77,7 +77,7 @@ pub(crate) fn init(options: &Options<'_>) -> io::Result<()> {
     let sink = Sink::new(file, note_for(options.format));
 
     // Kept so that `release` below can reach it. The subscriber owns the only other reference and
-    // lives for the life of the process, which is exactly the problem T87 has with it.
+    // lives for the life of the process, which is exactly the problem an uninstall has with it.
     let _ = LIVE.set(sink.clone());
 
     tracing::subscriber::set_global_default(subscriber(options, sink))
@@ -102,16 +102,16 @@ pub(crate) fn started() -> bool {
     LIVE.get().is_some()
 }
 
-/// Let go of `daemon.log`, so the directory holding it can be removed — roadmap task **T87**.
+/// Let go of `daemon.log`, so the directory holding it can be removed.
 ///
 /// **Windows will not remove a directory holding an open file**, even one already marked for
 /// deletion, and a daemon removing its own home is removing the directory its log is in. This is
 /// called once, from `main`, after the last thing that could log and immediately before the removal.
 ///
-/// **And for good** (T182e): anything logged afterwards is dropped rather than reopening the file,
-/// which is what [`RotatingFile::release`] alone would do. The convention used to be enough — nothing
-/// came between this and the removal but a rename — and stopped being enough when the removal began
-/// to look for held folders and retry, seconds in which any task still running may log. A reopened
+/// **And for good**: anything logged afterwards is dropped rather than reopening the file, which is
+/// what [`RotatingFile::release`] alone would do. The convention used to be enough — nothing came
+/// between this and the removal but a rename — and stopped being enough when the removal began to
+/// look for held folders and retry, seconds in which any task still running may log. A reopened
 /// `daemon.log` then refused the rename of the directory it lives in.
 pub(crate) fn release() {
     if let Some(sink) = LIVE.get() {
@@ -230,9 +230,9 @@ struct Sink {
 }
 
 impl Sink {
-    /// Let go of the file for good — T182e. The flag is set before the lock is taken, and every
-    /// writer reads it after taking the lock, so a write that began first finishes and every later
-    /// one sees the file closed.
+    /// Let go of the file for good. The flag is set before the lock is taken, and every writer
+    /// reads it after taking the lock, so a write that began first finishes and every later one
+    /// sees the file closed.
     fn close(&self) {
         self.closed.store(true, Ordering::SeqCst);
         self.file
@@ -299,7 +299,7 @@ impl Drop for SinkWriter<'_> {
     /// in the file before any other event can be written between it and the line that caused it.
     ///
     /// Written to stderr straight through the handle: `eprintln!` panics when stderr cannot be
-    /// written, which a detached daemon (T9) would then do from inside its own logger, and a failure
+    /// written, which a detached daemon would then do from inside its own logger, and a failure
     /// to report that rotation failed is not worth a process.
     fn drop(&mut self) {
         if self.closed {
@@ -324,10 +324,10 @@ mod tests {
 
     use super::*;
 
-    /// T182e. Once the daemon has let go of its log for the last time, an event from a task still
-    /// running must not open it again: the uninstall now spends seconds between letting go and
-    /// renaming the directory, and a reopened `daemon.log` refused that rename (measured on a real
-    /// Windows uninstall, where the daemon named itself as the holder).
+    /// Once the daemon has let go of its log for the last time, an event from a task still running
+    /// must not open it again: the uninstall now spends seconds between letting go and renaming the
+    /// directory, and a reopened `daemon.log` refused that rename (measured on a real Windows
+    /// uninstall, where the daemon named itself as the holder).
     #[test]
     fn a_closed_log_stays_closed_whatever_is_written_after() {
         let home = TempDir::new().unwrap();
@@ -503,9 +503,9 @@ mod tests {
     /// The rule the architecture states: a rotation that cannot happen never costs a log line, and
     /// the file says why, once per run of failures.
     ///
-    /// Written from here rather than from inside [`RotatingFile`] since T16 — a service's log is
-    /// rotated by the same type and must *not* be given a sentence of ours — so this is where the
-    /// "once, in the file" half of that rule is now proved.
+    /// Written from here rather than from inside [`RotatingFile`] — a service's log is rotated by
+    /// the same type and must *not* be given a sentence of ours — so this is where the "once, in
+    /// the file" half of that rule is now proved.
     #[test]
     fn a_rotation_that_cannot_happen_says_so_in_the_file_once() {
         let log = Log::new();

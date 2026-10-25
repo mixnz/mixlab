@@ -16,11 +16,11 @@ use super::steps;
 impl Api {
     /// Every version this apply will install, decided before it writes anything.
     ///
-    /// **D9.** A plan reads this home's tables and never the index, so it holds a
-    /// [`VersionConstraint`](mixengine_proto::VersionConstraint) where a release belongs. Turning
-    /// one into a release needs the index, which needs the network — so it happens here, once, at
-    /// the top of the job: a constraint nothing satisfies fails while the ledger is still empty and
-    /// there is nothing to take back.
+    /// **Nothing is written until every version is known.** A plan reads this home's tables and
+    /// never the index, so it holds a [`VersionConstraint`](mixengine_proto::VersionConstraint)
+    /// where a release belongs. Turning one into a release needs the index, which needs the network
+    /// — so it happens here, once, at the top of the job: a constraint nothing satisfies fails
+    /// while the ledger is still empty and there is nothing to take back.
     pub(super) async fn resolve(
         &self,
         plan: &BlueprintPlan,
@@ -66,7 +66,7 @@ impl Api {
         Ok(resolved)
     }
 
-    /// The release every `Create` install step resolves to, without reporting progress — T152.
+    /// The release every `Create` install step resolves to, without reporting progress.
     ///
     /// [`Self::resolve`]'s lookups for a caller with no job: the dry run.
     async fn install_targets(
@@ -98,7 +98,7 @@ impl Api {
         Ok(targets)
     }
 
-    /// What those releases lack on this machine, merged — T152, design D7.
+    /// What those releases lack on this machine, merged.
     ///
     /// [`None`] when anything needed to judge could not be had: a dry run prints its plan regardless.
     pub(super) async fn blueprint_needs(&self, plan: &BlueprintPlan) -> Option<Vec<Requirement>> {
@@ -127,7 +127,7 @@ impl Api {
         handle: &JobHandle,
     ) -> Result<(), Error> {
         // A plan that installs nothing asks the index nothing — an apply that worked offline before
-        // T152 still does.
+        // requirements were checked still does.
         let targets = self.install_targets(plan).await?;
         if targets.is_empty() {
             return Ok(());

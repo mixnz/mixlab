@@ -38,7 +38,7 @@ describe("devkitOffer", () => {
   });
 });
 
-/* T206, measured by hand: two pills and a devkit button on every Ruby row overflowed the row. One
+/* Measured by hand: two pills and a devkit button on every Ruby row overflowed the row. One
    mark a row, its reasons on hover; the devkit offered once, above the list. */
 describe("one mark a row", () => {
   it("joins every reason into the mark's tooltip, in key order", () => {
@@ -83,7 +83,7 @@ describe("devkitState", () => {
     });
   });
 
-  it("reads a daemon from before T206d as present", () => {
+  it("reads a row that carries no missing flag as present", () => {
     expect(devkitState([row("2026.10.08")])).toEqual({ state: "present", version: "2026.10.08" });
   });
 });

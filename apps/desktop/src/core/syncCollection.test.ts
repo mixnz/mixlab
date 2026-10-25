@@ -53,7 +53,7 @@ describe("applying another machine's changes", () => {
       { id: "b", name: "B" },
     ]);
     // Named so sync does not agree on it: agreed, and then left out by `read`, it would be pushed
-    // as a deletion (T178a, L4).
+    // as a deletion.
     expect(skipped).toEqual(["a"]);
   });
 

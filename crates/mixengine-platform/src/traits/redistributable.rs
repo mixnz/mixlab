@@ -1,5 +1,4 @@
-//! Running Microsoft's Visual C++ Redistributable installer, once somebody agreed to it — roadmap
-//! task **T150**.
+//! Running Microsoft's Visual C++ Redistributable installer, once somebody agreed to it.
 //!
 //! **The one place MixEngine starts a program that asks Windows for administrator rights and is not
 //! `mixengine-elevate`** — ADR 0037. What makes that acceptable is here: the file is believed only
@@ -12,7 +11,7 @@ use std::path::Path;
 
 use crate::Result;
 
-/// The organisation Microsoft signs the installer as — measured in the T148 plan's step zero.
+/// The organisation Microsoft signs the installer as, read off a real installer's signature.
 pub const VISUAL_CPP_PUBLISHER: &str = "Microsoft Corporation";
 
 /// How one run of the installer ended.
@@ -60,7 +59,7 @@ pub fn names_the_redistributable(product: &str) -> bool {
     product.contains("Visual C++") && product.contains("Redistributable")
 }
 
-/// Installing a Visual C++ runtime this machine lacks — roadmap task **T150**.
+/// Installing a Visual C++ runtime this machine lacks.
 pub trait Redistributables: std::fmt::Debug + Send + Sync {
     /// Believe `installer` is Microsoft's Visual C++ Redistributable, run it quietly, and wait.
     ///

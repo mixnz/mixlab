@@ -1,7 +1,7 @@
 import type { Need, RedistributableArch, Requirement } from "@mixengine/api";
 
 /**
- * What an install has to ask before it starts — roadmap task T151.
+ * What an install has to ask before it starts.
  *
  * Pure, so the rule is tested without a window. The daemon decided every remedy; this only decides
  * which one question the screen asks: none, "install it too?", or "install this version instead?".
@@ -32,7 +32,7 @@ export function requirementStep(unmet: readonly Requirement[]): RequirementStep 
 
   const needs = unmet.map((requirement) => requirement.need);
 
-  // A library the distribution provides is said, not asked about — T27e. It never outranks the two
+  // A library the distribution provides is said, not asked about. It never outranks the two
   // steps below: a plan that also needs consent asks for it, and one that is blocked says so.
   const actionable = unmet.filter(
     (requirement) => requirement.remedy.remedy !== "install_from_distribution",
@@ -86,7 +86,7 @@ export function needLabel(need: Need): string {
 }
 
 /**
- * A row's needs, with every shared library gathered apart — T27e.
+ * A row's needs, with every shared library gathered apart.
  *
  * A Linux JDK names eight sonames, which is more than a table cell holds; the screen shows how many
  * there are and puts the names in the cell's title.
@@ -106,7 +106,7 @@ export function splitLibraries(needs: readonly Need[]): {
   return { others, libraries };
 }
 
-/** Whether a blueprint's apply may be sent, given what its releases lack and what was agreed — T152. */
+/** Whether a blueprint's apply may be sent, given what its releases lack and what was agreed. */
 export function requirementsAllowApply(unmet: readonly Requirement[], agreed: boolean): boolean {
   const step = requirementStep(unmet);
   if (step.kind === "proceed" || step.kind === "notice") return true;

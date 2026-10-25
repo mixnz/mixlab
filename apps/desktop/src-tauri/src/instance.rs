@@ -59,8 +59,7 @@ pub async fn forward(endpoint: &Endpoint, line: &str) -> bool {
     sys::forward(&endpoint.path, line).await
 }
 
-/// Whether somebody is answering on `endpoint`, without saying anything to them — roadmap task
-/// **T106**.
+/// Whether somebody is answering on `endpoint`, without saying anything to them.
 ///
 /// **The one question a relaunched copy asks.** It has to wait for the copy it is replacing to go
 /// before it can take the endpoint itself, and [`forward`] is not the way to ask: that delivers a
@@ -327,9 +326,9 @@ mod tests {
         );
     }
 
-    /// T106. A relaunched copy has to know when the copy it is replacing has gone, and asking must
-    /// not do anything to it on the way: `forward` would bring a dying window to the front and hand
-    /// it a start it is in no position to serve.
+    /// A relaunched copy has to know when the copy it is replacing has gone, and asking must not do
+    /// anything to it on the way: `forward` would bring a dying window to the front and hand it a
+    /// start it is in no position to serve.
     #[tokio::test]
     async fn listening_answers_without_saying_anything() {
         let endpoint = test_endpoint();

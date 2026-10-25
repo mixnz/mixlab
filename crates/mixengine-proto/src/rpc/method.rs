@@ -15,7 +15,7 @@ pub const DAEMON_SHUTDOWN: &str = "daemon.shutdown";
 
 /// Choose where this home keeps its passwords from the next start. Takes
 /// [`CredentialStoreSet`](crate::CredentialStoreSet), answers
-/// [`CredentialStoreChange`](crate::CredentialStoreChange). Roadmap task **T194**.
+/// [`CredentialStoreChange`](crate::CredentialStoreChange).
 ///
 /// **Refused while the current store holds anything for this home**, naming what it holds, and
 /// on a release refused for the file anywhere but a Linux machine with no credential store
@@ -28,28 +28,26 @@ pub const DAEMON_SET_CREDENTIAL_STORE: &str = "daemon.set_credential_store";
 /// Examine this machine and say what was found. Takes nothing, answers
 /// [`DoctorReport`](crate::DoctorReport).
 ///
-/// **A read in the strict sense** — roadmap task **T47a**: no row is written, no file is
-/// written, nothing is enqueued, and no elevation prompt can result from calling it. That is
-/// what makes it safe on a timer and from a diagnostics bundle. Repairing what it finds is
-/// `daemon.doctor_repair`, which is T47b's.
+/// **A read in the strict sense**: no row is written, no file is written, nothing is enqueued,
+/// and no elevation prompt can result from calling it. That is what makes it safe on a timer and
+/// from a diagnostics bundle. Repairing what it finds is [`DAEMON_DOCTOR_REPAIR`].
 pub const DAEMON_DOCTOR: &str = "daemon.doctor";
 
 /// Repair what `daemon.doctor` found — everything this build can act on, in one call.
 ///
 /// Takes [`DoctorRepair`](crate::DoctorRepair), answers [`RepairReport`](crate::RepairReport).
-/// Roadmap task **T47b**.
 ///
 /// **The one method here that can raise an elevation prompt, and it raises at most one** — and
 /// only when asked to. Repairs that need the helper enqueue; whether the queue is then flushed in
-/// this same call is `grant`, which exists so that T64's rule survives: what is about to be
-/// allowed is read before it is allowed. A repair that lives inside `MIXENGINE_HOME` prompts for
-/// nothing either way.
+/// this same call is `grant`, which exists so that the rule every elevation follows survives:
+/// what is about to be allowed is shown before it is allowed. A repair that lives inside
+/// `MIXENGINE_HOME` prompts for nothing either way.
 pub const DAEMON_DOCTOR_REPAIR: &str = "daemon.doctor_repair";
 
 /// One diagnostics archive, written into this home and named in the answer.
 ///
 /// Takes [`DiagnosticsBundle`](crate::DiagnosticsBundle), answers
-/// [`BundleReport`](crate::BundleReport). Roadmap task **T93**.
+/// [`BundleReport`](crate::BundleReport).
 ///
 /// **Reads the machine and writes one file: the archive itself**, inside
 /// `<root>/cache/diagnostics/`. No row, no queue, no prompt — which is what makes it safe to
@@ -59,7 +57,7 @@ pub const DAEMON_BUNDLE: &str = "daemon.bundle";
 
 /// What an uninstall would take off this machine. Takes
 /// [`UninstallQuery`](crate::UninstallQuery), answers
-/// [`UninstallReport`](crate::UninstallReport). Roadmap task **T87**.
+/// [`UninstallReport`](crate::UninstallReport).
 ///
 /// **A read in the strict sense**, exactly as [`DAEMON_DOCTOR`] is: no row is written, nothing
 /// is enqueued, and no elevation prompt can result from calling it. That is what makes it safe
@@ -69,7 +67,7 @@ pub const DAEMON_UNINSTALL_PLAN: &str = "daemon.uninstall_plan";
 
 /// Take MixEngine off this machine. Takes [`UninstallQuery`](crate::UninstallQuery), answers a
 /// [`JobSummary`](crate::JobSummary) whose result is an
-/// [`UninstallReport`](crate::UninstallReport). Roadmap task **T87**.
+/// [`UninstallReport`](crate::UninstallReport).
 ///
 /// **A job, because it can raise the elevation prompt** — what it then waits on is a person
 /// reading a dialog, which has no deadline. It raises at most one, and only when `grant` says
@@ -80,8 +78,7 @@ pub const DAEMON_UNINSTALL_PLAN: &str = "daemon.uninstall_plan";
 pub const DAEMON_UNINSTALL: &str = "daemon.uninstall";
 
 /// Where this home's disk has gone, category by category. Takes
-/// [`DiskUsageQuery`](crate::DiskUsageQuery), answers [`DiskUsage`](crate::DiskUsage). Roadmap
-/// task **T96**.
+/// [`DiskUsageQuery`](crate::DiskUsageQuery), answers [`DiskUsage`](crate::DiskUsage).
 ///
 /// **A read in the strict sense**, exactly as [`DAEMON_DOCTOR`] and [`DAEMON_UNINSTALL_PLAN`]
 /// are: no row is written, no file is written, nothing is enqueued, and no elevation prompt can
@@ -96,10 +93,9 @@ pub const DAEMON_DISK_USAGE: &str = "daemon.disk_usage";
 
 /// Remove what is safe to lose. Takes [`CleanupQuery`](crate::CleanupQuery), answers a
 /// [`JobSummary`](crate::JobSummary) whose result is a [`CleanupReport`](crate::CleanupReport).
-/// Roadmap task **T96**.
 ///
 /// **What it may remove is a closed list, never a walk of the home** — [`DAEMON_BUNDLE`]'s rule
-/// (**T93**) applied to deletion. Rotated log files and `cache/`; nothing else, whatever
+/// applied to deletion. Rotated log files and `cache/`; nothing else, whatever
 /// [`DAEMON_DISK_USAGE`]'s sum says. The live log files, `logs/crashes/`, `data/`, `runtimes/`
 /// and `certs/` are out of reach by construction rather than by a check somebody has to
 /// remember.
@@ -114,18 +110,17 @@ pub const DAEMON_CLEANUP: &str = "daemon.cleanup";
 /// left.
 ///
 /// Takes [`CaStatusQuery`](crate::CaStatusQuery), answers [`CaStatus`](crate::CaStatus).
-/// Roadmap task **T48**.
 ///
 /// **Never the private key.** `docs/architecture/security-model.md` says it is never copied,
 /// exported by an RPC, or sent to a client, and [`CaStatus`](crate::CaStatus) has no field one
 /// could travel in.
 ///
 /// Whether an operating system *trusts* the certificate is a different question, about a
-/// different subsystem, and is T49's to answer.
+/// different subsystem: the operating system's trust store, which this method does not read.
 pub const CERT_CA_STATUS: &str = "cert.ca_status";
 
-/// What this daemon knows about updating itself, without going to the network — roadmap task
-/// **T88**. Takes nothing, answers [`UpdateStatus`](crate::UpdateStatus).
+/// What this daemon knows about updating itself, without going to the network. Takes nothing,
+/// answers [`UpdateStatus`](crate::UpdateStatus).
 ///
 /// The cheap one: it reports the last feed this daemon verified, whenever that was. What forces
 /// a request is [`UPDATE_CHECK`].
@@ -159,8 +154,8 @@ pub const UPDATE_DECIDE: &str = "update.decide";
 /// manager, before anything is downloaded.
 pub const UPDATE_APPLY: &str = "update.apply";
 
-/// Download and verify the next `.pkg`, and open it in Installer.app — roadmap task **T88f**.
-/// Takes [`UpdateHandOver`](crate::UpdateHandOver), answers
+/// Download and verify the next `.pkg`, and open it in Installer.app. Takes
+/// [`UpdateHandOver`](crate::UpdateHandOver), answers
 /// [`UpdateHandedOver`](crate::UpdateHandedOver). **The daemon keeps running**, and nothing is
 /// stopped: a person who cancels the installer has lost nothing.
 ///
@@ -168,8 +163,9 @@ pub const UPDATE_APPLY: &str = "update.apply";
 pub const UPDATE_HAND_OVER: &str = "update.hand_over";
 
 /// Once the `.pkg` has installed, stop, remember what was running, answer and exit — the second
-/// half of [`UPDATE_APPLY`], roadmap task **T88f**. Takes [`UpdateFinish`](crate::UpdateFinish),
-/// answers [`UpdateApplied`](crate::UpdateApplied) with nothing in `replaced`.
+/// half of [`UPDATE_APPLY`], for a copy the `.pkg` installed. Takes
+/// [`UpdateFinish`](crate::UpdateFinish), answers [`UpdateApplied`](crate::UpdateApplied) with
+/// nothing in `replaced`.
 ///
 /// Refused with `precondition_failed` until `update.status` carries `installed`.
 pub const UPDATE_FINISH: &str = "update.finish";
@@ -177,18 +173,17 @@ pub const UPDATE_FINISH: &str = "update.finish";
 /// Give a site the certificate its names need — or every HTTPS site one. Takes
 /// [`CertIssue`](crate::CertIssue), answers [`CertIssueReport`](crate::CertIssueReport).
 ///
-/// Roadmap task **T50**. Idempotent: a certificate that still covers the right names, has more
-/// than thirty days left and was signed by the authority this home has now is reused rather
-/// than replaced.
+/// Idempotent: a certificate that still covers the right names, has more than thirty days left
+/// and was signed by the authority this home has now is reused rather than replaced.
 pub const CERT_ISSUE: &str = "cert.issue";
 
 /// What this home's certificates are doing, per site, **including a live TLS handshake** against
 /// the running front end. Takes [`CertStatusQuery`](crate::CertStatusQuery), answers
 /// [`CertStatusReport`](crate::CertStatusReport).
 ///
-/// Roadmap task **T53**. The one question in this API that is not answered from a file: it opens
-/// a socket to this home's own front end and reports the certificate that server presents, which
-/// is the only thing a browser ever sees.
+/// The one question in this API that is not answered from a file: it opens a socket to this
+/// home's own front end and reports the certificate that server presents, which is the only
+/// thing a browser ever sees.
 ///
 /// Reads only. Nothing is issued, nothing is installed and nothing is reloaded — a diagnostic
 /// that repaired what it found would be unable to report the state it had just repaired.
@@ -198,8 +193,8 @@ pub const CERT_STATUS: &str = "cert.status";
 /// [`CaRotateQuery`](crate::CaRotateQuery), answers a [`JobSummary`](crate::JobSummary) whose
 /// result is a [`CaRotateReport`](crate::CaRotateReport).
 ///
-/// Roadmap task **T54**, and the one destructive operation in phase 5: every browser holding a
-/// cached chain under the old authority stops accepting it.
+/// The one destructive operation on certificates: every browser holding a cached chain under the
+/// old authority stops accepting it.
 ///
 /// **A job because it waits for a person.** One elevation prompt covers taking the old
 /// certificate out and putting the new one in, and nothing is committed unless a fresh reading
@@ -211,9 +206,9 @@ pub const CERT_CA_ROTATE: &str = "cert.ca_rotate";
 /// [`CaUninstallQuery`](crate::CaUninstallQuery), answers a [`JobSummary`](crate::JobSummary)
 /// whose result is a [`CaUninstallReport`](crate::CaUninstallReport).
 ///
-/// Roadmap task **T54**. **Trust and never a file**: `certs/ca/` and every leaf are left where
-/// they are, because removing trust is undone by `mix doctor --repair` and deleting a private
-/// key is undone by nothing. Deleting is uninstall's, T87.
+/// **Trust and never a file**: `certs/ca/` and every leaf are left where they are, because
+/// removing trust is undone by `mix doctor --repair` and deleting a private key is undone by
+/// nothing. Deleting is [`DAEMON_UNINSTALL`]'s.
 pub const CERT_CA_UNINSTALL: &str = "cert.ca_uninstall";
 
 /// Every version of every runtime the index offers **for this machine**, and whether each is
@@ -238,9 +233,8 @@ pub const RUNTIME_LIST_INSTALLED: &str = "runtime.list_installed";
 /// [`RuntimeSummary`](crate::RuntimeSummary).
 pub const RUNTIME_INSTALL: &str = "runtime.install";
 
-/// What one version lacks on this machine, and what can be done about each — roadmap task
-/// **T149**. Takes [`RuntimeTarget`](crate::RuntimeTarget), answers
-/// [`Requirements`](crate::Requirements).
+/// What one version lacks on this machine, and what can be done about each. Takes
+/// [`RuntimeTarget`](crate::RuntimeTarget), answers [`Requirements`](crate::Requirements).
 ///
 /// What a client asks **before** `runtime.install`, so it can ask the person once rather than
 /// meet a refusal. The install judges again regardless.
@@ -259,16 +253,16 @@ pub const RUNTIME_UNINSTALL: &str = "runtime.uninstall";
 /// [`RuntimeSummary`](crate::RuntimeSummary) that is now the default.
 pub const RUNTIME_SET_DEFAULT: &str = "runtime.set_default";
 
-/// Record a version that is on disk without a row, such as one an earlier home left — roadmap
-/// task **T182f**. Takes [`RuntimeTarget`](crate::RuntimeTarget), answers the
-/// [`RuntimeSummary`](crate::RuntimeSummary) now recorded, or the one already there.
+/// Record a version that is on disk without a row, such as one an earlier home left. Takes
+/// [`RuntimeTarget`](crate::RuntimeTarget), answers the [`RuntimeSummary`](crate::RuntimeSummary)
+/// now recorded, or the one already there.
 ///
 /// Checked by its marker, or against the package index: every file the build provides is there,
 /// and it runs. Nothing is downloaded and nothing on disk is removed.
 pub const RUNTIME_ADOPT: &str = "runtime.adopt";
 
-/// Every runtime directory on disk with no row, and why — roadmap task **T182i**. Takes
-/// nothing, answers [`RuntimeFoundList`](crate::RuntimeFoundList). Offline and a read: no index
+/// Every runtime directory on disk with no row, and why. Takes nothing, answers
+/// [`RuntimeFoundList`](crate::RuntimeFoundList). Offline and a read: no index
 /// is fetched and nothing is recorded; [`RUNTIME_ADOPT`] is what checks and records one.
 pub const RUNTIME_FOUND: &str = "runtime.found";
 
@@ -308,13 +302,13 @@ pub const RUNTIME_SET_EXTENSION: &str = "runtime.set_extension";
 /// in the hint.
 pub const RUNTIME_RESOLVE: &str = "runtime.resolve";
 
-/// What updating one installed version within its line would do, changing nothing — roadmap
-/// task **T193b**. Takes [`RuntimeUpgradeQuery`](crate::RuntimeUpgradeQuery), answers
+/// What updating one installed version within its line would do, changing nothing. Takes
+/// [`RuntimeUpgradeQuery`](crate::RuntimeUpgradeQuery), answers
 /// [`UpgradePlan`](crate::UpgradePlan).
 pub const RUNTIME_UPGRADE_PLAN: &str = "runtime.upgrade_plan";
 
 /// Update one installed version to a newer release of its line, moving everything that points
-/// at it — T193b. Takes [`RuntimeUpgrade`](crate::RuntimeUpgrade), answers a
+/// at it. Takes [`RuntimeUpgrade`](crate::RuntimeUpgrade), answers a
 /// [`JobSummary`](crate::JobSummary) whose result is the [`UpgradePlan`](crate::UpgradePlan)
 /// marked with what was done.
 pub const RUNTIME_UPGRADE: &str = "runtime.upgrade";
@@ -350,9 +344,9 @@ pub const PATH_UNINSTALL: &str = "path.uninstall";
 /// Compare `<root>/bin` against what is installed, now. Takes no parameters, answers
 /// [`PathReport`](crate::PathReport).
 ///
-/// **Roadmap task T131.** The daemon hears a tool somebody installed into a runtime through a
-/// watch on its bindir (T185b), so this is for a bindir the system would not let it watch, and
-/// for a person who wants to know *now* whether MixEngine agrees with their disk.
+/// The daemon hears a tool somebody installed into a runtime through a watch on its bindir, so
+/// this is for a bindir the system would not let it watch, and for a person who wants to know
+/// *now* whether MixEngine agrees with their disk.
 ///
 /// Idempotent and cheap: a pass that finds nothing changed copies nothing.
 pub const PATH_RESCAN: &str = "path.rescan";
@@ -429,9 +423,8 @@ pub const SERVICE_STOP: &str = "service.stop";
 /// Take a service down and put back exactly what went down with it. Same types again.
 pub const SERVICE_RESTART: &str = "service.restart";
 
-/// Re-set one database's superuser credential inside its own data directory — roadmap task
-/// **T127**. Takes [`ResetCredential`](crate::ResetCredential), answers
-/// [`ServiceWalk`](crate::ServiceWalk).
+/// Re-set one database's superuser credential inside its own data directory. Takes
+/// [`ResetCredential`](crate::ResetCredential), answers [`ServiceWalk`](crate::ServiceWalk).
 ///
 /// The repair for a server that refuses the password this home holds for it. A database keeps
 /// its own copy of that password inside its data directory and the keyring holds the other; they
@@ -446,26 +439,24 @@ pub const SERVICE_RESTART: &str = "service.restart";
 /// Also the name of the job it performs the work in, which is where the log of it lives.
 pub const SERVICE_RESET_CREDENTIAL: &str = "service.reset_credential";
 
-/// Service data an earlier home left under `data/`, with no service row — roadmap task
-/// **T182g**. Takes nothing, answers [`ServiceFoundList`](crate::ServiceFoundList): each
-/// directory, the version that made it, and the installed version that would open it or why none
-/// does. A read: nothing is written.
+/// Service data an earlier home left under `data/`, with no service row. Takes nothing, answers
+/// [`ServiceFoundList`](crate::ServiceFoundList): each directory, the version that made it, and
+/// the installed version that would open it or why none does. A read: nothing is written.
 pub const SERVICE_FOUND: &str = "service.found";
 
-/// A copy of an earlier home's state in a folder this home keeps — roadmap task **T182h**.
-/// Takes nothing, answers [`HomePrevious`](crate::HomePrevious): what the newest copy holds,
+/// A copy of an earlier home's state in a folder this home keeps. Takes nothing, answers
+/// [`HomePrevious`](crate::HomePrevious): what the newest copy holds,
 /// while this home has no project, site or package's service of its own yet. A read.
 pub const HOME_PREVIOUS: &str = "home.previous";
 
-/// Restore that copy into this home — roadmap task **T182h**. Takes nothing, answers
+/// Restore that copy into this home. Takes nothing, answers
 /// [`HomeRestoreReport`](crate::HomeRestoreReport). Projects, sites, domains, routes and
 /// services come back; every database gets a new admin password and is left stopped; the hosts
 /// file and the certificates of HTTPS sites are asked for as a site create asks for them.
 pub const HOME_RESTORE: &str = "home.restore";
 
-/// Turn one found data directory back into a service — roadmap task **T182g**. Takes
-/// [`ServiceAdopt`](crate::ServiceAdopt), answers the
-/// [`ServiceSummary`](crate::ServiceSummary) of the service, left stopped.
+/// Turn one found data directory back into a service. Takes [`ServiceAdopt`](crate::ServiceAdopt),
+/// answers the [`ServiceSummary`](crate::ServiceSummary) of the service, left stopped.
 ///
 /// `service.create` with that id, whose data directory is the one found, then — for a database
 /// — `service.reset_credential`, which writes a new admin password into it. Every database and
@@ -512,24 +503,23 @@ pub const PACKAGE_REQUIREMENTS: &str = "package.requirements";
 /// `ON DELETE RESTRICT`, and what a person does about it is [`SERVICE_DELETE`].
 pub const PACKAGE_UNINSTALL: &str = "package.uninstall";
 
-/// Record a version that is on disk without a row — roadmap task **T182f**. Takes
+/// Record a version that is on disk without a row. Takes
 /// [`PackageTarget`](crate::PackageTarget), answers the
 /// [`PackageSummary`](crate::PackageSummary) now recorded, or the one already there. Checked
 /// as [`RUNTIME_ADOPT`] checks a runtime.
 pub const PACKAGE_ADOPT: &str = "package.adopt";
 
-/// Every package directory on disk with no row, and why — roadmap task **T182i**. Takes
-/// nothing, answers [`PackageFoundList`](crate::PackageFoundList), as [`RUNTIME_FOUND`] does
-/// for runtimes.
+/// Every package directory on disk with no row, and why. Takes nothing, answers
+/// [`PackageFoundList`](crate::PackageFoundList), as [`RUNTIME_FOUND`] does for runtimes.
 pub const PACKAGE_FOUND: &str = "package.found";
 
-/// What updating one installed package version within its line would do, changing nothing —
-/// roadmap task **T193c**. Takes [`PackageUpgradeQuery`](crate::PackageUpgradeQuery), answers
+/// What updating one installed package version within its line would do, changing nothing.
+/// Takes [`PackageUpgradeQuery`](crate::PackageUpgradeQuery), answers
 /// [`UpgradePlan`](crate::UpgradePlan).
 pub const PACKAGE_UPGRADE_PLAN: &str = "package.upgrade_plan";
 
 /// Update one installed package version to a newer release of its line, moving its instances
-/// one at a time — T193c. Takes [`PackageUpgrade`](crate::PackageUpgrade), answers a
+/// one at a time. Takes [`PackageUpgrade`](crate::PackageUpgrade), answers a
 /// [`JobSummary`](crate::JobSummary) whose result is the [`UpgradePlan`](crate::UpgradePlan)
 /// marked with what was done.
 pub const PACKAGE_UPGRADE: &str = "package.upgrade";
@@ -539,8 +529,8 @@ pub const PACKAGE_UPGRADE: &str = "package.upgrade";
 /// [`ServiceSummary`](crate::ServiceSummary) the new row became.
 ///
 /// **The configuration is rendered before the answer**, so a service that could not be
-/// configured is one that was never created — T30 fails a whole declared set on one bad row, and
-/// a row left behind would take every later `service.*` call down with it.
+/// configured is one that was never created — the config generator fails a whole declared set on
+/// one bad row, and a row left behind would take every later `service.*` call down with it.
 pub const SERVICE_CREATE: &str = "service.create";
 
 /// Delete a service. Takes [`ServiceQuery`](crate::ServiceQuery), answers
@@ -553,7 +543,7 @@ pub const SERVICE_DELETE: &str = "service.delete";
 
 /// Change which program every site on this machine is reached through. Takes
 /// [`FrontEndSwitch`](crate::FrontEndSwitch), answers a [`JobSummary`](crate::JobSummary) whose
-/// result is a [`FrontEndReport`](crate::FrontEndReport). Roadmap task **T97**.
+/// result is a [`FrontEndReport`](crate::FrontEndReport).
 ///
 /// **A job and not a setting**, which is
 /// [ADR 0026](https://github.com/mixnz/mixlab/blob/master/docs/decisions/0026-the-active-front-end-is-a-row-and-switching-it-is-a-job.md):
@@ -572,20 +562,20 @@ pub const SERVICE_SET_FRONT_END: &str = "service.set_front_end";
 ///
 /// **The declared limits and the machine's support come back together**, because neither is
 /// worth reading alone: `512` means nothing until what it is measured as, and what happens at
-/// the ceiling, are beside it. Roadmap task **T68**.
+/// the ceiling, are beside it.
 pub const SERVICE_LIMITS: &str = "service.limits";
 
 /// Replace what a service may take. Takes [`ServiceLimitsSet`](crate::ServiceLimitsSet), answers
 /// [`ServiceLimitsReport`](crate::ServiceLimitsReport).
 ///
-/// **The whole value, never a delta** — T41's rule about the hosts block, applied to a much
-/// smaller thing for its reason: a patch needs a three-way value per field, which puts an enum
+/// **The whole value, never a delta** — the hosts block's rule, applied to a much smaller thing
+/// for its reason: a patch needs a three-way value per field, which puts an enum
 /// into every reader of limits including the ones that only display them.
 ///
 /// **Applied immediately.** A running service is re-capped before this answers, so there is no
 /// state in which a limit is set and not in effect — and a service already over a newly lowered
 /// memory ceiling can be killed by this call, which is the correct behaviour for the thing being
-/// asked for. Roadmap task **T68**.
+/// asked for.
 pub const SERVICE_SET_LIMITS: &str = "service.set_limits";
 
 /// When this service is stopped for being unused, and what is holding it open right now. Takes
@@ -595,7 +585,7 @@ pub const SERVICE_SET_LIMITS: &str = "service.set_limits";
 /// running?* has four answers that look identical from outside: no policy, a policy switched
 /// off here, something running that depends on it, and a project being kept warm. A report that
 /// collapsed them into one `Option` would send a person to change a setting that was never the
-/// cause — T46's rule for `DnsStatus`, at a smaller scale. Roadmap task **T69**.
+/// cause — the rule [`DnsStatus`](crate::DnsStatus) follows, at a smaller scale.
 pub const SERVICE_IDLE: &str = "service.idle";
 
 /// Replace how long this service may look idle before it is stopped. Takes
@@ -607,7 +597,7 @@ pub const SERVICE_IDLE: &str = "service.idle";
 ///
 /// **Not applied to anything immediately**, unlike `service.set_limits`: what this changes is
 /// when a future sweep will act, and a running service is neither stopped nor reprieved by the
-/// call itself. Roadmap task **T69**.
+/// call itself.
 pub const SERVICE_SET_IDLE: &str = "service.set_idle";
 
 /// Replace whether this service starts when the daemon does. Takes
@@ -621,12 +611,10 @@ pub const SERVICE_SET_IDLE: &str = "service.set_idle";
 /// **What the walk covers is not only what carries the flag.** It is built as a start plan over
 /// the flagged services, so a pool that is set brings up the database it depends on whether or
 /// not that database is set — the same rule `service.start` on one service already follows.
-///
-/// Roadmap task **T112**.
 pub const SERVICE_SET_AUTOSTART: &str = "service.set_autostart";
 
 /// Whether this home stops services nobody is using. Takes nothing, answers
-/// [`SaveResources`](crate::SaveResources). Roadmap task **T167b**.
+/// [`SaveResources`](crate::SaveResources).
 pub const SERVICE_SAVE_RESOURCES: &str = "service.save_resources";
 
 /// Turn the home's resource saving on or off. Takes
@@ -648,12 +636,12 @@ pub const SERVICE_SET_SAVE_RESOURCES: &str = "service.set_save_resources";
 /// making a database is milliseconds, and what can be slow is getting there — the instance may
 /// be stopped, and starting it may perform a first run. [`SERVICE_START`] already carries
 /// exactly that cost this way, and a job here would be a second progress vocabulary for work
-/// that is instant. Roadmap task **T77a**.
+/// that is instant.
 pub const DATABASE_CREATE: &str = "database.create";
 
 /// Where one database instance could be opened, and with what. Takes
 /// [`DatabaseClientQuery`](crate::DatabaseClientQuery), answers
-/// [`DatabaseClientReport`](crate::DatabaseClientReport). Roadmap task **T83**.
+/// [`DatabaseClientReport`](crate::DatabaseClientReport).
 ///
 /// **Reads only**: starts nothing, launches nothing, touches no credential. It exists so a
 /// client can draw the affordance from data rather than probing the filesystem for an
@@ -662,7 +650,6 @@ pub const DATABASE_CLIENT: &str = "database.client";
 
 /// Hand one instance to the installed desktop database client. Takes
 /// [`DatabaseOpen`](crate::DatabaseOpen), answers [`DatabaseHandoff`](crate::DatabaseHandoff).
-/// Roadmap task **T83**.
 ///
 /// Starts the instance if it is stopped (on [`DATABASE_CREATE`]'s road), reads the account's
 /// password from the OS keyring at that moment and puts it in the started process's environment
@@ -672,11 +659,11 @@ pub const DATABASE_OPEN: &str = "database.open";
 
 /// The password MixEngine holds for one account. Takes
 /// [`DatabaseCredentialsQuery`](crate::DatabaseCredentialsQuery), answers
-/// [`DatabaseCredentials`](crate::DatabaseCredentials). Roadmap task **T77b**.
+/// [`DatabaseCredentials`](crate::DatabaseCredentials).
 ///
 /// **Reads only**, like [`DATABASE_CLIENT`]: no instance is started, no statement runs. It
-/// exists so a password already held can reach a project's `.env`, which nothing before this
-/// task could do — every other `database.*` answer names the address and never the value.
+/// exists so a password already held can reach a project's `.env`, which no other method can do
+/// — every other `database.*` answer names the address and never the value.
 pub const DATABASE_CREDENTIALS: &str = "database.credentials";
 
 /// The long operations this daemon has run, newest first. Takes
@@ -705,7 +692,7 @@ pub const JOB_WAIT: &str = "job.wait";
 pub const JOB_CANCEL: &str = "job.cancel";
 
 /// Every subject's reading, taken now. Takes no parameters, answers
-/// [`MetricsFrame`](crate::MetricsFrame). Roadmap task **T71**.
+/// [`MetricsFrame`](crate::MetricsFrame).
 ///
 /// **A reading rather than the last one taken.** With nobody watching, this daemon samples once
 /// a minute, so serving the cached tick would answer a person with a number up to a minute old
@@ -716,7 +703,7 @@ pub const METRICS_SNAPSHOT: &str = "metrics.snapshot";
 
 /// The 24-hour history, one row per subject per minute. Takes
 /// [`MetricsHistoryQuery`](crate::MetricsHistoryQuery), answers
-/// [`MetricsHistory`](crate::MetricsHistory). Roadmap task **T71**.
+/// [`MetricsHistory`](crate::MetricsHistory).
 ///
 /// **There is no `metrics.subscribe` beside these two**, and the live stream is `GET /metrics`
 /// rather than a method for [ADR 0009](https://github.com/mixnz/mixlab/blob/master/docs/decisions/0009-logs-travel-on-their-own-stream.md)'s
@@ -830,8 +817,8 @@ pub const SITE_START: &str = "site.start";
 /// answering for the name rather than going on serving a site nothing declares.
 pub const SITE_STOP: &str = "site.stop";
 
-/// Let the local network reach this site — roadmap task **T74**. Takes
-/// [`SiteShare`](crate::SiteShare), answers [`SiteSharing`](crate::SiteSharing).
+/// Let the local network reach this site. Takes [`SiteShare`](crate::SiteShare), answers
+/// [`SiteSharing`](crate::SiteSharing).
 ///
 /// **Per site, and never global.** What it changes is this one site's listeners, this one site's
 /// certificate, and the machine's firewall rules; every other site is untouched, and so is the
@@ -854,12 +841,12 @@ pub const SITE_UNSHARE: &str = "site.unshare";
 /// ours.
 pub const SITE_DELETE: &str = "site.delete";
 
-/// Write down what a project is made of — roadmap task **T77**. Takes
+/// Write down what a project is made of. Takes
 /// [`BlueprintCapture`](crate::BlueprintCapture), answers
 /// [`BlueprintSummary`](crate::BlueprintSummary).
 pub const BLUEPRINT_CAPTURE: &str = "blueprint.capture";
 
-/// Take in a blueprint somebody else wrote — roadmap task **T78a**. Takes
+/// Take in a blueprint somebody else wrote. Takes
 /// [`BlueprintImport`](crate::BlueprintImport), answers the
 /// [`BlueprintSummary`](crate::BlueprintSummary) of the row it wrote.
 ///
@@ -873,7 +860,7 @@ pub const BLUEPRINT_IMPORT: &str = "blueprint.import";
 /// [`BlueprintList`](crate::BlueprintList).
 pub const BLUEPRINT_LIST: &str = "blueprint.list";
 
-/// What applying one would do, and doing it — roadmap task **T78**. Takes
+/// What applying one would do, and doing it. Takes
 /// [`BlueprintApply`](crate::BlueprintApply), answers
 /// [`BlueprintApplyResponse`](crate::BlueprintApplyResponse): the plan for `dry_run: true`, and
 /// the job carrying it out for `dry_run: false`.
@@ -890,8 +877,7 @@ pub const BLUEPRINT_APPLY: &str = "blueprint.apply";
 /// [`ExtensionInspect`](crate::ExtensionInspect), answers
 /// [`ExtensionInspection`](crate::ExtensionInspection).
 ///
-/// **Read-only, and the only `extension.*` method this build has.** T80 installs nothing; the
-/// registry, `install`, `uninstall`, `start` and `stop` arrive with T81.
+/// **Read-only**: it installs nothing.
 pub const EXTENSION_INSPECT: &str = "extension.inspect";
 
 /// What this home has installed. Takes nothing, answers

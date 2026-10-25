@@ -129,11 +129,8 @@ const vi: SharedDict = {
     prevTab: "Tab liền trước",
     reload: "Tải lại pane đang xem",
   },
-  // Which version is running, and where the new one comes from. MixEngine's updater is what
-  // replaces this window — T106 — so this block is a signpost rather than a downloader.
-  // The tray (T168, T192): the frame's header, and the menu's items — sent to
-  // `src-tauri/src/tray.rs` rather than kept in Rust. The slogan is a brand line and stays in
-  // English in every language.
+  // The tray: the frame's header, and the menu's items — sent to `src-tauri/src/tray.rs` rather
+  // than kept in Rust. The slogan is a brand line and stays in English in every language.
   tray: {
     openPanel: "Mở bảng điều khiển",
     openMain: "Mở MixLab",
@@ -191,7 +188,7 @@ const vi: SharedDict = {
     openPage: "Mở trang tải về",
     available: "Đã có MixLab {{version}}.",
   },
-  // MixLab ▸ Gỡ MixLab khỏi máy Mac này… (T182a).
+  // MixLab ▸ Gỡ MixLab khỏi máy Mac này…
   remove: {
     title: "Gỡ MixLab khỏi máy Mac này",
     menuItem: "Gỡ MixLab khỏi máy Mac này…",
@@ -215,7 +212,7 @@ const vi: SharedDict = {
   error: {
     // MixEngine — the local daemon this app manages. `message` is the daemon's own words and is
     // never translated: it is a string people can look up.
-    // Relaunching the window — T106, `src-tauri/src/relaunch.rs`. The first is a machine whose
+    // Relaunching the window — `src-tauri/src/relaunch.rs`. The first is a machine whose
     // operating system will not reveal this process's own executable; the second is a machine
     // that cannot run it.
     relaunchNoExecutable: "MixLab không xác định được chương trình nào cần khởi động lại.",

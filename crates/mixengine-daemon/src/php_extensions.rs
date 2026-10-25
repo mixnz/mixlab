@@ -1,8 +1,8 @@
-//! `runtime.list_extensions` and `runtime.set_extension` — roadmap task **T28**.
+//! `runtime.list_extensions` and `runtime.set_extension`.
 //!
 //! **These are PHP extensions.** MixEngine's own — Mailpit, phpMyAdmin, Adminer — are
-//! [`crate::extensions`]. This file was called `extensions.rs` until T80 needed that name for
-//! the thing the product calls an extension, and two modules cannot share one.
+//! [`crate::extensions`]. This file was called `extensions.rs` until the manifest format needed
+//! that name for the thing the product calls an extension, and two modules cannot share one.
 //!
 //! Its own module rather than two more methods on [`crate::runtimes`] because of what it needs: a
 //! toggle rewrites a file a *service* is reading, so this is the one runtime operation that has to
@@ -10,8 +10,8 @@
 //!
 //! # What a change answers about the pool
 //!
-//! **The daemon does not restart a pool nobody asked it to restart**; it reports. That is T32's own
-//! policy for a changed override:
+//! **The daemon does not restart a pool nobody asked it to restart**; it reports. That is the
+//! php-fpm pool's own policy for a changed override:
 //!
 //! | | Unix | Windows |
 //! | --- | --- | --- |
@@ -124,11 +124,11 @@ impl Extensions {
 
     /// Which of the three things happened to the pools that run this version.
     ///
-    /// **Every pool of that version, aggregated into one answer** — roadmap task **T82a**, its
-    /// design's D6. The ini set is per runtime — `PHP_INI_SCAN_DIR` names a directory per version —
-    /// so a `web-app` extension's own pool reads exactly what the shared one reads, and both are
-    /// told. The wire enum stays single-valued and says the thing a person has to act on: a restart
-    /// needed by any of them outranks a reload done by any of them.
+    /// **Every pool of that version, aggregated into one answer.** The ini set is per runtime —
+    /// `PHP_INI_SCAN_DIR` names a directory per version — so a `web-app` extension's own pool reads
+    /// exactly what the shared one reads, and both are told. The wire enum stays single-valued and
+    /// says the thing a person has to act on: a restart needed by any of them outranks a reload
+    /// done by any of them.
     async fn tell_the_pool(&self, target: &RuntimeTarget) -> PoolOutcome {
         let pools =
             mixengine_core::services::pools::of_runtime(&self.store, target.kind, &target.version)

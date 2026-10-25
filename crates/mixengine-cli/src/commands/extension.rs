@@ -167,10 +167,10 @@ pub(crate) async fn extension(
         } => {
             let source = origin(id, path)?;
 
-            // **The plan is read before anything is installed, and the consent names it** — the
-            // T81 design's D2 and D9. Two calls rather than one because that is what makes the
-            // question answerable: the daemon has no keyboard, and the permissions a person is
-            // agreeing to arrive with the listing rather than with the artifact.
+            // **The plan is read before anything is installed, and the consent names it.** Two
+            // calls rather than one because that is what makes the question answerable: the daemon
+            // has no keyboard, and the permissions a person is agreeing to arrive with the listing
+            // rather than with the artifact.
             let plan: ExtensionPlan = ask(
                 &mut client,
                 rpc::method::EXTENSION_PLAN,

@@ -264,7 +264,7 @@ async fn detaching_keeps_waiting_when_its_child_stood_aside_for_a_daemon_still_s
     //
     // What used to happen: the child finds the lock taken, prints the endpoint and exits 0; the
     // parent sees an exit, retries the endpoint once, and calls the whole thing a failure. Two
-    // clients autostarting at the same instant (roadmap task T10) would have had one of them fail.
+    // clients autostarting at the same instant would have had one of them fail.
     let home = Home::new();
 
     std::fs::create_dir_all(home.run_dir()).expect("a run directory to lock in");
@@ -339,8 +339,9 @@ async fn a_daemon_adopts_what_outlived_the_last_one_and_clears_what_did_not() {
     let first = start(&home).await;
 
     // The async half of `Home::declare`, which builds a runtime of its own and cannot be called
-    // from inside this one. The row *is* the declaration since T30, so this is both halves of what
-    // the second daemon meets: a service it can supervise, and a claim about a process.
+    // from inside this one. The row *is* the declaration, since services are rendered from rows, so
+    // this is both halves of what the second daemon meets: a service it can supervise, and a claim
+    // about a process.
     mixengine_testkit::create(
         home.endpoint(),
         &home.database_file(),
@@ -543,7 +544,7 @@ async fn a_daemon_waits_for_a_holder_that_is_leaving_and_then_takes_the_home() {
     );
 }
 
-/// **`service.set_autostart` writes the column and every reading reports it** — roadmap task T112.
+/// **`service.set_autostart` writes the column and every reading reports it.**
 ///
 /// Against a real socket rather than against `core::services::set_autostart`, because what this
 /// task added is a *method*: the column and the writer behind it are unit-tested where they live,
@@ -602,7 +603,7 @@ async fn a_service_is_told_to_start_with_the_daemon_and_says_so_afterwards() {
     home.wait_until_gone().await;
 }
 
-/// **A setting accepted for a service nobody declares is a row nobody can read back** — T112.
+/// **A setting accepted for a service nobody declares is a row nobody can read back.**
 #[tokio::test]
 async fn setting_autostart_on_a_service_that_does_not_exist_is_refused() {
     let home = Home::new();
@@ -638,7 +639,7 @@ async fn listed(home: &Home, id: &str) -> serde_json::Value {
         .clone()
 }
 
-/// **The next daemon starts what the last one was told to start** — roadmap task T113.
+/// **The next daemon starts what the last one was told to start.**
 ///
 /// The whole of the task from the end a person is at: a service is flagged, the daemon holding the
 /// home is stopped, and the daemon that takes the home over leaves that service running with nobody
@@ -688,7 +689,7 @@ async fn the_next_daemon_starts_what_the_last_one_was_told_to_start() {
     home.wait_until_gone().await;
 }
 
-/// **A home where nothing carries the flag starts nothing** — roadmap task T113.
+/// **A home where nothing carries the flag starts nothing.**
 ///
 /// The default, and the one every existing home and every fixture has: the walk is built from the
 /// flagged rows, so an empty set is an empty plan and the daemon does what it has always done.

@@ -76,7 +76,7 @@ pub struct ProjectUpdate {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pins: Option<BTreeMap<RuntimeKind, VersionConstraint>>,
 
-    /// Whether to hold this project's services out of idle shutdown — roadmap task **T69**.
+    /// Whether to hold this project's services out of idle shutdown.
     ///
     /// A field here rather than a `project.keep_warm` method of its own: it is a setting on a
     /// project, it travels on the call every other project setting travels on, and a whole RPC for
@@ -125,7 +125,7 @@ pub struct ProjectSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub manifest: Option<String>,
 
-    /// Whether this project's services are held out of idle shutdown — roadmap task **T69**.
+    /// Whether this project's services are held out of idle shutdown.
     ///
     /// In the listing rather than in `project.show` alone, because it is the answer to "why is that
     /// still running?" and the person asking is looking at a list.
@@ -145,15 +145,15 @@ pub struct ProjectDetail {
     /// a panel that lies.
     pub pins: Vec<ProjectPin>,
 
-    /// The sites its `mixengine.toml` declares, in file order — roadmap task **T204**, spec D7.
+    /// The sites its `mixengine.toml` declares, in file order.
     ///
-    /// What lets a client offer the import at all: until T204 only `site.create` read the file,
+    /// What lets a client offer the import at all: before this, only `site.create` read the file,
     /// and only at the moment of creating.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub declared_sites: Vec<DeclaredSite>,
 
-    /// What its blueprint says is left to do, read through `projects.blueprint_id` — roadmap task
-    /// **T205**, D5. [`None`] for a project made by hand or applied before T205.
+    /// What its blueprint says is left to do, read through `projects.blueprint_id`. [`None`] for a
+    /// project made by hand or applied before blueprints carried next steps.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub next_steps: Option<crate::NextSteps>,
 }
@@ -198,8 +198,7 @@ pub enum PinSource {
     },
 }
 
-/// One site a project's `mixengine.toml` declares, and whether this home has it — roadmap task
-/// **T204**, spec D7.
+/// One site a project's `mixengine.toml` declares, and whether this home has it.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct DeclaredSite {
@@ -261,8 +260,7 @@ pub struct ProjectExport {
     /// Whether the file was made, or an existing one merged into.
     pub created: bool,
 
-    /// The `domain` of each site entry in the file this home has no site for — roadmap task
-    /// **T204**, spec D4.
+    /// The `domain` of each site entry in the file this home has no site for.
     ///
     /// Left exactly as written, because an export never deletes; named here, because an entry
     /// nobody is told about is a site a colleague will adopt without anyone here having it.

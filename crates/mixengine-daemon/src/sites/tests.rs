@@ -2,7 +2,7 @@ use mixengine_proto::{RouteTarget, SiteRoute};
 
 use super::*;
 
-/// T191 D3: a static route's root reaches the wire as this system spells a path.
+/// A static route's root reaches the wire as this system spells a path.
 #[test]
 fn a_static_route_root_is_spelled_natively() {
     let route = SiteRoute {
@@ -30,8 +30,8 @@ fn a_natively_spelled_doc_root_is_stored_with_slashes() {
     );
 }
 
-/// **T81b, D6.** The sentence an extension-owned site refuses every edit with — one sentence,
-/// naming the one thing a person can do.
+/// The sentence an extension-owned site refuses every edit with — one sentence, naming the one
+/// thing a person can do.
 #[test]
 fn an_extension_site_refuses_with_the_command_that_removes_it() {
     let refusal = owned_by_an_extension(
@@ -72,8 +72,8 @@ fn an_upstream_is_an_absolute_http_address_with_a_host() {
     }
 }
 
-/// **T135, D10.** An upstream is rendered verbatim into a Caddyfile and into `nginx.conf`, so
-/// what it may contain is a whitelist rather than a list of things somebody thought of.
+/// An upstream is rendered verbatim into a Caddyfile and into `nginx.conf`, so what it may contain
+/// is a whitelist rather than a list of things somebody thought of.
 ///
 /// The first case is the hole this closes: a newline, a closing brace and a second server on
 /// Caddy's admin port, in one string a JSON member can carry.
@@ -100,8 +100,8 @@ fn an_upstream_may_not_carry_configuration() {
     }
 }
 
-/// **T135, D10.** A route path is a prefix, at a segment boundary, drawn from an alphabet that
-/// cannot reach a Caddy matcher or an nginx regex as anything but itself.
+/// A route path is a prefix, at a segment boundary, drawn from an alphabet that cannot reach a
+/// Caddy matcher or an nginx regex as anything but itself.
 #[test]
 fn a_route_path_is_an_absolute_prefix() {
     for good in ["/api", "/api/v1", "/v1.0", "/a-b_c~d%20e"] {
@@ -109,7 +109,7 @@ fn a_route_path_is_an_absolute_prefix() {
     }
 
     for bad in [
-        "/",         // what answers `/` is the site's kind — D1
+        "/",         // what answers `/` is the site's kind
         "api",       // not absolute
         "/api/",     // a trailing slash is not part of a prefix
         "/api//v1",  // an empty segment
@@ -124,7 +124,7 @@ fn a_route_path_is_an_absolute_prefix() {
     }
 }
 
-/// **T135, D10.** The whole list, which is where a duplicate and a flood are visible.
+/// The whole list, which is where a duplicate and a flood are visible.
 #[test]
 fn a_route_list_refuses_a_duplicate_and_a_flood() {
     let one = |path: &str| SiteRoute {

@@ -19,8 +19,7 @@ export const mixengineModule: ModuleDefinition = {
      is a connection, a session, a request. */
   singleTab: true,
   Tab: lazy(() => import("./MixEngineTab")),
-  /* Loaded when the tray's frame first draws this section — T168, T192. The main window never
-     loads it. */
+  /* Loaded when the tray's frame first draws this section. The main window never loads it. */
   TraySection: lazy(() => import("./tray/TraySection")),
   settings: { labelKey: "mixengine.settingsTitle", Icon: EngineIcon, Section: MixEngineSettings },
 };

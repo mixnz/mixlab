@@ -35,8 +35,8 @@ pub(crate) fn runtime_list(list: &RuntimeList) -> String {
                     false => MISSING.to_owned(),
                 },
                 size(runtime.bytes),
-                // **Gone reads as gone** — roadmap task **T206d**, D4: the date of an install that
-                // is not there would read as one that is.
+                // **Gone reads as gone**: the date of an install that is not there would read as
+                // one that is.
                 match runtime.is_missing() {
                     true => "missing".to_owned(),
                     false => ago(runtime.installed_at, now),
@@ -123,7 +123,7 @@ pub(crate) fn extension_change(change: &ExtensionChange) -> String {
 /// The columns `mix runtime available` prints when nothing is emulated.
 const RUNTIME_HEADINGS: [&str; 6] = ["RUNTIME", "VERSION", "CHANNEL", "SIZE", "INSTALLED", "EOL"];
 
-/// The column that says what a release cannot do on this cell — roadmap task **T206**, D3.
+/// The column that says what a release cannot do on this cell.
 const LACKS_HEADING: &str = "LACKS";
 
 /// The keys of what a release lacks, in the publisher's words; blank when it lacks nothing.
@@ -131,7 +131,7 @@ fn lacks(lacks: &std::collections::BTreeMap<String, String>) -> String {
     lacks.keys().cloned().collect::<Vec<_>>().join(", ")
 }
 
-/// Where the devkit stands, for the line after `mix runtime install` — roadmap task **T206**, D3.
+/// Where the devkit stands, for the line after `mix runtime install`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Devkit<'a> {
     /// One is installed here and its folder is there, so the Ruby builds native gems with it.
@@ -142,10 +142,10 @@ pub(crate) enum Devkit<'a> {
     NotOffered,
 }
 
-/// The line `mix runtime install` ends with when the release cannot build native gems — roadmap
-/// task **T206**, D3. It names the devkit only where one is offered for this machine, with the
-/// newest version offered, since `mix package install` takes one, and says nothing where one is
-/// already installed: that Ruby builds native gems.
+/// The line `mix runtime install` ends with when the release cannot build native gems. It names the
+/// devkit only where one is offered for this machine, with the newest version offered, since
+/// `mix package install` takes one, and says nothing where one is already installed: that Ruby
+/// builds native gems.
 pub(crate) fn lacks_after_install(
     lacks: &std::collections::BTreeMap<String, String>,
     devkit: Devkit<'_>,
@@ -366,7 +366,7 @@ mod tests {
 
     use super::*;
 
-    /// **A folder that is gone reads `missing`, and the way back is named** — T206d, D4.
+    /// **A folder that is gone reads `missing`, and the way back is named.**
     #[test]
     fn a_runtime_whose_folder_is_gone_reads_missing_and_names_the_way_back() {
         let mut runtime = mixengine_proto::RuntimeSummary {
@@ -399,7 +399,7 @@ mod tests {
         assert!(!said.contains("puts it back"), "{said}");
     }
 
-    /// One offered release, at whatever execution the daemon reported — roadmap task **T92**.
+    /// One offered release, at whatever execution the daemon reported.
     fn offered(version: &str, execution: Option<Execution>) -> RuntimeRelease {
         RuntimeRelease {
             kind: RuntimeKind::Php,
@@ -449,7 +449,7 @@ mod tests {
         line: None,
     };
 
-    /// **T193a, D3.** One row stands for each line, with a count of the rest.
+    /// One row stands for each line, with a count of the rest.
     #[test]
     fn one_row_stands_for_each_line_with_a_count_of_the_rest() {
         let rendered = runtime_catalogue(&by_line(), &EVERY_LINE);
@@ -503,8 +503,8 @@ mod tests {
         );
     }
 
-    /// **A daemon from before T193 sends no lines**, and its list is printed as it always was
-    /// rather than as nothing — the plan's review focus 1.
+    /// **A daemon from before releases were grouped by line sends no lines**, and its list is
+    /// printed as it always was rather than as nothing.
     #[test]
     fn an_old_daemon_s_catalogue_is_printed_flat() {
         let rendered = runtime_catalogue(
@@ -530,8 +530,8 @@ mod tests {
         }
     }
 
-    /// **T196.** A kind the index could not be read for is said above the table, where the
-    /// staleness line is said, and a list that read everything says nothing.
+    /// A kind the index could not be read for is said above the table, where the staleness line is
+    /// said, and a list that read everything says nothing.
     #[test]
     fn a_kind_the_index_could_not_be_read_for_is_said_above_the_table() {
         let mut catalogue = RuntimeCatalogue {
@@ -565,8 +565,8 @@ mod tests {
         }
     }
 
-    /// **What a cell cannot do has a column of its own** — roadmap task **T206**, D3, on `NEEDS`'
-    /// rule: drawn only when some row lacks something.
+    /// **What a cell cannot do has a column of its own**, on `NEEDS`' rule: drawn only when some
+    /// row lacks something.
     #[test]
     fn a_lacks_column_appears_only_when_a_row_lacks_something() {
         let catalogue_of = |runtimes| RuntimeCatalogue {
@@ -622,7 +622,7 @@ mod tests {
         assert_eq!(lacks_after_install(&yjit_only, Devkit::Offered("1")), None);
     }
 
-    /// **T151.** The column appears only when a row lacks something, on `RUNS`' reasoning.
+    /// The column appears only when a row lacks something, on `RUNS`' reasoning.
     #[test]
     fn a_needs_column_appears_only_when_a_row_lacks_something() {
         let plain = RuntimeCatalogue {
@@ -657,7 +657,7 @@ mod tests {
         assert!(rendered.contains("Visual C++ 2022 (x64)"), "{rendered}");
     }
 
-    /// The column exists only where it says something — roadmap task **T92**.
+    /// The column exists only where it says something.
     ///
     /// Five of the six targets MixEngine ships a build for see this rendering, and a column reading
     /// `native` against every row would be noise on all five.

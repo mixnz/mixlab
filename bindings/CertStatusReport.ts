@@ -2,7 +2,7 @@
 import type { SiteCertStatus } from "./SiteCertStatus";
 
 /**
- * What this home's certificates are doing — roadmap task **T53**.
+ * What this home's certificates are doing.
  */
 export type CertStatusReport = { 
 /**

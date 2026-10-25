@@ -193,10 +193,11 @@ async fn call_method(
         Err(join) => {
             // The panic message itself has already gone to the log through the panic hook — which
             // is `crate::crash`'s, installed at `main`, and which also left a report in
-            // `logs/crashes/`. Until T91 built it there was no hook at all and this sentence was
-            // true of nothing: the default one writes to stderr, and a `--detach`ed daemon's stderr
-            // is the null device. It is still not repeated to the client — a backtrace is not
-            // something a user can act on, and the daemon's log is where it belongs.
+            // `logs/crashes/`. Until crash reports existed there was no hook at all and this
+            // sentence was true of nothing: the default one writes to stderr, and a `--detach`ed
+            // daemon's stderr is the null device. It is still not repeated to the client — a
+            // backtrace is not something a user can act on, and the daemon's log is where it
+            // belongs.
             tracing::error!(
                 panicked = join.is_panic(),
                 "a request handler did not finish; answering `internal` and staying up"
@@ -372,10 +373,10 @@ mod tests {
 
     #[tokio::test]
     async fn an_unknown_method_is_method_not_found_and_says_which_one() {
-        // A namespace this build has not reached — `site.create` used to stand here until T39a,
-        // `blueprint.apply` until T77 and `extension.install` until T81. Each of them becoming a
-        // real method is exactly the drift this test is worth keeping past; what stands here now is
-        // a method nobody has written.
+        // A namespace this build has not reached — `site.create` used to stand here, then
+        // `blueprint.apply` and then `extension.install`. Each of them becoming a real method is
+        // exactly the drift this test is worth keeping past; what stands here now is a method
+        // nobody has written.
         let answer = call(r#"{"jsonrpc":"2.0","method":"extension.open","id":1}"#).await;
 
         assert_eq!(answer["error"]["code"], -32601);

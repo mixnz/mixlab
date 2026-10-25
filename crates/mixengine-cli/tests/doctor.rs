@@ -1,12 +1,12 @@
 //! `mix doctor` against a real daemon.
 //!
-//! Roadmap task **T47a**'s client half. What the daemon's own `tests/api.rs` proves is that the
-//! checks answer; what is proved here is the part only `mix` can be wrong about — that every check
-//! reaches the screen, and that the exit code is the *report* rather than the call.
+//! `mix doctor`'s client half. What the daemon's own `tests/api.rs` proves is that the checks
+//! answer; what is proved here is the part only `mix` can be wrong about — that every check reaches
+//! the screen, and that the exit code is the *report* rather than the call.
 //!
 //! **The assertion that matters is that a check can fail.** A suite that only ever sees a healthy
 //! machine has proved that the doctor runs, not that it looks — so each `Ok` here is paired, in the
-//! same test, with the arrangement that turns it into a `Problem` (T47a design, D10).
+//! same test, with the arrangement that turns it into a `Problem`.
 //!
 //! **And nothing here may assume the machine running it is well.** The first version of this file
 //! did, and CI answered: the GitHub Windows runner has **port 80 inside a reserved range**, so
@@ -42,31 +42,33 @@ async fn every_check_is_reported_and_named() {
 
     let table = stdout(&home.mix(&["doctor"]));
 
-    // T182f's: installs an earlier home left on disk, which only this command would ever name.
+    // Installs an earlier home left on disk, which only this command would ever name.
     assert!(table.contains("not recorded"), "{table}");
 
-    // T76's, and the reason it is asserted here rather than only in the daemon's own tests: the
-    // check reports a rule *Windows* wrote for `mixengined.exe`, and a client that dropped it would
-    // leave the widest firewall rule on the machine invisible to the one command whose job is to
-    // find things like that. On macOS and Linux the same check is `Skipped` and still printed.
+    // The firewall check, and the reason it is asserted here rather than only in the daemon's own
+    // tests: the check reports a rule *Windows* wrote for `mixengined.exe`, and a client that
+    // dropped it would leave the widest firewall rule on the machine invisible to the one command
+    // whose job is to find things like that. On macOS and Linux the same check is `Skipped` and
+    // still printed.
     assert!(table.contains("firewall"), "{table}");
 
     // The per-system fact ADR 0007 exists to keep honest, on the screen rather than only on the
     // wire.
     assert!(table.contains("descendant"), "{table}");
 
-    // And T68's, which is the same shape of fact about a different mechanism: what this machine
-    // will actually enforce of a limit, said whether or not it is bad news.
+    // And the limits check, which is the same shape of fact about a different mechanism: what this
+    // machine will actually enforce of a limit, said whether or not it is bad news.
     assert!(table.contains("enforce"), "{table}");
 
-    // T94's, and here for the same reason T76's is: the check is about what this *machine* will
-    // refuse to load, and a client that dropped it would hide the one condition under which nothing
-    // MixEngine installs can ever start. `Skipped` on macOS and Linux, and still printed.
+    // The application-control check, and here for the same reason the firewall's is: the check is
+    // about what this *machine* will refuse to load, and a client that dropped it would hide the
+    // one condition under which nothing MixEngine installs can ever start. `Skipped` on macOS and
+    // Linux, and still printed.
     assert!(table.contains("application control"), "{table}");
 
-    // T91's, and here for the reason the three above are: it is the one line that says MixEngine
-    // itself hit a bug on this machine, and a client that dropped it would leave the report on disk
-    // for nobody to find.
+    // The crash-report check, and here for the reason the three above are: it is the one line that
+    // says MixEngine itself hit a bug on this machine, and a client that dropped it would leave the
+    // report on disk for nobody to find.
     assert!(table.contains("crash reports"), "{table}");
 
     assert!(table.lines().count() >= 12, "{table}");
@@ -76,9 +78,9 @@ async fn every_check_is_reported_and_named() {
 /// healthy machine cannot demonstrate.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_name_nothing_resolves_is_a_problem_and_a_non_zero_exit() {
-    // **T202b, D5.** A Mac with MixEngine installed routes every `.test` name to that daemon
-    // through `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer
-    // and not this home's. CI's runners never carry the file; a developer's Mac does.
+    // A Mac with MixEngine installed routes every `.test` name to that daemon through
+    // `/etc/resolver/test`, so whether `blog.test` resolves here is that daemon's answer and not
+    // this home's. CI's runners never carry the file; a developer's Mac does.
     if std::path::Path::new("/etc/resolver/test").exists() {
         eprintln!(
             "skipped: this machine routes `.test` itself (/etc/resolver/test), so whether \
@@ -216,8 +218,8 @@ fn a_generated_file_that_was_edited_by_hand_is_put_back() {
     );
 }
 
-/// **`--repair` on its own never raises a prompt**, which is T64's rule and the reason the daemon
-/// takes a `grant` flag rather than flushing the queue itself.
+/// **`--repair` on its own never raises a prompt**, which is the rule every elevation follows and
+/// the reason the daemon takes a `grant` flag rather than flushing the queue itself.
 ///
 /// A home with no front end and no wired resolver has nothing queued, so what this proves is the
 /// half that holds on every machine: the command completes without waiting on anybody, and says what

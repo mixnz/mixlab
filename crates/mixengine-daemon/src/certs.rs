@@ -3,10 +3,10 @@
 //! **Made at start rather than when the first HTTPS site is created.**
 //! `docs/architecture/security-model.md` promises one elevation prompt at first run, covering the
 //! CA, the resolver wiring and the port grant together. An authority that first appeared with the
-//! first site would put its trust-store install (roadmap task T49) in a second batch and therefore
-//! behind a second prompt — which is the finding T45 already made about the resolver and wrote down
-//! in `main.rs` beside the block this one sits under. Generating here costs one ECDSA key on disk in
-//! a home that never serves HTTPS; the alternative costs a second prompt to everybody who does.
+//! first site would put its trust-store install in a second batch and therefore behind a second
+//! prompt — which is the finding the resolver had already made and written down in `main.rs` beside
+//! the block this one sits under. Generating here costs one ECDSA key on disk in a home that never
+//! serves HTTPS; the alternative costs a second prompt to everybody who does.
 //!
 //! Everything about what an authority *is* lives in `mixengine_core::certs::ca`. This module is the
 //! two things that are the daemon's: when it happens, and which thread it happens on.
@@ -30,26 +30,26 @@ pub(crate) mod renewal;
 
 /// Everything this needs, which is one directory.
 ///
-/// **`Clone` because a job takes an owned one** — roadmap task **T54**. Every field clones cheaply:
-/// a path, an `Arc`, and a `Store` whose own documentation says one pool sits behind it.
+/// **`Clone` because a job takes an owned one.** Every field clones cheaply: a path, an `Arc`, and
+/// a `Store` whose own documentation says one pool sits behind it.
 #[derive(Debug, Clone)]
 pub(crate) struct Certificates {
     certs: PathBuf,
 
-    /// Where the generated trust bundle goes — roadmap task **T132**.
+    /// Where the generated trust bundle goes.
     ///
     /// `Option` for `host`'s reason one field down: `in_directory` is handed a certificates
     /// directory and no `Paths`, and repairing a certificate needs no bundle to do it.
     etc: Option<PathBuf>,
 
-    /// This machine, for the trust-store half of the answer — roadmap task **T49a**.
+    /// This machine, for the trust-store half of the answer.
     ///
     /// `Option` because `ensure` is called at start from a place that has `Paths` and not yet an
     /// `Api`, and a home whose authority is being made does not need the store read to make it.
     /// `status` always has one.
     host: Option<Arc<dyn mixengine_platform::Host>>,
 
-    /// The rows, for the sites a certificate is issued *for* — roadmap task **T50**.
+    /// The rows, for the sites a certificate is issued *for*.
     ///
     /// `Option` for `host`'s reason: `ensure` is called at start from a place that has `Paths` and
     /// not yet a `Store`, and a home whose authority is being made does not need the site list to
@@ -106,7 +106,7 @@ impl Certificates {
         }
     }
 
-    /// Rewrite `etc/ca/bundle.pem` around whatever authority is on disk now — roadmap task **T132**.
+    /// Rewrite `etc/ca/bundle.pem` around whatever authority is on disk now.
     ///
     /// Called after a rotation commits. The file's header carries the authority's fingerprint, so a
     /// replaced authority makes it a *changed* file and every runtime started afterwards is handed
@@ -122,7 +122,7 @@ impl Certificates {
         bundle::render_into(etc, &self.certs, host.as_ref());
     }
 
-    /// Whether this site is actually served over TLS right now — roadmap task **T74**.
+    /// Whether this site is actually served over TLS right now.
     ///
     /// **The same two questions `generate::served` asks**, and deliberately the same two: a site
     /// declaring HTTPS with no usable pair on disk renders no TLS listener at all, so a firewall
@@ -177,17 +177,17 @@ impl Certificates {
         })
     }
 
-    /// Give one site, or every HTTPS site, the certificate its names need — roadmap task **T50**.
+    /// Give one site, or every HTTPS site, the certificate its names need.
     ///
-    /// **Takes records and never a [`SiteRef`](mixengine_proto::SiteRef).** Resolving a reference to
-    /// a row is `crate::sites::Sites::expect`, and T50 gives that struct a `Certificates` of its
-    /// own so a site gains its certificate before `site.create` answers — a `Certificates` that
-    /// resolved references would close that loop. The two callers that have a reference already have
-    /// the row it names: the RPC dispatch resolves it, and `sites` is holding the record it just
-    /// wrote.
+    /// **Takes records and never a [`SiteRef`](mixengine_proto::SiteRef).** Resolving a reference
+    /// to a row is `crate::sites::Sites::expect`, and that struct holds a `Certificates` of its own
+    /// so a site gains its certificate before `site.create` answers — a `Certificates` that
+    /// resolved references would close that loop. The two callers that have a reference already
+    /// have the row it names: the RPC dispatch resolves it, and `sites` is holding the record it
+    /// just wrote.
     ///
     /// **One site's refusal never takes the others with it.** A home with no authority answers
-    /// `Refused` for each site by name rather than failing the call, which is the shape T49b's
+    /// `Refused` for each site by name rather than failing the call, which is the shape
     /// `BrowserChange` already has and the only shape a report over N sites can honestly take.
     ///
     /// # Errors
@@ -224,7 +224,7 @@ impl Certificates {
         Ok(CertIssueReport { sites })
     }
 
-    /// What this home's authority is, and nothing about the machine holding it — task **T52**.
+    /// What this home's authority is, and nothing about the machine holding it.
     ///
     /// [`Self::status`] also asks this machine's trust stores and its browser databases, and on
     /// Linux the second of those spawns `certutil` once per profile. That is a fair price on a
@@ -245,7 +245,7 @@ impl Certificates {
         .await
     }
 
-    /// What every site's certificate is doing, on disk and on the wire — roadmap task **T53**.
+    /// What every site's certificate is doing, on disk and on the wire.
     ///
     /// **The one answer in this module that comes from a socket.** Everything else here reads a
     /// file and believes it; this opens a connection to the front end running on this machine and
@@ -317,10 +317,9 @@ impl Certificates {
                 },
             };
 
-            // **What the issuer covered, not what the row lists** — roadmap task **T75**, fixing a
-            // defect shipped with T74: that task put the LAN address into the certificate and left
-            // this comparison reading the bare domain list, so every shared site answered
-            // `NamesDiffer` for as long as it was shared.
+            // **What the issuer covered, not what the row lists.** LAN sharing first shipped with
+            // the LAN address in the certificate and this comparison reading the bare domain list,
+            // so every shared site answered `NamesDiffer` for as long as it was shared.
             let covered =
                 mixengine_core::certs::leaf::covered(&record.domains, record.sharing.as_ref());
 
@@ -402,8 +401,8 @@ impl Certificates {
     /// Ask this machine's browsers to hold the authority this home has, if it has a usable one.
     ///
     /// **No prompt, and no elevation queue.** These databases belong to the user, which is the line
-    /// T49 was split on: the system stores need root and ride in the first-run batch, and this is a
-    /// subprocess in the user's own home.
+    /// between them and the system stores: the system stores need root and ride in the first-run
+    /// batch, and this is a subprocess in the user's own home.
     ///
     /// **Never fails a start, and never fails a repair.** A machine with no `certutil`, no browser
     /// profile, or a locked one is a machine that keeps working; what happened comes back in the
@@ -426,8 +425,8 @@ impl Certificates {
         };
 
         // Only a present authority has bytes to install, exactly as the trust-store producer
-        // decides: asking a browser to hold a damaged certificate would be writing something T54
-        // has to replace anyway.
+        // decides: asking a browser to hold a damaged certificate would be writing something a
+        // rotation has to replace anyway.
         let CaState::Present { ca } = state else {
             return mixengine_platform::BrowserChange::default();
         };
@@ -454,13 +453,13 @@ impl Certificates {
             })
     }
 
-    /// Ask this machine's browsers to let the authority `key_id` names go — task **T54**.
+    /// Ask this machine's browsers to let the authority `key_id` names go.
     ///
     /// The mirror of [`install_in_browsers`](Self::install_in_browsers), and unprivileged for its
-    /// reason: these databases belong to the user, which is the line T49 was split on.
+    /// reason: these databases belong to the user, not to the system.
     ///
-    /// **Names an authority and never a certificate** — T49a's D5. What sits under the nickname is
-    /// read back and checked before anything is deleted, which is
+    /// **Names an authority and never a certificate.** What sits under the nickname is read back
+    /// and checked before anything is deleted, which is
     /// [`BrowserTrust::remove`](mixengine_platform::BrowserTrust::remove)'s own guarantee and not
     /// this method's to repeat.
     pub(crate) async fn remove_from_browsers(
@@ -490,7 +489,7 @@ impl Certificates {
             })
     }
 
-    /// Put this home's authority into every installed JDK that lacks it — roadmap task **T27e**.
+    /// Put this home's authority into every installed JDK that lacks it.
     ///
     /// **Nothing without a store**, on [`rebuild_trust_bundle`](Self::rebuild_trust_bundle)'s rule:
     /// which JDKs exist is a question about rows, and a `Certificates` built without them is one
@@ -502,7 +501,7 @@ impl Certificates {
         }
     }
 
-    /// Let the authority `key_id` names go from every installed JDK — roadmap task **T27e**.
+    /// Let the authority `key_id` names go from every installed JDK.
     pub(crate) async fn release_from_jdks(&self, key_id: &str) -> jdks::JdkChange {
         match &self.store {
             Some(store) => jdks::release(store, key_id).await,
@@ -513,9 +512,10 @@ impl Certificates {
     /// Enqueue taking `ca` out of this machine's trust store, and say whether anything was.
     ///
     /// `Ok(false)` is a machine with no store MixEngine can write, one that is not holding this
-    /// authority, or one whose store could not be read — **T41's D11 one capability along**: a
-    /// prompt spent on a row whose only possible outcome is `AlreadyDone` is a prompt spent for
-    /// nothing, and a probe that failed has said nothing about what to ask for.
+    /// authority, or one whose store could not be read — **the hosts file's rule that the disk is
+    /// read before a prompt is spent, one capability along**: a prompt spent on a row whose only
+    /// possible outcome is `AlreadyDone` is a prompt spent for nothing, and a probe that failed has
+    /// said nothing about what to ask for.
     ///
     /// # Errors
     ///
@@ -544,7 +544,7 @@ impl Certificates {
             }
         };
 
-        // **By key-id and never by fingerprint** — T49a's D5. A removal that could name a
+        // **By key-id and never by fingerprint.** A removal that could name a
         // fingerprint could name the root that validates this machine's own updates.
         match state.target(&ca.key_id) {
             Some(target) => {
@@ -557,7 +557,7 @@ impl Certificates {
         }
     }
 
-    /// What this machine's browsers hold — roadmap task **T49b**.
+    /// What this machine's browsers hold.
     ///
     /// **Every branch that cannot ask says why**, exactly as [`Self::trust`] does: a client renders
     /// this sentence, and "not installed" printed because nothing was asked would be the daemon
@@ -603,7 +603,7 @@ impl Certificates {
 ///
 /// The platform's own type and the wire's are deliberately separate — the split `TrustState` and
 /// `Trust` already make, one capability along — so this is where they meet.
-/// One site's outcome — roadmap task **T50**.
+/// One site's outcome.
 ///
 /// A free function beside [`database`] and for its reason: it takes what it needs and holds nothing,
 /// so the closure `issue` hands to a blocking thread can call it without carrying a `&self` across.
@@ -624,9 +624,9 @@ fn issued(
         return refused("this site has no domains".to_owned());
     }
 
-    // **Not a refusal** — roadmap task **T52**. This site asked for no certificate, and the
-    // renewal loop announces every failure it finds: under one name with `Refused` it would
-    // announce one per plaintext site, once an hour, for as long as the daemon runs.
+    // **Not a refusal.** This site asked for no certificate, and the renewal loop announces every
+    // failure it finds: under one name with `Refused` it would announce one per plaintext site,
+    // once an hour, for as long as the daemon runs.
     if !site.https_enabled {
         return SiteCertOutcome {
             domain,
@@ -637,10 +637,10 @@ fn issued(
         };
     }
 
-    // The sharing row itself, when this site is shared — roadmap tasks **T74** and **T75**. It
-    // travels with the row rather than as an argument, so every path that reissues a certificate
-    // covers what the site currently answers on: a share, an unshare, and the renewal timer that
-    // knows about neither. What that comes to is `leaf::covered`'s to say, not this function's.
+    // The sharing row itself, when this site is shared. It travels with the row rather than as an
+    // argument, so every path that reissues a certificate covers what the site currently answers
+    // on: a share, an unshare, and the renewal timer that knows about neither. What that comes to
+    // is `leaf::covered`'s to say, not this function's.
     match mixengine_core::certs::leaf::ensure(certs, &site.domains, site.sharing.as_ref(), now) {
         Ok((mixengine_core::certs::leaf::Issued::Written, state)) => SiteCertOutcome {
             domain,
@@ -656,7 +656,7 @@ fn issued(
     }
 }
 
-/// The one condition worth acting on, in the order a person would act — roadmap task **T53**.
+/// The one condition worth acting on, in the order a person would act.
 ///
 /// **First match wins, and the order is the whole of it.** A site can be wrong in several ways at
 /// once, and naming all of them leaves whoever reads the answer to decide which to fix first —
@@ -671,9 +671,9 @@ fn problem(
 ) -> Option<mixengine_proto::CertProblem> {
     use mixengine_proto::{CertProblem, CertState, Handshake, Verdict};
 
-    // **A site that asked for no certificate has no problem**, which is the distinction T52 added
-    // to `IssueOutcome` for this reason. Without this line every plaintext site in the home would
-    // be reported as missing a certificate it never wanted.
+    // **A site that asked for no certificate has no problem**, which is the distinction
+    // `IssueOutcome::NotWanted` exists to draw. Without this line every plaintext site in the home
+    // would be reported as missing a certificate it never wanted.
     if !https {
         return None;
     }

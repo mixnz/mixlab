@@ -2,8 +2,7 @@
 import type { PackageVersion } from "./PackageVersion";
 
 /**
- * One package directory on disk with no row — roadmap task **T182i**. The answer to `package.found` is a
- * list of these.
+ * One package directory on disk with no row. The answer to `package.found` is a list of these.
  */
 export type PackageFound = { 
 /**

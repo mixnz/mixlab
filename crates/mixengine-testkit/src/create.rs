@@ -1,11 +1,11 @@
 //! Declaring a fixture service the way a person does: over the socket, through `service.create`.
 //!
-//! **What replaced half of [`crate::declare`]** in roadmap task **T31a**. Until the daemon had a
-//! method for it, every suite that drove a service wrote its `services` row by hand — which meant
-//! the row every supervision test ran against was one no shipped code path had ever produced. Now
-//! the only row written by hand is the `packages` one ([`crate::declare::package`]),
-//! because `fakeservice` is a fixture binary no index will ever publish; the service itself arrives
-//! the way a user's does, and a difference between the two would fail a suite rather than hide.
+//! **What replaced half of [`crate::declare`].** Until the daemon had a method for it, every suite
+//! that drove a service wrote its `services` row by hand — which meant the row every supervision
+//! test ran against was one no shipped code path had ever produced. Now the only row written by
+//! hand is the `packages` one ([`crate::declare::package`]), because `fakeservice` is a fixture
+//! binary no index will ever publish; the service itself arrives the way a user's does, and a
+//! difference between the two would fail a suite rather than hide.
 //!
 //! A small JSON-RPC client rather than driving `mix`, because what a fixture has to send is the
 //! `overrides` document — how the fake service is to behave — and the command line deliberately has
@@ -79,10 +79,10 @@ pub fn create_blocking(endpoint: &Endpoint, database: &Path, services: &[Service
 
 /// One JSON-RPC call, and the whole response object.
 ///
-/// **Public since T112**, for the same reason this module exists at all: a suite that wants to drive
-/// a method the fixtures have no helper for should send the call a person sends rather than write
-/// the row a person's call would have written. The whole response and not the `result`, because a
-/// test asserting a *refusal* needs the `error` member.
+/// **Public**, for the same reason this module exists at all: a suite that wants to drive a method
+/// the fixtures have no helper for should send the call a person sends rather than write the row a
+/// person's call would have written. The whole response and not the `result`, because a test
+/// asserting a *refusal* needs the `error` member.
 ///
 /// # Panics
 ///

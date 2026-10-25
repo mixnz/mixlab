@@ -1,4 +1,4 @@
-/** What the *Remove MixLab* dialog draws, decided from values alone: T182a spec D4. */
+/** What the *Remove MixLab* dialog draws, decided from values alone. */
 import type { Outcome, Plan, PlanRow } from "./api";
 
 export type Stage = "checking" | "plan" | "removing" | "failed";
@@ -29,8 +29,8 @@ export function canRemove(stage: Stage, plan: Plan | null): boolean {
 /**
  * Nothing was removed and nothing is going: what a declined prompt leaves (ADR 0051, decision 3).
  * Read off the outcome rather than off the daemon's sentences: after a decline the privileged rows
- * are `failed`, still waiting for permission (T182b, D7), and a grant that failed before changing
- * anything reads the same way, which is the same thing to say.
+ * are `failed`, still waiting for permission, and a grant that failed before changing anything
+ * reads the same way, which is the same thing to say.
  */
 export function declined(report: Plan): boolean {
   const removal = (row: PlanRow) => row.outcome.removal;

@@ -1,6 +1,6 @@
 export default {
   mixengine: {
-    // The tray panel's MixEngine section (T168, T192).
+    // The tray panel's MixEngine section.
     tray: {
       counts: "Services running: {{up}}/{{total}}",
       setUp: "Set up in MixLab",
@@ -43,7 +43,7 @@ export default {
       blueprints: "Blueprints",
       // **The label, and not the word.** MixEngine's own add-ons are `extension.*` everywhere —
       // the methods, the module, every document — and this is the one place the two meanings
-      // collided: four rows below *Packages*, where PHP's extensions were hiding (T118).
+      // collided: four rows below *Packages*, where PHP's extensions were hiding.
       extensions: "Add-ons",
       metrics: "Metrics",
       settings: "Settings",
@@ -51,7 +51,7 @@ export default {
     // The three states in front of a daemon that is not answering. Each says what to do next,
     // because "error" alone leaves somebody guessing whether to install, to start, or to wait.
     // Since ADR 0027 the third has one meaning \u2014 this install is missing a file it shipped with \u2014
-    // so it names where it looked and offers a reinstall rather than a first download (T111).
+    // so it names where it looked and offers a reinstall rather than a first download.
     gate: {
       notRunning: "MixEngine is installed but not running.",
       notAnswering: "The MixEngine daemon is not answering.",
@@ -725,7 +725,7 @@ export default {
         stale:
           "These old files in the folder could not be removed: {{names}}. Close any terminal still using them, then try again.",
       },
-      // MixLab's own login entry, beside MixEngine's — ADR 0042, T168f.
+      // MixLab's own login entry, beside MixEngine's — ADR 0042.
       doctor: {
         title: "Diagnostics",
         ok: "OK",

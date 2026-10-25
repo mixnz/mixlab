@@ -1,4 +1,4 @@
-//! Capture a frozen `mixengine.db` at a schema version — the fixtures T89's suite migrates.
+//! Capture a frozen `mixengine.db` at a schema version — the fixtures `tests/upgrade.rs` migrates.
 //!
 //! ```text
 //! cargo run -p mixengine-core --example capture-upgrade-fixture -- 1

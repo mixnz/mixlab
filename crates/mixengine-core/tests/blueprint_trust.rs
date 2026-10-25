@@ -1,4 +1,4 @@
-//! What a gallery signature buys, and what it refuses — roadmap task **T78a**.
+//! What a gallery signature buys, and what it refuses.
 //!
 //! Out here rather than beside the code because the signing half of minisign is a
 //! `mixengine-testkit` dev-dependency and may be nowhere else: a shipped binary holding a signing
@@ -70,9 +70,9 @@ fn a_file_that_is_not_a_signature_is_refused_as_one() {
     );
 }
 
-/// The constant this build ships is a key that can be read. It signs nothing here — T79 is what
-/// publishes with the private half — and this is what keeps a typo in it from being discovered on
-/// somebody else's machine.
+/// The constant this build ships is a key that can be read. It signs nothing here — the gallery's
+/// publishing workflow holds the private half — and this is what keeps a typo in it from being
+/// discovered on somebody else's machine.
 #[test]
 fn the_compiled_in_key_is_a_key() {
     let signer = Signer::new();

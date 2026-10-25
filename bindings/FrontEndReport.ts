@@ -3,7 +3,7 @@ import type { FrontEndOutcome } from "./FrontEndOutcome";
 import type { ServiceId } from "./ServiceId";
 
 /**
- * What a switch did — roadmap task **T97**.
+ * What a switch did.
  *
  * **A measurement of the home afterwards, not a claim about what was attempted**, which is
  * [`UninstallReport`](crate::UninstallReport)'s shape and its reasoning: the interesting outcomes

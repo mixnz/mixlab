@@ -1,13 +1,15 @@
 //! Windows' Name Resolution Policy rule, as registry values.
 //!
-//! **Written directly rather than through `Add-DnsClientNrptRule`** — the T45 design, D11.
-//! `mixengine-elevate` never runs arbitrary commands, and a fixed cmdlet with validated arguments
-//! is still a scripting host started by a process holding an administrative token. The measurement
-//! is what makes the alternative available: a rule written to exactly these values **is read back
-//! by `Get-DnsClientNrptRule`**, so what MixEngine writes is what Windows' own tooling sees, and
-//! what a user can remove without MixEngine's help.
+//! **Written directly rather than through `Add-DnsClientNrptRule`.** `mixengine-elevate` never runs
+//! arbitrary commands, and a fixed cmdlet with validated arguments is still a scripting host
+//! started by a process holding an administrative token. The measurement is what makes the
+//! alternative available: a rule written to exactly these values **is read back by
+//! `Get-DnsClientNrptRule`**, so what MixEngine writes is what Windows' own tooling sees, and what
+//! a user can remove without MixEngine's help.
 //!
 //! Pure and compiled everywhere, for [`crate::resolver::directory`]'s reason.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-23-t45-resolver-wiring-design.md`.
 
 /// The one rule MixEngine owns.
 ///

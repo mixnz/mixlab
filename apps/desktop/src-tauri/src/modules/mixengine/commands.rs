@@ -21,8 +21,7 @@ pub async fn mixengine_presence() -> health::PresenceReport {
     health::presence().await
 }
 
-/// Where the daemon keeps its growing directories, and whether that can still be changed — roadmap
-/// task **T146**.
+/// Where the daemon keeps its growing directories, and whether that can still be changed.
 ///
 /// `Value`, for the same reason as the two reads just below: Rust reads no field of this answer.
 #[tauri::command]
@@ -102,17 +101,18 @@ pub async fn mixengine_service_action(id: String, action: String) -> Result<Valu
     rpc::call(method, params).await
 }
 
-/// `service.start` with a **project scope** — T125: every service this project needs, in
-/// dependency order.
+/// `service.start` with a **project scope**: every service this project needs, in dependency
+/// order.
 ///
 /// **The frontend must not work out that set of services itself.** That would be business logic in
 /// a client (`CLAUDE.md`), and on a second apply it is wrong as well: the web server a site needs
 /// is the one the plan *found*, not the one it created. So the question goes to the daemon
 /// verbatim, and the daemon is what reads `site_service_links` along with the home's front end.
 ///
-/// **Before T125 this was `mixengine_service_start_all`, sending an empty target** — meaning *every
-/// service this home declares*. A home with four PHP versions and three databases started all eight
-/// services to bring up one site, and that is exactly why this command takes a parameter.
+/// **Before the project scope this was `mixengine_service_start_all`, sending an empty target** —
+/// meaning *every service this home declares*. A home with four PHP versions and three databases
+/// started all eight services to bring up one site, and that is exactly why this command takes a
+/// parameter.
 ///
 /// A command of its own rather than `mixengine_service_action` with an empty `id`: "one service"
 /// and "what a project needs" are two different questions, and an empty `id` is where a typo turns
@@ -127,15 +127,16 @@ pub async fn mixengine_service_start_project(project: String) -> Result<Value, A
 ///
 /// **`ProjectRef` is an externally tagged enum**, so the project name travels in `{"name": …}`.
 /// Sending a bare string as `project` is a request the daemon refuses, and sending an empty
-/// `project` is a target with no scope — that is, starting the whole machine, exactly what T125
-/// removed.
+/// `project` is a target with no scope — that is, starting the whole machine, exactly what the
+/// project scope is there to avoid.
 fn service_start_project_params(project: &str) -> Value {
     json!({ "project": { "name": project }, "wait": true })
 }
 
 /// Opens the event stream. Opening again closes the one already open.
 ///
-/// Only the calling window's: each webview has its own stream since T168a.
+/// Only the calling window's: each webview has its own stream, so the tray panel opening one never
+/// closes the main window's.
 #[tauri::command]
 pub async fn mixengine_watch(
     webview: tauri::WebviewWindow,
@@ -301,7 +302,7 @@ pub async fn mixengine_ca_status() -> Result<Value, AppError> {
 
 /// Repairs the "browser" half of the CA. `params` has the shape of `DoctorRepair { grant }` — the
 /// original assumption that repairing the NSS database needs no administrator rights was wrong on a
-/// real machine, so this goes through the same two-step T64 flow as `mixengine_doctor_repair` /
+/// real machine, so this goes through the same two steps as `mixengine_doctor_repair` /
 /// `elevation.*` on the Dashboard, instead of hard-coding `grant: true`.
 #[tauri::command]
 pub async fn mixengine_ca_repair(params: Value) -> Result<Value, AppError> {
@@ -331,7 +332,7 @@ pub async fn mixengine_runtime_list_installed(filter: Value) -> Result<Value, Ap
 }
 
 /// `filter` has the shape of `RuntimeFilter`. `RuntimeCatalogue.stale` must be drawn by the
-/// frontend, not ignored — see D3.
+/// frontend, not ignored.
 #[tauri::command]
 pub async fn mixengine_runtime_list_available(filter: Value) -> Result<Value, AppError> {
     rpc::call("runtime.list_available", filter).await
@@ -346,7 +347,7 @@ pub async fn mixengine_runtime_install(target: Value) -> Result<Value, AppError>
 }
 
 /// `target` is a `RuntimeTarget`. Answers `Requirements`: what that version lacks on this machine,
-/// asked before `runtime.install` so the window can ask the person once — T151.
+/// asked before `runtime.install` so the window can ask the person once.
 #[tauri::command]
 pub async fn mixengine_runtime_requirements(target: Value) -> Result<Value, AppError> {
     rpc::call("runtime.requirements", target).await
@@ -385,7 +386,7 @@ pub async fn mixengine_package_list(filter: Value) -> Result<Value, AppError> {
 }
 
 /// `filter` has the shape of `PackageFilter`. `PackageCatalogue.stale` must be drawn, by the same
-/// component as `RuntimeCatalogue.stale` — D3.
+/// component as `RuntimeCatalogue.stale`.
 #[tauri::command]
 pub async fn mixengine_package_list_available(filter: Value) -> Result<Value, AppError> {
     rpc::call("package.list_available", filter).await
@@ -398,41 +399,41 @@ pub async fn mixengine_package_install(target: Value) -> Result<Value, AppError>
     rpc::call("package.install", target).await
 }
 
-/// `target` is a `PackageTarget`. `mixengine_runtime_requirements` for a service package — T151.
+/// `target` is a `PackageTarget`. `mixengine_runtime_requirements` for a service package.
 #[tauri::command]
 pub async fn mixengine_package_requirements(target: Value) -> Result<Value, AppError> {
     rpc::call("package.requirements", target).await
 }
 
 /// `target` has the shape of `PackageTarget`. **There is no `force`** — refusing because `services`
-/// is not empty is final; no parameter overrides it (D6).
+/// is not empty is final; no parameter overrides it.
 #[tauri::command]
 pub async fn mixengine_package_uninstall(target: Value) -> Result<Value, AppError> {
     rpc::call("package.uninstall", target).await
 }
 
 /// `query` is a `RuntimeUpgradeQuery { kind, from, to? }`. Answers `UpgradePlan` and changes
-/// nothing — T193b.
+/// nothing.
 #[tauri::command]
 pub async fn mixengine_runtime_upgrade_plan(query: Value) -> Result<Value, AppError> {
     rpc::call("runtime.upgrade_plan", query).await
 }
 
 /// `asked` is a `RuntimeUpgrade`. Answers `JobSummary`, followed over the stream as
-/// `runtime.install` is; the finished job's result is the plan, marked — T193b.
+/// `runtime.install` is; the finished job's result is the plan, marked.
 #[tauri::command]
 pub async fn mixengine_runtime_upgrade(asked: Value) -> Result<Value, AppError> {
     rpc::call("runtime.upgrade", asked).await
 }
 
-/// `query` is a `PackageUpgradeQuery { package, from, to? }`. Answers `UpgradePlan` — T193c.
+/// `query` is a `PackageUpgradeQuery { package, from, to? }`. Answers `UpgradePlan`.
 #[tauri::command]
 pub async fn mixengine_package_upgrade_plan(query: Value) -> Result<Value, AppError> {
     rpc::call("package.upgrade_plan", query).await
 }
 
 /// `asked` is a `PackageUpgrade`; the window sends `grant: true`, because the person has just
-/// agreed to a plan that says the machine may ask — T193c.
+/// agreed to a plan that says the machine may ask.
 #[tauri::command]
 pub async fn mixengine_package_upgrade(asked: Value) -> Result<Value, AppError> {
     rpc::call("package.upgrade", asked).await
@@ -466,8 +467,8 @@ pub async fn mixengine_service_set_idle(params: Value) -> Result<Value, AppError
     rpc::call("service.set_idle", params).await
 }
 
-/// `params` has the shape of `ServiceAutostartSet { service, autostart }` — T112. Two states, not
-/// three: `service.set_idle` has three because absence means "follow the recipe", whereas no recipe
+/// `params` has the shape of `ServiceAutostartSet { service, autostart }`. Two states, not three:
+/// `service.set_idle` has three because absence means "follow the recipe", whereas no recipe
 /// declares autostart. Returns `ServiceSummary` — that very service, as it has just become.
 ///
 /// **Starts nothing and stops nothing.** What it changes is the walk at the *next* daemon start.
@@ -476,8 +477,8 @@ pub async fn mixengine_service_set_autostart(params: Value) -> Result<Value, App
     rpc::call("service.set_autostart", params).await
 }
 
-/// `service.save_resources` — T167b / ADR 0041. Returns `SaveResources { on }`: whether this home
-/// stops services nobody is using. Off unless the user has turned it on.
+/// `service.save_resources` — ADR 0041. Returns `SaveResources { on }`: whether this home stops
+/// services nobody is using. Off unless the user has turned it on.
 #[tauri::command]
 pub async fn mixengine_service_save_resources() -> Result<Value, AppError> {
     rpc::call("service.save_resources", json!({})).await
@@ -490,14 +491,14 @@ pub async fn mixengine_service_set_save_resources(params: Value) -> Result<Value
     rpc::call("service.set_save_resources", params).await
 }
 
-/// `params` has the shape of `CredentialStoreSet { store }` — `daemon.set_credential_store`, T194.
+/// `params` has the shape of `CredentialStoreSet { store }` — `daemon.set_credential_store`.
 /// Records the store the next start uses; the running daemon keeps its own.
 #[tauri::command]
 pub async fn mixengine_daemon_set_credential_store(params: Value) -> Result<Value, AppError> {
     rpc::call("daemon.set_credential_store", params).await
 }
 
-/// `service.set_front_end` — T97 / ADR 0026. `params` has the shape of `FrontEndSwitch { server,
+/// `service.set_front_end` — ADR 0026. `params` has the shape of `FrontEndSwitch { server,
 /// version?, grant }`; returns a `JobSummary` (stopping the old server and bringing up the new one
 /// is one job), whose result is `FrontEndReport`. There is no separate read method: the active
 /// server is read from `ServiceSummary.role`.
@@ -564,7 +565,7 @@ pub async fn mixengine_database_credentials(
 }
 
 /// `service.reset_credential` — writes the administrator credential back into that database's own
-/// data directory, when this home can no longer produce the old password (T127).
+/// data directory, when this home can no longer produce the old password.
 ///
 /// **Not a small operation, and the client must say so before asking**: it stops this service and
 /// everything that depends on it, runs the recipe's offline set-password step, then starts them
@@ -582,40 +583,40 @@ pub async fn mixengine_service_reset_credential(service: String) -> Result<Value
     .await
 }
 
-/// `home.previous` — what a copy of an earlier install's state in the kept folders holds (T182h).
+/// `home.previous` — what a copy of an earlier install's state in the kept folders holds.
 #[tauri::command]
 pub async fn mixengine_home_previous() -> Result<Value, AppError> {
     rpc::call("home.previous", json!({})).await
 }
 
-/// `home.restore` — bring that copy back into this home (T182h). Databases get a new admin
-/// password and stay stopped.
+/// `home.restore` — bring that copy back into this home. Databases get a new admin password and
+/// stay stopped.
 #[tauri::command]
 pub async fn mixengine_home_restore() -> Result<Value, AppError> {
     rpc::call("home.restore", json!({})).await
 }
 
-/// `runtime.found` — runtime directories on disk with no row, and why (T182i). A read.
+/// `runtime.found` — runtime directories on disk with no row, and why. A read.
 #[tauri::command]
 pub async fn mixengine_runtime_found() -> Result<Value, AppError> {
     rpc::call("runtime.found", json!({})).await
 }
 
 /// `runtime.adopt` — record one runtime version that is on disk without a row, checked against the
-/// package index (T182f). Nothing is downloaded or removed.
+/// package index. Nothing is downloaded or removed.
 #[tauri::command]
 pub async fn mixengine_runtime_adopt(kind: String, version: String) -> Result<Value, AppError> {
     rpc::call("runtime.adopt", json!({ "kind": kind, "version": version })).await
 }
 
-/// `package.found` — package directories on disk with no row, and why (T182i). A read.
+/// `package.found` — package directories on disk with no row, and why. A read.
 #[tauri::command]
 pub async fn mixengine_package_found() -> Result<Value, AppError> {
     rpc::call("package.found", json!({})).await
 }
 
 /// `package.adopt` — record one package version that is on disk without a row, checked against the
-/// package index (T182f). Nothing is downloaded or removed.
+/// package index. Nothing is downloaded or removed.
 #[tauri::command]
 pub async fn mixengine_package_adopt(package: String, version: String) -> Result<Value, AppError> {
     rpc::call(
@@ -626,14 +627,14 @@ pub async fn mixengine_package_adopt(package: String, version: String) -> Result
 }
 
 /// `service.found` — service data an earlier install left under `data/`, and whether each can be
-/// adopted (T182g). A read: nothing is written.
+/// adopted. A read: nothing is written.
 #[tauri::command]
 pub async fn mixengine_service_found() -> Result<Value, AppError> {
     rpc::call("service.found", json!({})).await
 }
 
 /// `service.adopt` — turn one found data directory back into a stopped service with a new admin
-/// password (T182g). The databases and accounts in it are kept.
+/// password. The databases and accounts in it are kept.
 #[tauri::command]
 pub async fn mixengine_service_adopt(service: String) -> Result<Value, AppError> {
     rpc::call("service.adopt", json!({ "service": service })).await
@@ -770,22 +771,23 @@ pub async fn mixengine_extension_list_installed() -> Result<Value, AppError> {
 }
 
 /// `extension.available` — what the registry publishes, with `unreadable`/`stale`. **Not
-/// `extension.registry_list`** — that name does not exist, even though roadmap T4.4 says so.
+/// `extension.registry_list`** — that name does not exist, even though
+/// `docs/architecture/daemon-and-ipc.md` still lists it.
 #[tauri::command]
 pub async fn mixengine_extension_list_available() -> Result<Value, AppError> {
     rpc::call("extension.available", json!({})).await
 }
 
 /// `params` has the shape of `ExtensionPlanRequest { source: ExtensionOrigin }`. This is the only
-/// step before installing — `extension.inspect` is not called (Decision D2, spec).
+/// step before installing — `extension.inspect` is not called.
 #[tauri::command]
 pub async fn mixengine_extension_plan(params: Value) -> Result<Value, AppError> {
     rpc::call("extension.plan", params).await
 }
 
 /// `params` has the shape of `ExtensionInstall { source, consent }` — `consent` must be taken
-/// verbatim from the `ExtensionPlan` just received (Decision D3, spec), not rebuilt from user
-/// input.
+/// verbatim from the `ExtensionPlan` just received, not rebuilt from user input: what is agreed to
+/// is what was shown.
 #[tauri::command]
 pub async fn mixengine_extension_install(params: Value) -> Result<Value, AppError> {
     rpc::call("extension.install", params).await
@@ -860,7 +862,7 @@ pub async fn mixengine_path_uninstall() -> Result<Value, AppError> {
 }
 
 /// `service.stop` with no `service` — every declared service, stopped by the daemon in reverse
-/// dependency order (T168, the tray's *Stop all*).
+/// dependency order (the tray's *Stop all*).
 ///
 /// A command of its own rather than `mixengine_service_action` with an empty id, for the reason
 /// `mixengine_service_start_project` gives: "one service" and "all of them" are different
@@ -886,8 +888,8 @@ pub async fn mixengine_doctor() -> Result<Value, AppError> {
 
 /// `params` has the shape of `DoctorRepair { grant }` — separate from the existing
 /// `mixengine_ca_repair`: that one hard-codes `grant: true` just for the CA repair flow (Phase 2),
-/// this one takes `grant` from Settings, following the two-pass T64 flow (enqueue first,
-/// `elevation.grant` after the queue has been shown).
+/// this one takes `grant` from Settings, following the two passes every elevation takes (enqueue
+/// first, `elevation.grant` after the queue has been shown).
 #[tauri::command]
 pub async fn mixengine_doctor_repair(params: Value) -> Result<Value, AppError> {
     rpc::call("daemon.doctor_repair", params).await
@@ -930,10 +932,10 @@ mod tests {
         assert_eq!(params["wait"], true);
     }
 
-    /// **The scope travels in `project`, and the name sits in `{"name": …}`** — T125. A
-    /// `ProjectRef` sent in the wrong shape is a refused request; an absent `project` is far worse,
-    /// because it *succeeds*: an empty target is every service this home declares, exactly the
-    /// behaviour this task removes.
+    /// **The scope travels in `project`, and the name sits in `{"name": …}`.** A `ProjectRef` sent
+    /// in the wrong shape is a refused request; an absent `project` is far worse, because it
+    /// *succeeds*: an empty target is every service this home declares, exactly the behaviour the
+    /// project scope is there to avoid.
     #[test]
     fn a_project_start_names_the_project_it_is_about() {
         let params = service_start_project_params("shop");

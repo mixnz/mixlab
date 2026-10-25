@@ -1,8 +1,7 @@
 //! A supervised process cannot outlive what supervises it — as far as each system can promise that.
 //!
-//! Roadmap task **T13**, and the inverse of `an_orphan_outlives_the_process_that_left_it_behind` in
-//! `fakeservice.rs`: the same fixture, the same `mixengine-platform`, and the opposite outcome
-//! asserted.
+//! The inverse of `an_orphan_outlives_the_process_that_left_it_behind` in `fakeservice.rs`: the
+//! same fixture, the same `mixengine-platform`, and the opposite outcome asserted.
 //!
 //! **These live here rather than in `crates/mixengine-platform/tests/` for one reason**: the
 //! processes under test are `fakeservice`, which is a binary of *this* package, and
@@ -26,9 +25,8 @@
 //! `docs/decisions/0007-supervised-child-owns-a-process-group.md` sets it out, and the last two
 //! tests here are that ADR written as code: a **killed** supervisor takes its child down on Windows
 //! (the job object, a kernel guarantee) and on Linux (`PR_SET_PDEATHSIG`), and takes nothing down
-//! on macOS, where crash recovery at the next boot (roadmap task T18) is what covers it. The macOS
-//! test asserts the gap rather than skipping it, so that a day someone closes it is a day a test
-//! fails and says so.
+//! on macOS, where crash recovery at the next boot is what covers it. The macOS test asserts the
+//! gap rather than skipping it, so that a day someone closes it is a day a test fails and says so.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -101,7 +99,7 @@ fn stopping_a_supervised_process_reaches_what_it_started() {
     );
 }
 
-/// The gap T13 left and T15 owed: a stop has to reach the group even when the leader is gone.
+/// The gap the first process groups left: a stop reaches the group even when the leader is gone.
 ///
 /// This is the shape of an ordinary failure, not an exotic one — a php-fpm master crashes and its
 /// pool keeps the port; a wrapper script `exec`s into `mariadbd` and dies. The stop that a restart
@@ -220,7 +218,7 @@ fn a_supervisor_that_is_killed_takes_its_child_with_it() {
 ///
 /// macOS has no `PR_SET_PDEATHSIG` and no job object, so a supervised child of a killed daemon goes
 /// on running and nothing in the child or the kernel notices. That is written down in ADR 0007 and
-/// is covered by crash recovery at the next boot (roadmap task T18) rather than by anything here.
+/// is covered by crash recovery at the next boot rather than by anything here.
 ///
 /// Testing it the other way round — asserting the child survives — is what makes the ADR falsifiable
 /// on the machine rather than only in a document: the day macOS gains a mechanism, or the day

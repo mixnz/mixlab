@@ -2,8 +2,8 @@
 
 use super::*;
 
-/// **T97.** A row reads back as the value that wrote it, which is what makes a switch's
-/// rollback a second [`create`] rather than a reconstruction from a summary.
+/// A row reads back as the value that wrote it, which is what makes a switch's rollback a second
+/// [`create`] rather than a reconstruction from a summary.
 #[tokio::test]
 async fn a_row_reads_back_as_the_declaration_that_wrote_it() {
     let (_home, store) = store().await;
@@ -102,7 +102,7 @@ async fn a_declaration_of_a_service_that_is_not_there_is_named_as_such() {
 
 /// A row whose binary comes from an installed runtime rather than from a package.
 ///
-/// The whole of T32's schema change seen from the only place that writes it: `create` resolves
+/// The whole of the pool's schema change seen from the only place that writes it: `create` resolves
 /// `runtime_installs` instead of `packages`, and the row that lands names one parent.
 #[tokio::test]
 async fn a_service_can_come_from_a_runtime_install() {
@@ -197,9 +197,9 @@ async fn an_allocated_port_is_the_one_that_lands_in_the_row() {
 /// Somebody who names a port has already decided, and is not moved off it.
 ///
 /// The allocation exists because a recipe's 3306 is a *wish*. `--port 3307` is not one, and a
-/// daemon that answered it with 3308 because something was listening would be overruling the
-/// one instruction in the call — the start that then fails says who holds it (T38), which is
-/// the honest place for that news.
+/// daemon that answered it with 3308 because something was listening would be overruling the one
+/// instruction in the call — the start that then fails says who holds it, which is the honest place
+/// for that news.
 #[tokio::test]
 async fn a_port_the_caller_named_is_written_down_even_when_it_is_busy() {
     let (_home, store) = store().await;
@@ -259,11 +259,11 @@ async fn two_creates_racing_for_one_port_are_given_two() {
 
 /// Two services pointed at one data directory, which is the conflict a port conflict is not.
 ///
-/// A port two services share is a start that fails and says who holds it (T38). A *directory*
-/// two database servers share is two `mysqld`s over one set of InnoDB files, and what it costs
-/// is the data rather than the start — so it is refused where it is written down rather than
-/// discovered where it is opened. Only an explicit `data_dir` can reach this: the layout the
-/// generator derives is `data/<package>/<instance>` and two instances cannot collide in it.
+/// A port two services share is a start that fails and says who holds it. A *directory* two
+/// database servers share is two `mysqld`s over one set of InnoDB files, and what it costs is the
+/// data rather than the start — so it is refused where it is written down rather than discovered
+/// where it is opened. Only an explicit `data_dir` can reach this: the layout the generator derives
+/// is `data/<package>/<instance>` and two instances cannot collide in it.
 #[tokio::test]
 async fn a_data_directory_another_service_holds_is_refused() {
     let (home, store) = store().await;
@@ -353,8 +353,7 @@ async fn a_relative_data_directory_is_the_absolute_one_it_resolves_to() {
     );
 }
 
-/// **T183.** Each of the three parents answers for its own version, and a listing and a single
-/// read agree.
+/// Each of the three parents answers for its own version, and a listing and a single read agree.
 #[tokio::test]
 async fn a_record_carries_the_version_of_the_program_it_runs() {
     let (_home, store) = store().await;
@@ -482,8 +481,7 @@ async fn a_row_names_one_parent_and_not_two_and_not_none() {
     assert!(neither.is_err(), "a service with no parent was accepted");
 }
 
-/// **A service stopped for a credential reset may not be woken by a connection** — roadmap task
-/// **T127**.
+/// **A service stopped for a credential reset may not be woken by a connection.**
 ///
 /// **Asserted through [`StoppedBy::may_be_woken`] and not through the reason word**, because
 /// [`StoppedBy::of`] reaches [`StoppedBy::Daemon`] through a catch-all arm: a reason that is not
@@ -500,11 +498,11 @@ fn a_stop_for_a_credential_reset_may_not_be_woken() {
 
 /// And the daemon's own stops are still wakeable, which is the half the arm above must not break.
 ///
-/// **[`StateReason::SuperuserRefused`] is in here although it never reaches this function** —
-/// roadmap task **T127a**. It is only ever carried into [`ServiceState::Failed`] and this is
-/// consulted on the way into [`ServiceState::Stopped`], so the catch-all arm is what would
-/// answer for it. This says which answer that has to be if the word ever does arrive: a database
-/// that refused its superuser is not a stop anybody asked for, and a connection may still try.
+/// **[`StateReason::SuperuserRefused`] is in here although it never reaches this function.** It is
+/// only ever carried into [`ServiceState::Failed`] and this is consulted on the way into
+/// [`ServiceState::Stopped`], so the catch-all arm is what would answer for it. This says which
+/// answer that has to be if the word ever does arrive: a database that refused its superuser is not
+/// a stop anybody asked for, and a connection may still try.
 #[test]
 fn the_daemons_own_stops_are_still_wakeable() {
     for reason in [

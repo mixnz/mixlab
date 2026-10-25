@@ -72,7 +72,7 @@ pub fn saved_maximized<R: tauri::Runtime>(app: &AppHandle<R>, label: &str) -> bo
         .unwrap_or(false)
 }
 
-/// Lets the next child process handle Ctrl+C — roadmap task **T205c**.
+/// Lets the next child process handle Ctrl+C.
 ///
 /// A launcher that starts MixLab with `CREATE_NEW_PROCESS_GROUP` sets "ignore Ctrl+C" on it, and
 /// every child inherits that: a local PowerShell tab then ignored the key while Git Bash, whose

@@ -8,8 +8,6 @@ import type { ServiceId } from "./ServiceId";
  * value restores the recipe's own default; no recipe declares an autostart, so there is no third
  * state for one to restore and an option would be a case every client had to decide about for
  * nothing.
- *
- * Roadmap task **T112**.
  */
 export type ServiceAutostartSet = { 
 /**

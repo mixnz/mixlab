@@ -474,8 +474,8 @@ fn secrets_survive_a_round_trip_through_the_os_store() {
 #[test]
 #[ignore]
 fn a_mixengine_entry_round_trips_and_a_missing_one_is_none() {
-    // Written the way the daemon writes it (T186): through the platform crate, at an address
-    // with a home in front, which on macOS lands inside that home's vault item.
+    // Written the way the daemon writes it: through the platform crate, at an address with a home
+    // in front, which on macOS lands inside that home's vault item.
     let home = uuid::Uuid::new_v4().simple().to_string();
     let key = format!("{home}/mariadb@main/root");
     let host = mixengine_platform::host();

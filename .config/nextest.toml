@@ -1,4 +1,4 @@
-# cargo-nextest, the runner CI uses for the workspace step (T170f). Plain `cargo test` stays the
+# cargo-nextest, the runner CI uses for the workspace step. Plain `cargo test` stays the
 # contract: anything a test needs serialised is serialised in the test *and* declared here, never
 # with a flag on one CI job. See docs/standards/testing.md.
 
@@ -17,10 +17,10 @@ failure-output = "immediate-final"
 # serialises nothing.
 credential-store = { max-threads = 1 }
 
-# The tests that search a fixed window of loopback ports on Windows and keep their place in it with a
-# process-wide counter (`static NEXT` and its siblings), so two tests never search the same window.
-# Under nextest every one of them starts at the same counter in a process of its own, and the first
-# CI run found two of them racing for one port (T170f). One at a time across every binary restores
+# The tests that search a fixed window of loopback ports on Windows and keep their place in it with
+# a process-wide counter (`static NEXT` and its siblings), so two tests never search the same
+# window. Under nextest every one of them starts at the same counter in a process of its own, and
+# the first CI run found two of them racing for one port. One at a time across every binary restores
 # what the counters promise; they take milliseconds each.
 port-windows = { max-threads = 1 }
 

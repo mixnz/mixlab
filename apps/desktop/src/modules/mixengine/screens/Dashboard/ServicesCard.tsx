@@ -131,8 +131,7 @@ export default function ServicesCard({
             <tr>
               <th>{t("mixengine.dashboard.service")}</th>
               <th>{t("mixengine.dashboard.state")}</th>
-              {/* Next to State — T114: what is running, and what will run after the next
-                  login. */}
+              {/* Next to State: what is running, and what will run after the next login. */}
               <th>{t("mixengine.dashboard.autostart")}</th>
               <th>{t("mixengine.dashboard.port")}</th>
               <th>{t("mixengine.dashboard.cpu")}</th>

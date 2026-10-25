@@ -2,9 +2,9 @@
 //! and the report the shipped helper writes is one this crate can read.
 //!
 //! **No token and no prompt.** `mixengine-elevate` is run directly, as this user, which is possible
-//! only because T40/D5 made `Probe` the operation that does not require elevation — the operation
-//! whose job includes reporting whether the token is elevated has to work when it is not. What is
-//! under test is the file protocol across the two crates, not the launcher: raising a prompt is
+//! only because `Probe` is the operation that does not require elevation — the operation whose job
+//! includes reporting whether the token is elevated has to work when it is not. What is under test
+//! is the file protocol across the two crates, not the launcher: raising a prompt is
 //! `mixengine-platform`'s and is asserted in its own suite.
 //!
 //! Every test gets its own home in a `TempDir`, passed as a path — rule 2 in
@@ -98,7 +98,7 @@ fn the_document_this_crate_writes_is_one_the_shipped_helper_answers() {
         report.supported_ops
     );
 
-    // `Probe` applies under any token — D5's payoff — so this is the same answer elevated or not.
+    // `Probe` applies under any token, so this is the same answer elevated or not.
     for outcome in &report.results {
         assert!(matches!(outcome, OpOutcome::Applied { .. }), "{outcome:?}");
     }
@@ -113,9 +113,9 @@ fn the_document_this_crate_writes_is_one_the_shipped_helper_answers() {
     );
 }
 
-/// T40/D10, from the daemon's side: the existence of the answer is the anti-replay check, so a
-/// directory that has one is finished. The daemon never reuses one — this is what would happen if a
-/// later change made it.
+/// From the daemon's side, the existence of the answer is the anti-replay check, so a directory
+/// that has one is finished. The daemon never reuses one — this is what would happen if a later
+/// change made it.
 #[test]
 fn a_request_that_has_already_been_answered_is_refused() {
     let home = tempfile::tempdir().expect("a temporary home");

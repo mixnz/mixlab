@@ -27,7 +27,7 @@ root?: string | null,
  */
 pins?: { [key in RuntimeKind]?: VersionConstraint } | null, 
 /**
- * Whether to hold this project's services out of idle shutdown — roadmap task **T69**.
+ * Whether to hold this project's services out of idle shutdown.
  *
  * A field here rather than a `project.keep_warm` method of its own: it is a setting on a
  * project, it travels on the call every other project setting travels on, and a whole RPC for

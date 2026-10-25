@@ -1,7 +1,7 @@
 //! The ways reading the signed index and installing what it names can fail.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 use std::path::PathBuf;
 
@@ -10,10 +10,11 @@ use std::path::PathBuf;
 pub enum InstallError {
     /// The package index could not be fetched.
     ///
-    /// **`document` is what this family gained in T81, and it is why there is no second family.**
-    /// Two signed documents are published — the package index and the extension registry — and they
-    /// fail in exactly these five ways. Duplicating the variants would duplicate every `match` that
-    /// reads them; naming the document in the message is the whole of the difference a reader needs.
+    /// **`document` is what this family gained with the extension registry, and it is why there is
+    /// no second family.** Two signed documents are published — the package index and the extension
+    /// registry — and they fail in exactly these five ways. Duplicating the variants would
+    /// duplicate every `match` that reads them; naming the document in the message is the whole of
+    /// the difference a reader needs.
     ///
     /// **Not always fatal**, and the only place in this enum where that is true of the error itself
     /// rather than of what the caller does with it: [`index::Client::catalogue`] constructs this,
@@ -94,8 +95,7 @@ pub enum InstallError {
         expected: u32,
     },
 
-    /// A timestamp handed to a parser is not the one shape this product writes — roadmap task
-    /// **T81a**.
+    /// A timestamp handed to a parser is not the one shape this product writes.
     ///
     /// Only reachable through [`FromStr`](std::str::FromStr), which is the publishing pipeline's
     /// door onto [`index::Timestamp`]; a timestamp arriving *inside* a document is refused by
@@ -109,8 +109,7 @@ pub enum InstallError {
         text: String,
     },
 
-    /// A kind's file of the package index is not the one the signed root names — roadmap task
-    /// **T196**.
+    /// A kind's file of the package index is not the one the signed root names.
     ///
     /// The root verified. This file is believed only because the root states its hash, and it is
     /// not that file: an index caught while it was being published, a mirror serving an old copy,
@@ -289,7 +288,7 @@ pub enum InstallError {
         detail: String,
     },
 
-    /// A JDK's own `keytool` would not answer, or would not write — roadmap task **T27e**, ADR 0039.
+    /// A JDK's own `keytool` would not answer, or would not write — ADR 0039.
     ///
     /// **Fatal to nothing.** An install and a daemon start carry on without it; what it costs is a
     /// JDK that cannot verify this home's own HTTPS sites, which `mix doctor` reports and repairs.

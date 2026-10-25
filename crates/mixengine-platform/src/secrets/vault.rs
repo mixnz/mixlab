@@ -1,4 +1,4 @@
-//! One Keychain item per home for `mixengined`'s credentials — roadmap task **T186**, ADR 0055.
+//! One Keychain item per home for `mixengined`'s credentials — ADR 0055.
 //!
 //! **macOS asks once per item**, for any program it does not recognise by signature, and an
 //! unsigned release is such a program after every update. One item per credential was one question
@@ -163,10 +163,11 @@ impl<K: Keyring> Keyring for Vaulted<K> {
             }
         }
 
-        // **A daemon from before T186 kept this password as an item of its own**, under the account
-        // `<home>/<rest>`, and a vault that does not hold it is not the last word: the item is read
-        // where that daemon left it. Listed first, which asks the store nothing it would prompt for,
-        // so a key nobody ever kept still costs no visit (T186's promise, the test above).
+        // **A daemon from before the vault kept this password as an item of its own**, under the
+        // account `<home>/<rest>`, and a vault that does not hold it is not the last word: the item
+        // is read where that daemon left it. Listed first, which asks the store nothing it would
+        // prompt for, so a key nobody ever kept still costs no visit (the vault's promise, the test
+        // above).
         if self.inner.keys(service)?.iter().any(|flat| flat == key) {
             return self.inner.secret(service, key);
         }
@@ -209,9 +210,9 @@ impl<K: Keyring> Keyring for Vaulted<K> {
             self.save(&mut held, home)?;
         }
 
-        // And the item a daemon from before T186 would have kept under this very name, which `keys`
-        // lists as it is: an uninstall that forgot the vault's entry alone left it behind. The
-        // inner store's forget is idempotent, so a name it never held costs nothing.
+        // And the item a daemon from before the vault would have kept under this very name, which
+        // `keys` lists as it is: an uninstall that forgot the vault's entry alone left it behind.
+        // The inner store's forget is idempotent, so a name it never held costs nothing.
         self.inner.forget_secret(service, key)
     }
 
@@ -253,7 +254,8 @@ impl<K: Keyring> Keyring for Vaulted<K> {
 /// The shape `mixengine_core::home::HomeId` has: lowercase hex, not empty.
 ///
 /// Repeated here rather than imported because this crate sits below `mixengine-core`. A service id
-/// (`mariadb@main`) never passes it, which is what keeps a pre-T126 key out of a vault.
+/// (`mariadb@main`) never passes it, which is what keeps a key from before addresses named their
+/// home out of a vault.
 fn is_a_home(value: &str) -> bool {
     !value.is_empty()
         && value
@@ -447,10 +449,10 @@ mod tests {
         assert!(vault.keys(SERVICE).unwrap().is_empty());
     }
 
-    /// A daemon from before T186 wrote each password as an item of its own, under the account
+    /// A daemon from before the vault wrote each password as an item of its own, under the account
     /// `<home>/<rest>`. `keys` lists such an item as it is, so a reader and an uninstall that took
     /// the vault path alone found nothing there: the password unreadable, the item never forgotten
-    /// ("3 of 3 are still in this user's credential store", found by the T182a walk).
+    /// ("3 of 3 are still in this user's credential store", found by walking a macOS uninstall).
     #[test]
     fn a_key_an_older_daemon_kept_flat_is_read_and_forgotten() {
         let store = Arc::new(Counting::default());
@@ -521,7 +523,7 @@ mod tests {
             ]
         );
 
-        // Neither the pre-T126 key nor another service is vaulted.
+        // Neither the key from before addresses named their home nor another service is vaulted.
         let items = store.items.lock().unwrap();
         assert!(items.contains_key(&(SERVICE.to_owned(), "mariadb@main/root".to_owned())));
         assert!(items.contains_key(&("elsewhere".to_owned(), format!("{HOME}/x"))));

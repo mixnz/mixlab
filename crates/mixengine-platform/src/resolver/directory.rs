@@ -3,6 +3,8 @@
 //! Pure, and compiled on all three systems exactly as [`crate::port_access::pf`] is: the file this
 //! generates is the whole of what macOS needs, so generating it here means a developer on any of
 //! the three can test it in full and only the write itself is per-OS.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-23-t45-resolver-wiring-design.md`.
 
 use std::path::{Path, PathBuf};
 
@@ -11,9 +13,9 @@ pub(crate) const DIRECTORY: &str = "/etc/resolver";
 
 /// The line that says whose file this is.
 ///
-/// **A marker rather than a spliced block** — the T45 design, D5. The whole file is ours, so there
-/// is nothing to splice into; what is needed is the ability to tell our file from somebody else's
-/// configuration for the same TLD, which must never be replaced silently.
+/// **A marker rather than a spliced block** (D5). The whole file is ours, so there is nothing to
+/// splice into; what is needed is the ability to tell our file from somebody else's configuration
+/// for the same TLD, which must never be replaced silently.
 const MARKER: &str = "# Managed by MixEngine. Remove this file to stop routing this TLD.";
 
 /// The file that routes one TLD to the server on `port`.
@@ -53,7 +55,7 @@ mod tests {
     }
 
     /// D5. A file without our marker is somebody else's configuration for that TLD, and replacing
-    /// it silently is the failure T41's marker block exists to prevent.
+    /// it silently is the failure the hosts file's marker block exists to prevent.
     #[test]
     fn a_file_without_the_marker_is_not_ours() {
         assert!(!is_ours("nameserver 192.168.1.1\n"));

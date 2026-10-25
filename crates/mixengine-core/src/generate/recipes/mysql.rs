@@ -1,4 +1,4 @@
-//! MySQL: the other database with these programs' names — roadmap task **T34c**.
+//! MySQL: the other database with these programs' names.
 //!
 //! **Not a version of [`mariadb`](super::mariadb)**, and anybody maintaining an application against
 //! one of them can say which. It is its own package, its own recipe and its own rows — and the two
@@ -76,7 +76,7 @@ const SERVER: &str = "mysqld";
 /// The client the readiness check, the health check and the shutdown all run.
 const ADMIN: &str = "mysqladmin";
 
-/// The client that runs SQL — roadmap task **T77a**.
+/// The client that runs SQL.
 ///
 /// Not [`ADMIN`], which speaks the administrative sub-commands and takes no statements.
 const CLIENT: &str = "mysql";
@@ -96,7 +96,7 @@ const INIT_FILE_SUFFIX: &str = "-init.sql";
 /// How much memory InnoDB is given, allocated at startup and held with nobody connected.
 ///
 /// 64M against the server's own 128M, for [`mariadb`](super::mariadb)'s reason and measured by the
-/// same `bench` suite — roadmap task **T73**.
+/// same `bench` suite.
 const BUFFER_POOL: &str = "innodb_buffer_pool_size";
 
 /// How many connections it accepts at once. MySQL's own default.
@@ -179,17 +179,17 @@ impl Recipe for Mysql {
         Some(3306)
     }
 
-    /// `root`, the same name `ROOT` addresses the credential under — roadmap task **T82**.
+    /// `root`, the same name `ROOT` addresses the credential under.
     fn administrator(&self) -> Option<&'static str> {
         Some(ROOT)
     }
 
-    /// MySQL's protocol — T83.
+    /// MySQL's protocol.
     fn protocol(&self) -> Option<mixengine_proto::DatabaseProtocol> {
         Some(mixengine_proto::DatabaseProtocol::Mysql)
     }
 
-    /// Every client Oracle's archive publishes, under its own name — roadmap task **T130**.
+    /// Every client Oracle's archive publishes, under its own name.
     ///
     /// **All nine are `Own`**, which is what takes `mysql`, `mysqladmin` and `mysqldump` away from
     /// MariaDB the moment this package is installed: a person with both products on one machine and
@@ -320,7 +320,7 @@ impl Recipe for Mysql {
         })
     }
 
-    /// Its port, and its socket where the system has one — T70a's D4.
+    /// Its port, and its socket where the system has one.
     ///
     /// **Two addresses and not one**, because which of them a client uses is that client's habit
     /// rather than a setting: a generated `.env` names the port, and the client typed with no host
@@ -336,20 +336,20 @@ impl Recipe for Mysql {
         Ok(held)
     }
 
-    /// An hour — T70a, design D9, and the number `resource-isolation.md` already publishes.
+    /// An hour — the number `resource-isolation.md` already publishes.
     ///
     /// **Longer than php-fpm's half hour on purpose.** A pool starts in tens of milliseconds; a
     /// server replays its log first, so a developer coming back to a project after fifty minutes
     /// would pay for the stop rather than benefit from it. What the extra half hour costs is one
     /// idle server's memory, which is the thing being traded and is worth naming.
     ///
-    /// **Answerable only now.** Until T70a the daemon could stop this and nothing could start it
-    /// again, and a default that idled it would have been a default that broke a home which changed
-    /// nothing — which is why the number arrives in the last commit of that task rather than the
-    /// first.
+    /// **Answerable only once a connection can start this server.** Before that the daemon could
+    /// stop it and nothing could start it again, and a default that idled it would have been a
+    /// default that broke a home which changed nothing — which is why the number arrived with the
+    /// last of that work rather than the first.
     ///
-    /// **Only while the home saves resources** — roadmap task **T167b**, ADR 0041. Until then this
-    /// number was the default for every home; now a service nobody set is never idle-stopped.
+    /// **Only while the home saves resources** (ADR 0041). Before that this number was the default
+    /// for every home; now a service nobody set is never idle-stopped.
     fn idle_when_saving(&self) -> Option<mixengine_proto::Millis> {
         Some(mixengine_proto::Millis::from_secs(60 * 60))
     }
@@ -370,7 +370,7 @@ impl Recipe for Mysql {
         let addr = address(context)?;
 
         Ok(ServiceSpec::builder(context.service().clone(), &server)
-            // What a failed start is diagnosed against (T38).
+            // What a failed start is diagnosed against.
             .ports([addr.port()])
             // **First, and on its own**: `--defaults-file` means *read this file and no other*,
             // which is what keeps a machine's own `/etc/my.cnf` — naming a datadir, a socket and a
@@ -393,7 +393,7 @@ impl Recipe for Mysql {
             })
             .health(HealthCheck {
                 // The server's greeting, not `mysqladmin ping`: the same answer without starting a
-                // process every ten seconds — roadmap task T190b, D4.
+                // process every ten seconds.
                 probe: HealthProbe::MysqlGreeting { addr },
                 interval: HEALTH_INTERVAL,
                 timeout: HEALTH_TIMEOUT,
@@ -423,7 +423,7 @@ impl Recipe for Mysql {
         })
     }
 
-    /// The same statements MariaDB gets, through the same builder — roadmap task **T77a**.
+    /// The same statements MariaDB gets, through the same builder.
     ///
     /// The two servers' *bootstraps* differ, which is why they have two rituals; making a database
     /// is one syntax, and `mysql_provisions_with_the_same_statements_mariadb_does` below is what
@@ -535,7 +535,7 @@ pub(super) fn steps_for(context: &Context, route: Route, windows: bool) -> Resul
     }
 }
 
-/// Set the root password in a data directory that already exists — roadmap task **T127**.
+/// Set the root password in a data directory that already exists.
 ///
 /// # Errors
 ///
@@ -583,7 +583,7 @@ pub(super) fn reset_steps_for(context: &Context, route: Route, windows: bool) ->
 
 /// The step that gives `root` its password on a directory `--initialize-insecure` built.
 ///
-/// One function so that the ritual and the repair cannot drift apart — the T127 reason
+/// One function so that the ritual and the repair cannot drift apart — the reason
 /// [`refuse_a_password_that_needs_escaping`] is one function — and the branch inside it is
 /// [`bootstraps_the_password`]: 5.7 through a server that reads its statements and exits, 8.0 and
 /// newer through one that has to be told to stop.
@@ -605,8 +605,8 @@ fn the_password_step(context: &Context, password: &str, windows: bool) -> Result
 /// `mixengine_platform::generate_secret`, whose alphabet is what makes the interpolation below safe
 /// without an escaper nobody could prove right.
 ///
-/// One function and not two copies since **T127**, so that the repair cannot end up with a weaker
-/// rule than the ritual it repairs.
+/// One function and not two copies, so that the repair cannot end up with a weaker rule than the
+/// ritual it repairs.
 ///
 /// # Errors
 ///
@@ -727,8 +727,8 @@ fn set_the_password(context: &Context, password: &str, windows: bool) -> Result<
 ///
 /// **Nothing is deleted here, unlike [`bootstrap`].** What this route starts from is a directory
 /// `--initialize-insecure` built, which holds `root@localhost` and nothing else — no anonymous
-/// accounts and no `test` database — and the repair of T127 runs the same step against a directory
-/// full of somebody's own work, where removing rows would be the last thing to do.
+/// accounts and no `test` database — and the credential repair runs the same step against a
+/// directory full of somebody's own work, where removing rows would be the last thing to do.
 ///
 /// **No `--log-error`, for [`bootstrap`]'s reason**: a statement that fails is quoted back by the
 /// server that refused it, and this one carries the credential. The error log would be a file on
@@ -899,7 +899,7 @@ fn connection(addr: SocketAddr) -> Vec<String> {
 /// [`connection`], as the account that was just made rather than as root, against its own database.
 ///
 /// The last step of a provisioning is the only thing here that authenticates as anybody but the
-/// superuser — the T77a design, D13.
+/// superuser.
 fn as_account(addr: SocketAddr, user: &str, database: &str) -> Vec<String> {
     vec![
         super::mysql_family::NO_DEFAULTS.to_owned(),

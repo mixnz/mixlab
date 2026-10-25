@@ -13,8 +13,7 @@ path: string,
  */
 created: boolean, 
 /**
- * The `domain` of each site entry in the file this home has no site for — roadmap task
- * **T204**, spec D4.
+ * The `domain` of each site entry in the file this home has no site for.
  *
  * Left exactly as written, because an export never deletes; named here, because an entry
  * nobody is told about is a site a colleague will adopt without anyone here having it.

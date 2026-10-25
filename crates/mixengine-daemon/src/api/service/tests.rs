@@ -9,8 +9,8 @@ use crate::services::fixture;
 
 #[tokio::test]
 async fn a_home_that_declares_nothing_lists_nothing_rather_than_failing() {
-    // The honest answer for this build, and the one the registry, the graph and the walk all
-    // handle without a special case: `Undeclared` until T30 renders a row into a spec.
+    // The honest answer for a home that declares nothing, and the one the registry, the graph and
+    // the walk all handle without a special case.
     let list: ServiceList = undeclared()
         .await
         .expect(rpc::method::SERVICE_LIST, Value::Null)
@@ -43,9 +43,9 @@ async fn a_listing_names_the_declared_set_with_what_each_row_says() {
     );
 }
 
-// The project scope — roadmap task **T125**. What the set *is* belongs to
-// `core::sites::services_of`, which is tested where it lives; what is proved here is the three
-// requests this surface has to answer with a refusal rather than with a walk.
+// The project scope. What the set *is* belongs to `core::sites::services_of`, which is tested where
+// it lives; what is proved here is the three requests this surface has to answer with a refusal
+// rather than with a walk.
 
 #[tokio::test]
 async fn a_start_scoped_to_a_project_nothing_answers_to_is_not_found() {
@@ -89,13 +89,12 @@ async fn a_start_naming_a_service_and_a_project_is_refused() {
     );
 }
 
-/// **A reset names one service, and no service at all is refused by the type** — roadmap task
-/// **T127**.
+/// **A reset names one service, and no service at all is refused by the type.**
 ///
-/// T125's finding was that `ServiceTarget::service` is optional and [`None`] means *the whole
-/// home*; a repair that could be asked for with no subject is that mistake with worse
-/// consequences. `ResetCredential::service` is required, so this is a deserialisation refusal
-/// rather than a check somebody could delete.
+/// `ServiceTarget::service` is optional and [`None`] means *the whole home*, which once started
+/// every service a blueprint's apply did not need; a repair that could be asked for with no
+/// subject would be that mistake with worse consequences. `ResetCredential::service` is required,
+/// so this is a deserialisation refusal rather than a check somebody could delete.
 #[tokio::test]
 async fn a_credential_reset_requires_a_service() {
     let daemon = daemon(web_and_db(), &["db", "web"]).await;
@@ -115,7 +114,7 @@ async fn a_credential_reset_requires_a_service() {
     }
 }
 
-/// **A service that keeps no credential is refused before anything is stopped** — **T127**.
+/// **A service that keeps no credential is refused before anything is stopped.**
 ///
 /// The second assertion is the one worth having: a repair that refused *after* the stop would
 /// take a web server down to tell somebody they named the wrong thing.
@@ -167,7 +166,7 @@ async fn a_stop_and_a_restart_have_no_project_scope() {
     }
 }
 
-/// **T97.** A listing says what each service is *for*, so a client never has to decide that
+/// A listing says what each service is *for*, so a client never has to decide that
 /// `nginx` means "front end" for itself.
 ///
 /// Written with nginx rather than Caddy on purpose, which is `front_end::held_by`'s own test
@@ -209,9 +208,9 @@ async fn a_listing_says_what_each_service_is_for() {
 
 #[tokio::test]
 async fn a_service_that_is_declared_and_has_no_row_is_reported_without_a_state() {
-    // Not a case a finished MixEngine reaches — from T30 a declaration is rendered *from* a row
-    // — and reported rather than smoothed into `stopped`, because a service that claims to be
-    // stopped and then refuses to start explains nothing to whoever declared it.
+    // Not a case a finished MixEngine reaches — a declaration is rendered *from* a row — and
+    // reported rather than smoothed into `stopped`, because a service that claims to be stopped and
+    // then refuses to start explains nothing to whoever declared it.
     let daemon = daemon(web_and_db(), &["db"]).await;
 
     let list: ServiceList = daemon.expect(rpc::method::SERVICE_LIST, Value::Null).await;
@@ -486,12 +485,13 @@ async fn starting_a_service_that_is_not_declared_is_not_found_rather_than_a_walk
 ///
 /// It used to be `internal` for every source failure whatever it was, and the fixture is why:
 /// `SpecSource` returned `anyhow::Error`, the wire mapping downcast to find a
-/// `mixengine_core::Error` behind it, and a fixture that raised a bare string had none to find.
-/// The running daemon never took that path — its source renders through `mixengine-core` and so
-/// always carried a code — so what this test was pinning down was the hole and not the product.
-/// With the trait typed, a package that is not installed answers `not_found` and points at
-/// `mix package list`, which is the sentence `error.rs` has argued for since T30: a user who
-/// misspelled a setting must not be sent to file a bug report.
+/// `mixengine_core::Error` behind it, and a fixture that raised a bare string had none to find. The
+/// running daemon never took that path — its source renders through `mixengine-core` and so always
+/// carried a code — so what this test was pinning down was the hole and not the product. With the
+/// trait typed, a package that is not installed answers `not_found` and points at
+/// `mix package list`, which is the sentence `error.rs` has argued for since the generator's
+/// failures got a vocabulary: a user who misspelled a setting must not be sent to file a bug
+/// report.
 #[tokio::test]
 async fn a_source_that_cannot_answer_is_reported_with_the_failure_s_own_code() {
     let daemon = daemon(Arc::new(fixture::Unavailable), &[]).await;

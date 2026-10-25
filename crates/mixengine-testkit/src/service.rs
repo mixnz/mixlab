@@ -90,8 +90,8 @@ impl FakeService {
 
     /// Create this file and exit at once, instead of being a service at all.
     ///
-    /// **The one-shot half of the fixture** (roadmap task T15a): what a `StopBehaviour::Command` or
-    /// a `HealthProbe::Command` names, so a test can see that the supervisor really ran it. Its
+    /// **The one-shot half of the fixture**: what a `StopBehaviour::Command` or a
+    /// `HealthProbe::Command` names, so a test can see that the supervisor really ran it. Its
     /// counterpart is [`exit_when`](Self::exit_when), and the pair is what makes a stop command
     /// provable rather than merely attempted.
     #[must_use]
@@ -145,8 +145,8 @@ impl FakeService {
     /// **The way a test asks whether a process is really gone.** A pid answers a question about a
     /// number — and on Unix goes on answering yes for a process that has exited and not been reaped
     /// — while a lock is released by the kernel when the process ends and by nothing else. So
-    /// `Lock::acquire` succeeding is proof, and it is the assertion roadmap task T13 rests on, where
-    /// [`try_stop`](crate::try_stop) would have proved nothing.
+    /// `Lock::acquire` succeeding is proof, and it is the assertion the process-group tests rest
+    /// on, where [`try_stop`](crate::try_stop) would have proved nothing.
     ///
     /// The holder's pid is recorded in the lock file by the lock itself, so a test can find the
     /// process without a second file.
@@ -216,9 +216,9 @@ impl FakeService {
 
     /// Take another `mb` megabytes every 50 ms and never let go of any of it.
     ///
-    /// **For walking a service into a memory ceiling** — roadmap task **T68**. The only way to prove
-    /// a cap by *outcome*: a service that dies is a discrete event, where a CPU cap is a rate and
-    /// asserting a rate means timing work on a shared runner.
+    /// **For walking a service into a memory ceiling.** The only way to prove a cap by *outcome*: a
+    /// service that dies is a discrete event, where a CPU cap is a rate and asserting a rate means
+    /// timing work on a shared runner.
     ///
     /// Pick a bite small enough that the ceiling is reached in steps rather than in one allocation:
     /// a single request for more than the ceiling can fail on its own, which proves the allocator

@@ -30,22 +30,22 @@ import styles from "./NextStepsPanel.module.css";
 interface Props {
   project: string;
   root: string;
-  /** Where `open` rows go: the step's own site when it names one, else the first — T204a. */
+  /** Where `open` rows go: the step's own site when it names one, else the first. */
   addresses: SiteAddresses;
   steps: NextSteps;
-  /** Present only right after an apply (D8): the credentials block is drawn from it. */
+  /** Present only right after an apply: the credentials block is drawn from it. */
   database?: AppliedDatabase | null;
   /** Whether this window draws the Terminal module. Hidden, the buttons say they turn it on: the
-   *  shell turns a module on for a tab that names it (`shell/workspace/useTabRequests.ts`, T110). */
+   *  shell turns a module on for a tab that names it (`shell/workspace/useTabRequests.ts`). */
   terminalVisible: boolean;
-  /** A step with `credentials`, outside `AfterApply`, links here (D8). */
+  /** A step with `credentials`, outside `AfterApply`, links here. */
   onShowDatabase?: () => void;
   /** Draws its own heading. Off inside a `Card`, whose title already says it. */
   titled?: boolean;
 }
 
 /**
- * What a blueprint says is left to do once it has been applied — roadmap task **T205**, D8.
+ * What a blueprint says is left to do once it has been applied.
  *
  * **Guidance, not supervision.** The daemon runs none of this: each command goes to a Terminal tab
  * (`api.openTerminal`, a one-shot run or a drafted target), where the person sees it run and stops
@@ -62,7 +62,7 @@ export default function NextStepsPanel({
   titled = true,
 }: Props) {
   const { t } = useTranslation();
-  // Where the project's runtimes are, for the shell a step runs in (D9). `null` while it is read.
+  // Where the project's runtimes are, for the shell a step runs in. `null` while it is read.
   const [toolchain, setToolchain] = useState<Toolchain | null>(null);
   const [password, setPassword] = useState<string | null>(null);
   /** The database service's port, read from `service.list`: a framework's settings need it, and
@@ -304,8 +304,8 @@ export default function NextStepsPanel({
 
       {!steps.trusted && <NoticeBanner message={t("mixengine.nextSteps.untrusted")} />}
 
-      {/* T204a, D5: with several sites, each site's steps sit under its name. Run the required
-          steps stays over the whole list, since a project's tabs are one project's work. */}
+      {/* With several sites, each site's steps sit under its name. Run the required steps stays
+          over the whole list, since a project's tabs are one project's work. */}
       {groups.length > 1 ? (
         groups.map((group) => (
           <div key={group.site ?? ""} className={styles.siteGroup}>

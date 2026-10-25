@@ -8,7 +8,7 @@ import styles from "./FoundServices.module.css";
 
 /**
  * The list behind `FoundServices`' *Review* — one row per data directory, with **Adopt** where the
- * daemon says an installed version opens it and the daemon's reason where it does not (T182g).
+ * daemon says an installed version opens it and the daemon's reason where it does not.
  */
 export default function FoundServicesDialog({
   rows,

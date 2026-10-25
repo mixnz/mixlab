@@ -1,4 +1,4 @@
-//! Which install a service's client commands run out of — roadmap task **T130**.
+//! Which install a service's client commands run out of.
 //!
 //! A runtime resolves *per directory*: [`crate::resolve::runtime`] walks up from the working
 //! directory to a project row and falls back to a default, which is what makes `php -v` differ
@@ -112,7 +112,7 @@ pub fn override_env(package: &str) -> String {
     format!("MIXENGINE_{folded}")
 }
 
-/// Every client command this home could front, as claims on a name — roadmap task **T130**.
+/// Every client command this home could front, as claims on a name.
 ///
 /// **One implementation, two callers, and that is the point.** The daemon asks with `only` as
 /// [`None`] to compose `bin/`; a shim asks with the name somebody just typed, to find out whose
@@ -433,8 +433,8 @@ mod tests {
 
     use crate::Paths;
 
-    /// T191: the program behind a published name is spelled as this system spells a path, so a
-    /// service that will not start names a file a person can paste.
+    /// The program behind a published name is spelled as this system spells a path, so a service
+    /// that will not start names a file a person can paste.
     #[test]
     fn a_program_is_spelled_the_way_this_system_spells_a_path() {
         let chosen = Chosen {

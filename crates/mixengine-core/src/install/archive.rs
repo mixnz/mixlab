@@ -108,7 +108,7 @@ pub(crate) fn extract(archive: &Path, format: Format, into: &Path) -> Result<()>
 /// entry it is the root that [`names_the_destination`] takes out of the unpackers' way before they
 /// ask this.
 ///
-/// `pub(crate)` rather than `pub(super)` since T25: [`crate::runtimes::program`] asks the same
+/// `pub(crate)` rather than `pub(super)` because [`crate::runtimes::program`] asks the same
 /// question of the same value months later. What an archive entry was allowed to be when it was
 /// unpacked and what a recorded path is allowed to be when it is run have to be one rule, or the
 /// second reader is a way around the first.

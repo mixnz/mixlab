@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A stripped release daemon's crash report turns back into names — roadmap task T91a.
+# A stripped release daemon's crash report turns back into names.
 #
 # `bench`'s last step on every system. It builds `mixengined` the way a release does — the release
 # profile and `mix_release_rustflags` — plus the `crash-probe` feature, strips it with

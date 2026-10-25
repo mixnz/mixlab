@@ -33,8 +33,8 @@ describe("the Remove MixLab dialog's state", () => {
   });
 
   it("a declined prompt reads as failed rows still waiting, and nothing removed", () => {
-    // What the daemon reports after a declined grant (T182b, D7): the privileged rows are failed,
-    // still waiting for permission, and nothing was removed or is going.
+    // What the daemon reports after a declined grant: the privileged rows are failed, still waiting
+    // for permission, and nothing was removed or is going.
     const report: Plan = {
       items: [
         row("resolver_wiring", "failed", { because: "this is still here, and the operation that removes it is still waiting for permission" }),

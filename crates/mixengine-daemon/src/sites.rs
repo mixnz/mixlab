@@ -1,16 +1,16 @@
 //! `site.*`: what is served out of a project's directory, and at what name.
 //!
-//! Roadmap task **T39a**. [`crate::projects`]' shape one table down, and nothing more: this task
-//! declares, and T43 serves. No config file is rendered here and no process is started — but a
-//! declared name has to resolve, so every write asks [`crate::elevation`] for the hosts file this
-//! home now needs (T41). Asking is all it does: the operation waits for somebody to allow it.
+//! [`crate::projects`]' shape one table down. A write renders the front end's configuration and
+//! tells the running server, and starts no process — and a declared name has to resolve, so every
+//! write also asks [`crate::elevation`] for the hosts file this home now needs. Asking is all it
+//! does: the operation waits for somebody to allow it.
 //!
 //! # A create is also the import
 //!
-//! [`ProjectCreate`](mixengine_proto::ProjectCreate)'s rule, one table down (spec D7): every field
-//! but the project falls through — the argument, then `[site]` in the project's manifest, then a
-//! default. `site.create { project }` with nothing else typed is therefore how a colleague's
-//! checkout gets its site, and there is one code path rather than two for one outcome.
+//! [`ProjectCreate`](mixengine_proto::ProjectCreate)'s rule, one table down: every field but the
+//! project falls through — the argument, then `[site]` in the project's manifest, then a default.
+//! `site.create { project }` with nothing else typed is therefore how a colleague's checkout gets
+//! its site, and there is one code path rather than two for one outcome.
 //!
 //! # Two answers about a pool, because the row holds one of them
 //!
@@ -54,14 +54,14 @@ pub(crate) struct Sites {
     /// Where a site is written down.
     store: Store,
 
-    /// Where a change to the names this home answers for goes to wait for permission — T41.
+    /// Where a change to the names this home answers for goes to wait for permission.
     elevation: Arc<crate::elevation::Elevation>,
 
-    /// What turns the rows into the front end's configuration, and tells the running server —
-    /// roadmap task **T43**. Every write below ends here.
+    /// What turns the rows into the front end's configuration, and tells the running server. Every
+    /// write below ends here.
     services: Arc<crate::services::Registry>,
 
-    /// What signs this site's certificate — roadmap task **T50**.
+    /// What signs this site's certificate.
     ///
     /// **Held here rather than reached for through the API**, so a site gains its certificate
     /// before `site.create` answers: a site that needed a second command to get a padlock is a site
@@ -70,14 +70,14 @@ pub(crate) struct Sites {
     /// references would need the `Sites` holding it.
     certificates: crate::certs::Certificates,
 
-    /// What advertises a shared site's name on the local network — roadmap task **T75**.
+    /// What advertises a shared site's name on the local network.
     ///
     /// Held rather than reached for, exactly as `certificates` is: every path that changes a share
     /// has to reconcile the advertisement, and a mechanism the caller has to remember is one the
     /// caller eventually forgets.
     mdns: Arc<crate::mdns::Mdns>,
 
-    /// Where a change to what this home is sharing is announced — roadmap task **T76**.
+    /// Where a change to what this home is sharing is announced.
     ///
     /// Held for `mdns`' reason and beside it: every path that changes a share has to say so, and a
     /// mechanism the caller has to remember is one the caller eventually forgets. That matters more
@@ -86,25 +86,25 @@ pub(crate) struct Sites {
     /// told about.
     events: crate::api::Events,
 
-    /// One share at a time — the T76 design, D9.
+    /// One share at a time.
     ///
-    /// **T74 needed no lock and T76 does, and the difference is who calls.** Sharing arrived only
-    /// from a person until the watcher; now *read the rows, work out what this machine should have
-    /// open, write* runs on a timer beside an API request doing the same thing. Whole-state
-    /// reconciliation absorbs most of that race — the next plan supersedes the last — but not the
-    /// part where two passes read the same rows and each writes a plan for a home the other has
-    /// already changed.
+    /// **A lock, and the reason is who calls.** Sharing arrived only from a person until the
+    /// watcher that ends a share nobody ended; now *read the rows, work out what this machine
+    /// should have open, write* runs on a timer beside an API request doing the same thing.
+    /// Whole-state reconciliation absorbs most of that race — the next plan supersedes the last —
+    /// but not the part where two passes read the same rows and each writes a plan for a home the
+    /// other has already changed.
     ///
     /// A `tokio::sync::Mutex` and not a `std` one: the section it covers awaits at every step — a
     /// database write, a re-render, a certificate, an enqueue.
     sharing: tokio::sync::Mutex<()>,
 }
 
-/// Who a site belongs to, with what the daemon needs of them — roadmap task **T81b**.
+/// Who a site belongs to, with what the daemon needs of them.
 ///
 /// The core's [`SiteOwner`](sites::SiteOwner) is a rowid or an id; this is the same answer with the
 /// root joined on, the wire shape ready, and the question `core::resolve` is asked for the pool —
-/// a directory for a project, the constraint alone for an extension (the design's D5).
+/// a directory for a project, the constraint alone for an extension.
 #[derive(Debug, Clone)]
 pub(crate) enum Holder {
     /// A registered project.
@@ -157,7 +157,7 @@ impl Holder {
     }
 }
 
-/// The refusal every edit of an extension-owned site answers with — the T81b design's D6.
+/// The refusal every edit of an extension-owned site answers with.
 fn owned_by_an_extension(domain: &str, id: &ExtensionId) -> Error {
     Error::new(
         ErrorCode::PreconditionFailed,
@@ -166,8 +166,7 @@ fn owned_by_an_extension(domain: &str, id: &ExtensionId) -> Error {
     .with_hint(format!("`mix extension uninstall {id}` removes it"))
 }
 
-/// A manifest that names no single site to fall through to, as the refusal a person reads —
-/// roadmap task **T204**, spec D5.
+/// A manifest that names no single site to fall through to, as the refusal a person reads.
 fn unchosen(why: manifest::Unchosen) -> Error {
     match why {
         manifest::Unchosen::NotDeclared { name, declared } => Error::new(
@@ -224,7 +223,7 @@ impl Sites {
         })
     }
 
-    /// Every site in this home, as the rows hold them — roadmap task **T76**.
+    /// Every site in this home, as the rows hold them.
     ///
     /// Here rather than in [`revoke`] so that the watcher asks this type for
     /// its own rows instead of reaching past it into the store: one door onto a table, which is the
@@ -239,16 +238,17 @@ impl Sites {
             .map_err(|error| error.to_wire())
     }
 
-    /// Give this site the certificate its names need — roadmap task **T50**.
+    /// Give this site the certificate its names need.
     ///
-    /// **Before the walk that renders its configuration and never after**, which is the ordering
-    /// the T50 design's D1 argues for: `etc/` is disposable and rebuilt from the rows, a certificate
-    /// is state that cannot be, so issuance is a precondition of generation rather than a step in
-    /// it. T51 is what will make the difference visible.
+    /// **Before the walk that renders its configuration and never after**: `etc/` is disposable and
+    /// rebuilt from the rows, a certificate is state that cannot be, so issuance is a precondition
+    /// of generation rather than a step in it. The rendering shows the difference: a site with no
+    /// usable certificate renders no TLS.
     ///
     /// **Run after an update as well as a create**, because a site that just gained a domain has a
-    /// certificate that no longer covers its names — T50's second reuse question. That is what
-    /// `docs/features/tls.md` names as the most common "the padlock broke" report.
+    /// certificate that no longer covers its names — the second question the leaf's reuse rule
+    /// asks. That is what `docs/features/tls.md` names as the most common "the padlock broke"
+    /// report.
     ///
     /// A failure is logged and never returned, exactly as [`Self::wants_the_hosts_file`] is: the
     /// row is already written by the time this runs, a site that exists is worth more than a
@@ -264,9 +264,9 @@ impl Sites {
                             tracing::warn!(%domain, %because, "the site has no certificate yet");
                         }
 
-                        // **Silence and not a warning** — roadmap task **T52**. A site with HTTPS
-                        // off asked for no certificate, and saying it has none is a line whoever
-                        // reads this log has to work out is not about them. Before T52 split the
+                        // **Silence and not a warning.** A site with HTTPS off asked for no
+                        // certificate, and saying it has none is a line whoever reads this log has
+                        // to work out is not about them. Before `IssueOutcome::NotWanted` split the
                         // outcome, every plaintext site created wrote one.
                         mixengine_proto::IssueOutcome::NotWanted { .. }
                         | mixengine_proto::IssueOutcome::Issued {}
@@ -294,7 +294,7 @@ impl Sites {
         }
     }
 
-    /// Render what this home now declares, and tell the front end — roadmap task **T43**, D10.
+    /// Render what this home now declares, and tell the front end.
     ///
     /// **Unlike [`wants_the_hosts_file`](Self::wants_the_hosts_file), a failure here fails the
     /// call**, and the difference is what a failure *means*. A hosts entry that has not been granted
@@ -311,9 +311,9 @@ impl Sites {
     /// A home with no front end renders nothing and this succeeds: there is no set to add sites to,
     /// which is a different thing from a set that was refused.
     ///
-    /// **Reachable from `extension.*` as well** — roadmap task **T81c**. An extension carrying a
-    /// `[[recipe.front_end]]` changed what the front end reads without touching a `sites` row, and
-    /// what has to happen next is this and nothing else: no hosts file, no certificate.
+    /// **Reachable from `extension.*` as well.** An extension carrying a `[[recipe.front_end]]`
+    /// changed what the front end reads without touching a `sites` row, and what has to happen next
+    /// is this and nothing else: no hosts file, no certificate.
     ///
     /// # Errors
     ///
@@ -342,7 +342,7 @@ impl Sites {
         // A name that slugs to nothing names no entry, and the default refuses it in its own words.
         let default_domain = domains::default_for(&project.name).unwrap_or_default();
 
-        // **Which entry, before any field falls through to it** — roadmap task **T204**, spec D5.
+        // **Which entry, before any field falls through to it.**
         let chosen = manifest
             .choose(
                 create.from.as_deref(),
@@ -352,7 +352,7 @@ impl Sites {
             .map_err(unchosen)?;
         let declared = chosen.site;
 
-        // The fall-through, in the order spec D7 writes it: the argument, the manifest, the default.
+        // The fall-through, in its order: the argument, the manifest, the default.
         let domains = match &create.domains {
             Some(domains) => domains.clone(),
             None => match declared.and_then(|site| site.domain.clone()) {
@@ -380,7 +380,7 @@ impl Sites {
 
         // No manifest fall-through, unlike `https` above: a blueprint declares what a site *is*,
         // and a redirect is a fact about one home's traffic rather than about the site a blueprint
-        // describes — roadmap task **T98**. Off whenever the caller does not ask for it.
+        // describes. Off whenever the caller does not ask for it.
         let https_redirect = create.https_redirect.unwrap_or(false);
 
         let kind = create
@@ -398,9 +398,9 @@ impl Sites {
             },
         };
 
-        // **Falls through to `[[site.routes]]`, on `kind`'s rule** — roadmap task **T135**. An
-        // import is what this exists for: `project.export` writes the routes into the file, and a
-        // `site.create` that ignored them would make the round trip lose half of what a site is.
+        // **Falls through to `[[site.routes]]`, on `kind`'s rule.** An import is what this exists
+        // for: `project.export` writes the routes into the file, and a `site.create` that ignored
+        // them would make the round trip lose half of what a site is.
         let routes = create.routes.clone().or_else(|| {
             declared
                 .map(|site| site.routes.clone())
@@ -489,7 +489,7 @@ impl Sites {
     /// # Errors
     ///
     /// Everything [`Sites::create`] refuses, plus `not_found` for a site matching nothing.
-    /// Set this site's domains to exactly this list — roadmap task **T46**.
+    /// Set this site's domains to exactly this list.
     ///
     /// [`Self::update`] with one field filled in, named so that the two `domain.*` verbs read as
     /// what they are rather than as an update that happens to leave six fields empty — and so that
@@ -574,11 +574,11 @@ impl Sites {
 
     /// `site.start` — serve this site.
     ///
-    /// **A flag and a walk** — D9. The state is set, the front end's configuration is re-rendered
-    /// and the running server is told; nothing starts a process. A home whose Caddy is not running
-    /// gets a rendered site file and no traffic, which is T39a's line held rather than a limitation:
-    /// a `site.start` that started the front end would owe an answer to what it means when the pool
-    /// starts and the front end does not.
+    /// **A flag and a walk.** The state is set, the front end's configuration is re-rendered and
+    /// the running server is told; nothing starts a process. A home whose Caddy is not running gets
+    /// a rendered site file and no traffic, which is the site model's line held rather than a
+    /// limitation: a `site.start` that started the front end would owe an answer to what it means
+    /// when the pool starts and the front end does not.
     ///
     /// **Idempotent, and not because anything here checks.** A second call on an enabled site
     /// re-renders the same bytes; `document::install` compares before it stages, finds nothing
@@ -630,12 +630,11 @@ impl Sites {
 
     /// `site.delete` — take the row, and leave the files.
     ///
-    /// **A shared site takes its share with it** — roadmap task **T199a**. The firewall rule and the
-    /// mDNS name a share put outside the front end are reconciled from the rows, so once the row is
-    /// gone the next reconciliation withdraws them; this is that reconciliation, in `unshare`'s
-    /// order. Without it they stayed until the daemon next started, opening a port for a site
-    /// nothing declared. Under the sharing lock for `unshare`'s reason: the watcher reads the same
-    /// rows on a timer.
+    /// **A shared site takes its share with it.** The firewall rule and the mDNS name a share put
+    /// outside the front end are reconciled from the rows, so once the row is gone the next
+    /// reconciliation withdraws them; this is that reconciliation, in `unshare`'s order. Without it
+    /// they stayed until the daemon next started, opening a port for a site nothing declared. Under
+    /// the sharing lock for `unshare`'s reason: the watcher reads the same rows on a timer.
     ///
     /// # Errors
     ///
@@ -702,14 +701,14 @@ fn summary(
         domain: site.domains.first().cloned().unwrap_or_default(),
         owner: holder.wire(),
         kind: site.kind.clone(),
-        // Stored with `/`, sent in this system's spelling — roadmap task **T191**.
+        // Stored with `/`, sent in this system's spelling.
         doc_root: mixengine_core::paths::native_relative(&site.doc_root),
         https: site.https_enabled,
         https_redirect: site.https_redirect,
         state: site.state,
-        // **In match order and not in the order somebody typed** — roadmap task **T135**. The
-        // rendering resolves an overlap by specificity, so a listing showing declaration order
-        // would be showing something the front end does not do.
+        // **In match order and not in the order somebody typed.** The rendering resolves an overlap
+        // by specificity, so a listing showing declaration order would be showing something the
+        // front end does not do.
         routes: {
             let mut routes = site.routes.clone();
             routes.sort_by(sites::by_specificity);
@@ -718,9 +717,9 @@ fn summary(
         sharing: site.sharing.as_ref().map(|sharing| {
             let url = sites::shared_url(sharing.address, web_port);
 
-            // The same three answers `site.share` gives, from the same two sources — roadmap task
-            // T75. A listing that reported a name differently from the command that created it
-            // would be a second definition of what this site is called.
+            // The same three answers `site.share` gives, from the same two sources. A listing that
+            // reported a name differently from the command that created it would be a second
+            // definition of what this site is called.
             let name = site
                 .domains
                 .first()

@@ -1,4 +1,4 @@
-//! A daemon started on a database an older build wrote — roadmap task **T89**.
+//! A daemon started on a database an older build wrote.
 //!
 //! `crates/mixengine-core/tests/upgrade.rs` proves the schema migrates and the rows survive, inside
 //! one process calling `Store::open`. What it cannot answer is whether the **product** starts on

@@ -20,22 +20,22 @@ export type DaemonShutdown = {
 /**
  * Stopping every supervised service, in reverse dependency order.
  *
- * [`ServiceWalk::failed`] here is what T18 made possible and nothing else: a process that
- * outlived a previous daemon, was adopted by this one, and would not die. **The daemon stops
- * anyway** — refusing to shut down because something will not is a machine with no way out of
- * the situation — and the next daemon meets that survivor as the crash recovery it already
- * performs on every boot. Whoever asked is told, which is the point.
+ * [`ServiceWalk::failed`] here is what crash recovery made possible and nothing else: a
+ * process that outlived a previous daemon, was adopted by this one, and would not die. **The
+ * daemon stops anyway** — refusing to shut down because something will not is a machine with
+ * no way out of the situation — and the next daemon meets that survivor as the crash recovery
+ * it already performs on every boot. Whoever asked is told, which is the point.
  */
 services: ServiceWalk, 
 /**
  * Why there was no order to stop them in, on the shutdown where there was none.
  *
- * **The reporting half of T9a's "it is reported, the ordered walk is skipped".** A daemon that
+ * **The reporting half of "it is reported, the ordered walk is skipped".** A daemon that
  * cannot say what it declares — an `extension.toml` somebody is in the middle of editing —
  * still stops, because refusing over a half-typed file would leave them a daemon they can only
  * kill. What stops the services then is the root token, all at once, the way a signal would
- * have: each still stops the way its own spec asks, and what is lost is the *order* — a site is
- * no longer guaranteed to go before the database it is serving requests against.
+ * have: each still stops the way its own spec asks, and what is lost is the *order* — a site
+ * is no longer guaranteed to go before the database it is serving requests against.
  *
  * Without this field that walk goes out empty and [`complete`](ServiceWalk::complete), which on
  * the wire is **indistinguishable from a home that declares no services at all** — so a client
@@ -44,10 +44,10 @@ services: ServiceWalk,
  * never sent, which is the business-logic-in-a-client bug `CLAUDE.md` forbids, arriving from
  * the side a client cannot fix.
  *
- * The wire [`Error`] and not a vocabulary of its own, because this is the same failure the same
- * declarations hand `service.list` — the same code, the same message, the same hint about where
- * services are written down — and a second spelling of it would be a second thing to keep in
- * step with whatever T30's generator can fail with.
+ * The wire [`Error`] and not a vocabulary of its own, because this is the same failure the
+ * same declarations hand `service.list` — the same code, the same message, the same hint about
+ * where services are written down — and a second spelling of it would be a second thing to
+ * keep in step with whatever the config generator can fail with.
  *
  * [`None`] is every ordinary shutdown, and it is absent from the wire rather than `null`: a
  * daemon built before this field answers byte for byte what one that walked the plan in order

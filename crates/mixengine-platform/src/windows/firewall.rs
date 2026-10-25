@@ -1,4 +1,4 @@
-//! Windows' half of T74: one inbound rule, named, on the private profile.
+//! Windows' half of LAN sharing: one inbound rule, named, on the private profile.
 
 use std::ffi::OsStr;
 

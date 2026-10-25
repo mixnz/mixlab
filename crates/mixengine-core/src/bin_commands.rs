@@ -1,4 +1,4 @@
-//! The `bin_commands` table: tools somebody installed into a runtime — roadmap task **T131**.
+//! The `bin_commands` table: tools somebody installed into a runtime.
 //!
 //! This module owns every read and write of that table, on [`crate::packages`]' rule. What it holds
 //! is a **projection**: [`record`] replaces it whole, the way `etc/` is rebuilt from the database
@@ -59,7 +59,8 @@ pub async fn all(store: &Store) -> Result<BTreeMap<String, RuntimeKind>> {
 ///
 /// **The shim's own query**, and the reason this is not `all(...).get(name)`: a `yarn` in somebody's
 /// terminal pays for one row rather than for every tool every runtime on the machine holds, and
-/// roadmap task T29's budget is fifteen milliseconds for the whole of a command's resolution.
+/// the budget CI's `bench` job holds the shim to is fifteen milliseconds for the whole of a
+/// command's resolution.
 ///
 /// # Errors
 ///

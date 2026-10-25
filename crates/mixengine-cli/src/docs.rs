@@ -3,8 +3,8 @@
 //! **No daemon, no home, no socket.** The command is answered before a client exists, because the
 //! page somebody most needs is the one that explains why nothing starts. What it prints is the
 //! page's Markdown, byte for byte: the same document the site serves at `/<locale>/<slug>.md`, so a
-//! person and a program reading either receive the same thing — roadmap task T90, and ADR 0021 for
-//! why this is not an API method.
+//! person and a program reading either receive the same thing. ADR 0021 says why this is not an API
+//! method.
 //!
 //! No colour and no renderer, which is [`crate::render`]'s rule and, here, also the design: a
 //! rendering would be a second telling of a document this crate does not own.
@@ -95,7 +95,7 @@ pub(crate) fn topics(locale: Locale) -> String {
 /// The whole command tree as one Markdown document, front matter included.
 ///
 /// **Generated rather than written.** `mix` has twenty top-level commands and eighteen groups under
-/// them, and a hand-written reference for that is wrong within a week — roadmap task T90, D10.
+/// them, and a hand-written reference for that is wrong within a week.
 ///
 /// It reads the `clap` tree and **nothing else**. In particular it never reads the corpus, which is
 /// what keeps the generation non-circular: this output becomes `docs/guide/en/cli.md`, which is

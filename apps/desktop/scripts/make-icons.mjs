@@ -21,7 +21,7 @@
  *
  * A third file, public/tray-template.svg, is the macOS menu-bar icon: the same platters as one black
  * silhouette with no tile, rendered to src-tauri/icons/tray/44x44.png. It is a different drawing
- * rather than a copy, so the drift check above does not cover it (T168).
+ * rather than a copy, so the drift check above does not cover it.
  *
  * Usage:
  *   npm run icons

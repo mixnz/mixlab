@@ -6,7 +6,7 @@ import type { OnDiskRow } from "../../onDisk";
 import styles from "./OnDiskCard.module.css";
 
 /**
- * Versions on disk that this home has not recorded, with **Adopt** — roadmap task T182i.
+ * Versions on disk that this home has not recorded, with **Adopt**.
  *
  * Drawn only while the daemon lists some, at the top of Languages and of each Packages tab. An
  * *Install* whose directory was already there ends as a failed job, the tab reloads, and the version

@@ -124,8 +124,8 @@ async fn an_unattended_uninstall_without_yes_removes_nothing() {
     assert_ne!(refused.status.code(), Some(0), "{}", stdout(&refused));
 }
 
-/// T182, D9. On a home with nothing relocated, the listing the Windows uninstaller reads is empty
-/// and the command succeeds.
+/// On a home with nothing relocated, the listing the Windows uninstaller reads is empty and the
+/// command succeeds.
 #[tokio::test(flavor = "multi_thread")]
 async fn listing_relocated_directories_on_a_plain_home_prints_nothing() {
     let home = Home::new();
@@ -137,16 +137,16 @@ async fn listing_relocated_directories_on_a_plain_home_prints_nothing() {
     assert_eq!(stdout(&printed).trim(), "", "{}", stdout(&printed));
 }
 
-/// T182, D4. A program running from inside the home makes the dry run exit `3` and name it — the
-/// code the Windows uninstaller reads as *close this and try again*.
+/// A program running from inside the home makes the dry run exit `3` and name it — the code the
+/// Windows uninstaller reads as *close this and try again*.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_program_running_from_the_home_blocks_with_exit_code_three() {
     let home = Home::new();
     let _daemon = home.start_daemon();
 
-    // **Ten minutes, not thirty seconds** (T202b, D6): under a full parallel run the daemon's start
-    // and the plan once took longer than the occupant lived, and the plan found nothing in the way.
-    // The occupant is killed below whatever happens.
+    // **Ten minutes, not thirty seconds**: under a full parallel run the daemon's start and the
+    // plan once took longer than the occupant lived, and the plan found nothing in the way. The
+    // occupant is killed below whatever happens.
     let (source, args): (std::path::PathBuf, &[&str]) = if cfg!(windows) {
         (
             std::path::PathBuf::from(std::env::var("SystemRoot").expect("SystemRoot"))
@@ -179,9 +179,9 @@ async fn a_program_running_from_the_home_blocks_with_exit_code_three() {
     );
 }
 
-/// T182e. What the Windows uninstaller reads is ASCII when it asks: the firewall row's label is
-/// spelled with an em dash, which its log showed as `â€”`, and a plain dash here says the whole
-/// plan went through the same door.
+/// What the Windows uninstaller reads is ASCII when it asks: the firewall row's label is spelled
+/// with an em dash, which its log showed as `â€”`, and a plain dash here says the whole plan went
+/// through the same door.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_plan_read_as_plain_text_is_ascii() {
     let home = Home::new();
@@ -207,8 +207,8 @@ async fn a_plan_read_as_plain_text_is_ascii() {
     assert!(stdout(&plain).is_ascii(), "{}", stdout(&plain));
 }
 
-/// T182e, D6. On a home nothing is in the way of, the listing the Windows uninstaller's "close
-/// these first" page reads is empty, and the command succeeds.
+/// On a home nothing is in the way of, the listing the Windows uninstaller's "close these first"
+/// page reads is empty, and the command succeeds.
 #[tokio::test(flavor = "multi_thread")]
 async fn listing_what_is_in_the_way_of_a_plain_home_prints_nothing() {
     let home = Home::new();
@@ -220,8 +220,8 @@ async fn listing_what_is_in_the_way_of_a_plain_home_prints_nothing() {
     assert_eq!(stdout(&printed).trim(), "", "{}", stdout(&printed));
 }
 
-/// T182e, D6. A program standing in the home is one line of that listing, naming its pid and the
-/// folder it holds, and the listing still succeeds — it is a question, not a refusal.
+/// A program standing in the home is one line of that listing, naming its pid and the folder it
+/// holds, and the listing still succeeds — it is a question, not a refusal.
 #[cfg(windows)]
 #[tokio::test(flavor = "multi_thread")]
 async fn listing_what_is_in_the_way_names_a_program_standing_in_the_home() {
@@ -253,7 +253,7 @@ async fn listing_what_is_in_the_way_names_a_program_standing_in_the_home() {
     assert!(line.contains("t182e-listed"), "{line}");
 }
 
-/// T182e, D6. `--blocked` without `--dry-run` is refused by the parser: it changes nothing.
+/// `--blocked` without `--dry-run` is refused by the parser: it changes nothing.
 #[test]
 fn listing_what_is_in_the_way_requires_a_dry_run() {
     let home = Home::new();
@@ -263,8 +263,8 @@ fn listing_what_is_in_the_way_requires_a_dry_run() {
     assert_eq!(printed.status.code(), Some(2), "{}", stderr(&printed));
 }
 
-/// T182e, D4. A program *standing* in the home — a working directory, which cannot be moved — makes
-/// the dry run exit `3` and name it.
+/// A program *standing* in the home — a working directory, which cannot be moved — makes the dry
+/// run exit `3` and name it.
 #[cfg(windows)]
 #[tokio::test(flavor = "multi_thread")]
 async fn a_program_standing_in_the_home_blocks_with_exit_code_three() {
@@ -293,8 +293,8 @@ async fn a_program_standing_in_the_home_blocks_with_exit_code_three() {
     assert!(said.contains(&format!("(pid {})", occupant.id())), "{said}");
 }
 
-/// T182e, D4. A directory only *watched* — what an editor does — can be moved, so it is not in the
-/// way and the dry run does not block.
+/// A directory only *watched* — what an editor does — can be moved, so it is not in the way and the
+/// dry run does not block.
 #[cfg(windows)]
 #[tokio::test(flavor = "multi_thread")]
 async fn a_watched_folder_in_the_home_does_not_block() {
@@ -319,8 +319,8 @@ async fn a_watched_folder_in_the_home_does_not_block() {
     assert!(!said.contains("BLOCKED"), "{said}");
 }
 
-/// T182, D9. `--relocated` without `--dry-run` is refused by the parser: it changes nothing, and
-/// must never be mistaken for the act.
+/// `--relocated` without `--dry-run` is refused by the parser: it changes nothing, and must never
+/// be mistaken for the act.
 #[test]
 fn listing_requires_a_dry_run() {
     let home = Home::new();

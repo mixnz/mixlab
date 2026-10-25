@@ -1,11 +1,11 @@
-//! Extensions — roadmap task **T80**.
+//! Extensions.
 //!
 //! **Not [`crate::runtimes::extensions`]**, which is about a PHP extension being switched on for
 //! one installed runtime. These are MixEngine's own: Mailpit, phpMyAdmin, Adminer.
 //!
-//! T80 reads a manifest and renders it into the thing that would run. Nothing here installs, stores
-//! or starts anything — that is T81, which is deliberately handed a format already proved to make
-//! sense rather than one it discovers is wrong five actions into an install.
+//! This module reads a manifest and renders it into the thing that would run. Reading installs,
+//! stores or starts nothing — the installer does, and it is deliberately handed a format already
+//! proved to make sense rather than one it discovers is wrong five actions into an install.
 
 mod error;
 
@@ -152,8 +152,8 @@ fn additions(read: &ExtensionManifest, context: &Context) -> Result<Vec<RecipeAd
 
 /// Whether this machine has an artifact to install.
 ///
-/// `pub` since T81: a listing of what the registry publishes answers the same question about an
-/// entry nobody has inspected, and two functions deciding it would be two answers.
+/// `pub` because a listing of what the registry publishes answers the same question about an entry
+/// nobody has inspected, and two functions deciding it would be two answers.
 #[must_use]
 pub fn availability(read: &ExtensionManifest) -> ArtifactAvailability {
     if read.artifacts.is_empty() {
@@ -252,9 +252,9 @@ mod tests {
         let directory = paths.extensions().join("mailpit");
         std::fs::create_dir_all(&directory).expect("a directory");
         // **Every target renamed, counted rather than listed.** The fixture is the manifest that
-        // shipped (T82), so its target list is upstream's to change — a test naming three of them
-        // failed the day Mailpit published six, which is a fixture doing its job and an assertion
-        // that was measuring the wrong thing.
+        // shipped, so its target list is upstream's to change — a test naming three of them failed
+        // the day Mailpit published six, which is a fixture doing its job and an assertion that was
+        // measuring the wrong thing.
         let text = mixengine_testkit::extension::MAILPIT
             .replace("[artifact.windows-", "[artifact.plan9w-")
             .replace("[artifact.macos-", "[artifact.plan9m-")

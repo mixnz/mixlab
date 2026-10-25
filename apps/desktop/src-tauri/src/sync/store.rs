@@ -50,13 +50,13 @@ const SCHEMA: &[&str] = &[
        PRIMARY KEY (server, collection, id)
      )",
     // A resync under way: `410` started it, and the page with `more: false` ends it. Kept on disk,
-    // so a resync interrupted by quitting resumes as one (T178b, M1).
+    // so a resync interrupted by quitting resumes as one.
     "CREATE TABLE IF NOT EXISTS resync (
        server     TEXT NOT NULL,
        collection TEXT NOT NULL,
        PRIMARY KEY (server, collection)
      )",
-    // Every record a resync has met so far; what it never meets was reaped (M2).
+    // Every record a resync has met so far; what it never meets was reaped.
     "CREATE TABLE IF NOT EXISTS resync_met (
        server     TEXT NOT NULL,
        collection TEXT NOT NULL,
@@ -64,7 +64,7 @@ const SCHEMA: &[&str] = &[
        PRIMARY KEY (server, collection, id)
      )",
     // Records this machine's module skipped: the server holds them, this machine does not. Each
-    // is asked for again once a new version of the app, the one that may read it, syncs (T178d).
+    // is asked for again once a new version of the app, the one that may read it, syncs.
     "CREATE TABLE IF NOT EXISTS owed (
        server     TEXT NOT NULL,
        collection TEXT NOT NULL,
@@ -221,8 +221,7 @@ impl Store {
 
     /// What `410 cursor-expired` asks for — D3's *resync from empty rather than incomplete news
     /// quietly*: the cursor back to the start and a resync under way. **What was agreed stays**, so
-    /// a surviving tombstone still removes what it names and an agreed record is not rewritten
-    /// (T178b, M1).
+    /// a surviving tombstone still removes what it names and an agreed record is not rewritten.
     pub async fn begin_resync(&self, collection: &str) -> Result<(), AppError> {
         for statement in [
             "DELETE FROM cursor WHERE server = ?1 AND collection = ?2",
@@ -277,9 +276,9 @@ impl Store {
 
     /// The page that ends a resync has been written: forget each record it never met — its
     /// tombstone was reaped — with any deletion of it this machine was landing, and end the
-    /// resync. An edit's stamp stays: with no version remembered, it is pushed as a creation (M2).
+    /// resync. An edit's stamp stays: with no version remembered, it is pushed as a creation.
     /// A record owed and never met is owed no more. `unmet` does not name it, because it was never
-    /// agreed, so `resync_met` decides (T178d).
+    /// agreed, so `resync_met` decides.
     pub async fn end_resync(&self, collection: &str, unmet: &[String]) -> Result<(), AppError> {
         for id in unmet {
             sqlx::query("DELETE FROM seen WHERE server = ?1 AND collection = ?2 AND id = ?3")
@@ -370,7 +369,7 @@ impl Store {
     }
 
     /// Records the module skipped, owed to this machine. `version` is the app that skipped them;
-    /// skipped again, a record takes the later one (T178d).
+    /// skipped again, a record takes the later one.
     pub async fn owe(
         &self,
         collection: &str,
@@ -490,7 +489,7 @@ impl Store {
     }
 
     /// Whether any change to `collection` is still stamped: made here and not yet landed. The
-    /// server may hold it already, from a push this machine never heard the end of (T189).
+    /// server may hold it already, from a push this machine never heard the end of.
     pub async fn unlanded(&self, collection: &str) -> Result<bool, AppError> {
         let row = sqlx::query("SELECT 1 FROM stamp WHERE server = ?1 AND collection = ?2 LIMIT 1")
             .bind(&self.server)
@@ -585,7 +584,7 @@ mod tests {
     }
 
     /// `410` moves the cursor back and starts a resync, and **keeps what was agreed**: a surviving
-    /// tombstone still has something to remove, and an agreed record is not rewritten (M1).
+    /// tombstone still has something to remove, and an agreed record is not rewritten.
     #[tokio::test]
     async fn a_resync_moves_the_cursor_and_keeps_what_was_agreed() {
         let store = Store::in_memory("https://a").await.unwrap();
@@ -602,7 +601,7 @@ mod tests {
     }
 
     /// The end of a resync forgets what it did not meet — and a deletion this machine was
-    /// landing for one of them — but keeps an edit's stamp, which is pushed as a creation (M2).
+    /// landing for one of them — but keeps an edit's stamp, which is pushed as a creation.
     #[tokio::test]
     async fn the_end_of_a_resync_forgets_what_it_did_not_meet() {
         let store = Store::in_memory("https://a").await.unwrap();
@@ -739,7 +738,7 @@ mod tests {
     }
 
     /// A skipped record is owed until it stops being owed: agreed once the module writes it, a
-    /// tombstone remembered for it, or a resync that ends without meeting it (T178d).
+    /// tombstone remembered for it, or a resync that ends without meeting it.
     #[tokio::test]
     async fn a_skipped_record_is_owed_until_it_is_agreed_deleted_or_reaped() {
         let store = Store::in_memory("https://a").await.unwrap();

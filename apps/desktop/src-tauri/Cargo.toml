@@ -25,10 +25,10 @@ tauri-build = { version = "2", features = [] }
 # here so the import (`import.rs`) can say what it skipped and why: it runs before any window is
 # drawn, and there is nowhere else for it to say it.
 log = "0.4"
-# `tray-icon`: MixEngine in the tray or the menu bar — T168, `src/tray.rs`. `macos-private-api`:
-# the only way a macOS window is transparent, which is what gives the tray panel its rounded card and
-# lets it slide in from the edge without dragging a rectangle behind it. The cost is the Mac App
-# Store, which MixLab is not in.
+# `tray-icon`: MixEngine in the tray or the menu bar — `src/tray.rs`. `macos-private-api`: the only
+# way a macOS window is transparent, which is what gives the tray panel its rounded card and lets it
+# slide in from the edge without dragging a rectangle behind it. The cost is the Mac App Store,
+# which MixLab is not in.
 tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
@@ -86,23 +86,23 @@ http-body-util = "0.1"
 # named is `default`, as `mixengine-cli` names it, because that crate's `hosts.rs` reaches into
 # `elevated` unconditionally and a narrower set does not compile — a gating debt on that side,
 # not a capability this one uses. This replaced a hand-kept copy of the pipe-name fingerprint, a
-# named-pipe dial and an owner check read through `windows-sys` (phase 11, T102).
+# named-pipe dial and an owner check read through `windows-sys`.
 mixengine-platform = { path = "../../../crates/mixengine-platform", default-features = false, features = ["default"] }
 # The daemon's wire types, for the one seam that decodes a job and a report rather than forwarding
-# them: the removal of T182a (`modules::mixengine::for_uninstall`). ADR 0027 allows it, and
+# them: the uninstall's removal (`modules::mixengine::for_uninstall`). ADR 0027 allows it, and
 # `tests/layering.rs` holds the line at proto and platform.
 mixengine-proto = { path = "../../../crates/mixengine-proto" }
 futures-util = "0.3.33"
 async-trait = "0.1.91"
 base64 = "0.23.1"
 sha2 = "0.10"
-# Verifying the update feed before a byte of it is parsed — T187, spec D2. The same crate and the
+# Verifying the update feed before a byte of it is parsed. The same crate and the
 # same version MixEngine's reader uses; zero dependencies of its own.
 minisign-verify = "0.2.5"
-# Reading the Windows payload, which is a zip — T187, spec D4. The version and features the root
+# Reading the Windows payload, which is a zip. The version and features the root
 # workspace pins, so both trees read archives the same way.
 zip = { version = "9.0.4", default-features = false, features = ["deflate-flate2"] }
-# T177a — the sync envelope. Pure Rust, no C and no second TLS stack: the promise that the server
+# The sync envelope. Pure Rust, no C and no second TLS stack: the promise that the server
 # cannot read a record is a property of this handful of crates and of `src/sync/crypto.rs`.
 argon2 = "0.5"
 chacha20poly1305 = "0.10"
@@ -117,7 +117,7 @@ tauri-plugin-log = "2"
 # Chromium's `clipboard-read` permission box — a system strip the app cannot style, shown exactly
 # once and then remembering the choice per origin. Here there is no webview that has to ask anyone.
 #
-# **arboard directly rather than through `tauri-plugin-clipboard-manager` (T175a).** That plugin is
+# **arboard directly rather than through `tauri-plugin-clipboard-manager`.** That plugin is
 # a thin layer over this very crate, and it asks for arboard's default `image-data` feature — i.e.
 # reading *images* from the clipboard, which nothing here does — pulling in `image` and `moxcms`,
 # 99 seconds of compilation on every build. Cargo features only add, never subtract, so the only
@@ -183,7 +183,7 @@ objc2-app-kit = { version = "0.3", default-features = false, features = ["std", 
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData"] }
 
 # Whether a StatusNotifierItem host is on the session bus, before a tray icon nobody would draw is
-# made (`src/tray.rs`, T168d). The same major version and features `tauri-plugin-opener` already
+# made (`src/tray.rs`). The same major version and features `tauri-plugin-opener` already
 # pulls in on Linux, so this compiles nothing new.
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = "5"
@@ -195,21 +195,21 @@ tokio = { version = "1.53.1", features = ["full", "test-util"] }
 # A temporary home for the transport test to bind a real endpoint under.
 tempfile = "3"
 # `tests/layering.rs` reads this crate's own manifest. Nothing shipped parses TOML any more: the
-# `[daemon] ipc_path` reading that used to was a knob the daemon never honoured (T102), since
+# `[daemon] ipc_path` reading that used to was a knob the daemon never honoured, since
 # retired from `config.toml` altogether.
 toml = "1"
-# `Signer`, so the feed tests sign a document with a key made for the test (T187). Allowed as a
+# `Signer`, so the feed tests sign a document with a key made for the test. Allowed as a
 # dev-dependency by tests/layering.rs, and never linked into the shipped window.
 mixengine-testkit = { path = "../../../crates/mixengine-testkit" }
 
 # Window state and the URL scheme are desktop-only, and `lib.rs` guards them with `cfg`.
 #
-# **`tauri-plugin-updater` and `tauri-plugin-process` were here and are not** — T106. MixEngine's
-# updater is the only updater: one signed feed, one key, one payload, and `update.apply` on the
-# daemon. Restarting this window is `crate::relaunch`, which the process plugin could not have done
-# — after a swap the running executable's own path names the file that was renamed out of the way,
-# not the one that replaced it. Going with the updater is the second minisign key this application
-# used to compile in, belonging to a repository that is about to be archived.
+# **`tauri-plugin-updater` and `tauri-plugin-process` were here and are not.** MixLab's updater is
+# `crate::updater`, its own: one signed feed, one key, one payload. Restarting this window is
+# `crate::relaunch`, which the process plugin could not have done — after a swap the running
+# executable's own path names the file that was renamed out of the way, not the one that replaced
+# it. Going with the updater is the second minisign key this application used to compile in,
+# belonging to a repository that is about to be archived.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 # Remembers only whether the window was left maximized; everything else falls back to the
 # default size in `tauri.conf.json`.
@@ -217,7 +217,7 @@ tauri-plugin-window-state = "2"
 # Registers the `mixlab://` scheme with the OS at install time (NSIS, Info.plist, the .desktop
 # file) and hands the app the URLs the OS opens it with. The URL's meaning is `launch.rs`'s.
 tauri-plugin-deep-link = "2"
-# MixLab at login, when a person turns it on in Settings — ADR 0042, T168f. A LaunchAgent on macOS,
+# MixLab at login, when a person turns it on in Settings — ADR 0042. A LaunchAgent on macOS,
 # `HKCU\...\Run` on Windows, an XDG autostart entry on Linux, each starting MixLab with `--hidden`.
 tauri-plugin-autostart = "2"
 

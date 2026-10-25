@@ -1,5 +1,4 @@
-//! The package index as callers ask for it: these kinds, from wherever is cheapest — roadmap task
-//! **T196**.
+//! The package index as callers ask for it: these kinds, from wherever is cheapest.
 //!
 //! # What is published
 //!
@@ -9,8 +8,7 @@
 //!
 //! # The contract
 //!
-//! `mixengine-packages` states it ("What a client must do") and the T196 design's D4–D10 are how it
-//! is kept here:
+//! `mixengine-packages` states it ("What a client must do"), and this is how it is kept here:
 //!
 //! 1. Ask for the signature. If it is byte for byte the one already held, nothing was published.
 //! 2. Otherwise fetch the root, verify it *before* parsing it, and refuse to go backwards.
@@ -129,10 +127,11 @@ struct State {
     kinds: BTreeMap<String, HeldKind>,
 
     /// Kinds whose file was refused, with the signature of the root it was refused under and the
-    /// reason — so a file that is wrong is not asked for again on every call (the design's D5).
+    /// reason — so a file that is wrong is not asked for again on every call.
     refused: BTreeMap<String, (String, String)>,
 
-    /// A cached schema 1 `index.json`, for a home from before T196 and for a source with no set.
+    /// A cached schema 1 `index.json`, for a home from before schema 2 and for a source with no
+    /// set.
     one: Option<(Stamp, Index)>,
 
     /// Whether falling back to schema 1 has been said. Once per daemon run.
@@ -198,7 +197,7 @@ enum Refreshed {
     /// A newer root, committed together with every cached kind it changed.
     New(HeldRoot),
 
-    /// The source publishes no schema 2 set (the design's D9).
+    /// The source publishes no schema 2 set.
     NoSchema2,
 }
 
@@ -217,7 +216,7 @@ pub struct PackageIndex {
     /// How long each file may take — [`FETCH_TIMEOUT`], per file rather than for the whole refresh.
     per_file: Duration,
 
-    /// `index.json`, as every MixEngine before T196 read it.
+    /// `index.json`, as every MixEngine before schema 2 read it.
     schema1: Client<schema1::Document>,
     state: tokio::sync::Mutex<State>,
 }
@@ -372,8 +371,8 @@ impl PackageIndex {
             }
         }
 
-        // **One floor across both encodings** (the design's D10): a home cannot be walked
-        // backwards by being upgraded, nor by a source that stops serving one of them.
+        // **One floor across both encodings**: a home cannot be walked backwards by being upgraded,
+        // nor by a source that stops serving one of them.
         let floor = [
             held.as_ref().map(|held| held.root.generated_at),
             one.as_ref().map(|(_, index)| index.generated_at()),
@@ -469,7 +468,7 @@ impl PackageIndex {
         }
     }
 
-    /// A source with no schema 2 set: read `index.json`, exactly as before T196.
+    /// A source with no schema 2 set: read `index.json`, exactly as before schema 2.
     async fn through_schema1(
         &self,
         state: &mut State,

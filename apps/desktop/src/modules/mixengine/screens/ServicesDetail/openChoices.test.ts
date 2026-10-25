@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DesktopClient } from "@mixengine/api";
 import { createsDatabases, openChoices, opensADatabase } from "./openChoices";
 
-/** The window itself — the only client `database.client` names (T107, T165). */
+/** The window itself — the only client `database.client` names. */
 const thisWindow: DesktopClient = { state: "installed", name: "MixLab", program: "/usr/bin/mixlab" };
 
 const noClient: DesktopClient = { state: "no_client" };
@@ -16,8 +16,8 @@ describe("openChoices", () => {
     expect(openChoices(thisWindow, false)).toEqual(["builtInAfterEnabling"]);
   });
 
-  /* `no_client` is a sentence and not a button, whatever the profile says — T110 leaves what the
-     affordance is drawn from alone. */
+  /* `no_client` is a sentence and not a button, whatever the profile says: which modules are
+     drawn never changes what the affordance is drawn from. */
   it("offers nothing at all when the daemon names no client to open with", () => {
     for (const visible of [true, false]) {
       expect(openChoices(noClient, visible)).toEqual([]);

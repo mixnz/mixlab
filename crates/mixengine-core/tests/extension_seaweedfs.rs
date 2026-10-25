@@ -1,6 +1,7 @@
-//! SeaweedFS, a local S3, as a `service` extension — roadmap task **T201**.
+//! SeaweedFS, a local S3, as a `service` extension. The D-numbers below are those of
+//! `docs/specs/2026-10-07-t201-seaweedfs-design.md`.
 //!
-//! **The format is not changed for it** (the design's D2), so what these hold to is that the
+//! **The format is not changed for it** (D2), so what these hold to is that the
 //! fixture says what `weed server -s3` needs in the vocabulary that already exists: every port it
 //! opens is one MixEngine allocated (D1), it reports nothing home (D1a), it is ready when S3 answers
 //! (D1b), it is given time to stop (D1c), and its data lives under `{data_dir}`. What the binary
@@ -193,7 +194,7 @@ fn the_data_directory_is_one_argument_even_with_a_space() {
 
 /// **D1b.** Ready when S3 answers HTTP: the port opens before the master has a leader, and a TCP
 /// check would call it up while every request still fails. The S3 port is also the one
-/// `services.port` holds (T81, D8).
+/// `services.port` holds.
 #[test]
 fn it_is_ready_when_s3_answers() {
     let manifest = seaweedfs();

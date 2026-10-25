@@ -20,19 +20,20 @@ id: ServiceId,
  * What the `services` row says it is doing.
  *
  * **[`None`] means declared but never created**: something describes how to run this service
- * and the daemon has no row for it, so it has no state to be in and cannot be started until one
- * exists. Not a case a finished MixEngine reaches — from T30 onwards a declaration is *rendered
- * from* a row — which is exactly why it is reported rather than smoothed over into `stopped`: a
- * service that quietly claims to be stopped and then refuses to start explains nothing.
+ * and the daemon has no row for it, so it has no state to be in and cannot be started until
+ * one exists. Not a case a finished MixEngine reaches — a declaration is *rendered from* a row
+ * — which is exactly why it is reported rather than smoothed over into `stopped`: a service
+ * that quietly claims to be stopped and then refuses to start explains nothing.
  */
 state?: ServiceState | null, 
 /**
  * Whether a task in this daemon is supervising it right now.
  *
  * Not a second opinion about [`ServiceSummary::state`] — the row is the only thing that says
- * what a service is doing — but the answer to a different question: a row saying `running` with
- * nothing supervising it is what a daemon that was killed leaves behind, and adopting or
- * clearing those is T18. Until then this is where that gap is visible instead of implied.
+ * what a service is doing — but the answer to a different question: a row saying `running`
+ * with nothing supervising it is what a daemon that was killed leaves behind. Crash recovery
+ * adopts or clears those when the daemon starts, and this is where anything it leaves is
+ * visible instead of implied.
  */
 supervised: boolean, 
 /**
@@ -42,11 +43,11 @@ pid: number | null,
 /**
  * The port its row was given, and [`None`] for a service that listens on none.
  *
- * **The number in the row, not one derived from the running process** — roadmap task
- * **T34c**. It is allocated once, when the service is created, and never recomputed: it is in
- * somebody's `.env` and in a colleague's shell history by the end of the afternoon, so a
- * service that quietly moved between restarts would break both. A stopped service has it just
- * as a running one does, which is the point of reporting it here rather than only at creation.
+ * **The number in the row, not one derived from the running process.** It is allocated once,
+ * when the service is created, and never recomputed: it is in somebody's `.env` and in a
+ * colleague's shell history by the end of the afternoon, so a service that quietly moved
+ * between restarts would break both. A stopped service has it just as a running one does,
+ * which is the point of reporting it here rather than only at creation.
  */
 port?: number | null, 
 /**
@@ -65,8 +66,7 @@ last_exit_code: number | null,
  */
 depends_on: Array<ServiceId>, 
 /**
- * What this service is *for*, where two packages can be for the same thing — roadmap task
- * **T97**.
+ * What this service is *for*, where two packages can be for the same thing.
  *
  * **The one thing a client could previously do nothing about.** Which program a home's sites
  * are reached through is a fact the daemon holds and never published, so a client wanting to
@@ -82,7 +82,7 @@ depends_on: Array<ServiceId>,
  */
 role?: ServiceRole | null, 
 /**
- * Whether this service starts when the daemon does — roadmap task **T112**.
+ * Whether this service starts when the daemon does.
  *
  * **The setting and not a prediction**: it says what the column holds, not whether the service
  * will in fact be running after the next login, which depends on a port being free and a
@@ -92,15 +92,15 @@ role?: ServiceRole | null,
  * follow: a service with no row has no setting to report, exactly as it has no state.
  *
  * **Defaulted**, on [ADR 0020]'s rule that the published contract is the shape the daemon
- * writes: a client older than T112 keeps parsing what a newer daemon says, and one newer than
- * a daemon that predates this member reads `false` — which is what every home had before
- * anybody could set it.
+ * writes: a client older than this member keeps parsing what a newer daemon says, and one
+ * newer than a daemon that predates this member reads `false` — which is what every home had
+ * before anybody could set it.
  *
  * [ADR 0020]: https://github.com/mixnz/mixlab/blob/master/docs/decisions/0020-the-published-contract-is-the-shape-the-daemon-writes.md
  */
 autostart: boolean, 
 /**
- * Who left it stopped, while it is — roadmap task **T167d**.
+ * Who left it stopped, while it is.
  *
  * **Absent while the service is not `stopped`**, and from a daemon older than this member
  * (ADR 0019). It is what lets a client tell a service MixEngine put to rest, which the next
@@ -111,7 +111,7 @@ autostart: boolean,
  */
 stopped_by?: StoppedBy | null, 
 /**
- * Which version of its program this service runs — roadmap task **T183**.
+ * Which version of its program this service runs.
  *
  * **What a person reads next to the id**, because the id is a name they chose and says
  * nothing about the program: `mysql@main` is whichever MySQL was installed when it was created.
@@ -123,7 +123,7 @@ stopped_by?: StoppedBy | null,
  */
 version?: PackageVersion | null, 
 /**
- * Why it failed, while it is `failed` — roadmap task **T200b**, D5.
+ * Why it failed, while it is `failed`.
  *
  * On `stopped_by`'s rule: the row keeps the note after a person stops a failed service, and no
  * listing shows a failure the state no longer claims. Optional on the wire (ADR 0019).

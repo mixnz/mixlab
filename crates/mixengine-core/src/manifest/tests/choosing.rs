@@ -10,7 +10,7 @@ const THREE: &str = "[[sites]]\ndomain = \"web.test\"\naliases = [\"www.web.test
                          [[sites]]\ndomain = \"api.test\"\nservices = [\"redis\"]\n\n\
                          [[sites]]\ndomain = \"admin.test\"\nservices = []\n";
 
-/// **T204, D5, step 1.** `from` picks by any of an entry's names.
+/// **`from` first.** It picks by any of an entry's names.
 #[test]
 fn from_picks_an_entry_by_any_of_its_names() {
     let manifest = declaring(THREE);
@@ -30,8 +30,8 @@ fn from_picks_an_entry_by_any_of_its_names() {
     );
 }
 
-/// **T204, D5, step 1.** A `from` naming nothing the file declares is `NotDeclared`, carrying
-/// what it does declare.
+/// **`from` first.** A `from` naming nothing the file declares is `NotDeclared`, carrying what it
+/// does declare.
 #[test]
 fn from_naming_nothing_is_not_declared() {
     let manifest = declaring(THREE);
@@ -45,8 +45,8 @@ fn from_naming_nothing_is_not_declared() {
     );
 }
 
-/// **T204, D5, step 2.** A named domain picks its entry; one the file does not describe picks
-/// none, and no services fall through.
+/// **Then the domain.** A named domain picks its entry; one the file does not describe picks none,
+/// and no services fall through.
 #[test]
 fn a_named_domain_picks_its_entry_or_none() {
     let manifest = declaring(THREE);
@@ -64,7 +64,7 @@ fn a_named_domain_picks_its_entry_or_none() {
     assert_eq!(other.services, ServicesFrom::Nothing);
 }
 
-/// **T204, D5, steps 2 and 3.** One entry is today's behaviour: chosen whatever the domain.
+/// **The domain, then the only one.** One entry is today's behaviour: chosen whatever the domain.
 #[test]
 fn one_entry_is_chosen_as_it_always_was() {
     let manifest = declaring("[site]\ndomain = \"blog.test\"\n");
@@ -78,7 +78,7 @@ fn one_entry_is_chosen_as_it_always_was() {
     }
 }
 
-/// **T204, D5, step 3.** Several and nothing named is refused rather than guessed.
+/// **Then the only one.** Several and nothing named is refused rather than guessed.
 #[test]
 fn several_and_nothing_named_is_ambiguous() {
     assert!(matches!(
@@ -87,7 +87,7 @@ fn several_and_nothing_named_is_ambiguous() {
     ));
 }
 
-/// **T204, D5.** No site at all: the defaults, with `[[services]]` as before.
+/// No site at all: the defaults, with `[[services]]` as before.
 #[test]
 fn no_entry_falls_through_to_every_service() {
     let manifest = Manifest::default();
@@ -98,8 +98,8 @@ fn no_entry_falls_through_to_every_service() {
     assert_eq!(chosen.services, ServicesFrom::Every);
 }
 
-/// **T204, D5.** Two entries answering to one name is refused at the point of choosing,
-/// numbered the way a person counts them.
+/// Two entries answering to one name is refused at the point of choosing, numbered the way a person
+/// counts them.
 #[test]
 fn named_twice() {
     let manifest = declaring(
@@ -117,7 +117,7 @@ fn named_twice() {
     );
 }
 
-/// **T204, D7.** An entry with no `domain` answers to the name `site.create` would give it.
+/// An entry with no `domain` answers to the name `site.create` would give it.
 #[test]
 fn an_entry_with_no_domain_answers_to_the_default() {
     let manifest =
@@ -133,8 +133,8 @@ fn an_entry_with_no_domain_answers_to_the_default() {
     );
 }
 
-/// **T204, final review.** A domain is a name whatever its case, as the daemon stores it, so a
-/// hand-written `Blog.test` answers the `from` MixLab sends, which is lowercase.
+/// A domain is a name whatever its case, as the daemon stores it, so a hand-written `Blog.test`
+/// answers the `from` MixLab sends, which is lowercase.
 #[test]
 fn from_matches_a_name_whatever_its_case() {
     let manifest = declaring(
@@ -154,8 +154,8 @@ fn from_matches_a_name_whatever_its_case() {
     }
 }
 
-/// **T204, final review.** An export finds the entry a person wrote in another case, rather
-/// than keeping it and adding a second one for the same site.
+/// An export finds the entry a person wrote in another case, rather than keeping it and adding a
+/// second one for the same site.
 #[test]
 fn an_entry_is_matched_whatever_the_case_of_its_domain() {
     let home = somewhere();
@@ -176,8 +176,8 @@ fn an_entry_is_matched_whatever_the_case_of_its_domain() {
     assert_eq!(after.matches("[[sites]]").count(), 2, "{after}");
 }
 
-/// **T204, checked by hand.** A kind that did not change keeps its payload key where the file
-/// had it, so an export with nothing new to say shows no moved line in a diff.
+/// **Found by hand.** A kind that did not change keeps its payload key where the file had it, so an
+/// export with nothing new to say shows no moved line in a diff.
 #[test]
 fn a_kind_that_stayed_keeps_its_payload_where_it_was() {
     for original in [
@@ -205,7 +205,7 @@ fn a_kind_that_stayed_keeps_its_payload_where_it_was() {
     }
 }
 
-/// **T204, checked by hand.** A project with no pins writes no empty `[runtimes]`, and leaves a
+/// **Found by hand.** A project with no pins writes no empty `[runtimes]`, and leaves a
 /// hand-written one as it is.
 #[test]
 fn no_pins_write_no_runtimes_table() {

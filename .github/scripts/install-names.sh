@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# T197: every file the install scripts can choose for this version is in the release, with its
+# Every file the install scripts can choose for this version is in the release, with its
 # .sha256 and .minisig. Run by _release.yml after signing, before a draft exists, which is the last
 # point where a renamed artifact can be caught without breaking a published command.
 #

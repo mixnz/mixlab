@@ -1,4 +1,4 @@
-//! Replacing this home's certificate authority, and taking it back out — roadmap task **T54**.
+//! Replacing this home's certificate authority, and taking it back out.
 //!
 //! **The only two operations in phase 5 that take something away.** Five tasks put an authority into
 //! this machine and kept the leaves under it fresh; these undo that, and the difference in risk is
@@ -6,11 +6,13 @@
 //!
 //! **Here rather than on [`Certificates`].** That struct holds a directory, a host and a store;
 //! these need the elevation queue and the job registry as well, and a struct that grew fields for
-//! them would be holding most of the daemon. `certs::renewal` set the precedent in T52: what needs
-//! more than certificates takes them as arguments.
+//! them would be holding most of the daemon. `certs::renewal` set the precedent: what needs more
+//! than certificates takes them as arguments.
 //!
-//! This module is a child of `crate::certs`, which is what lets it read [`Certificates`]' own fields
-//! and reuse `super::blocking` rather than adding accessors nothing else would call.
+//! This module is a child of `crate::certs`, which is what lets it read [`Certificates`]' own
+//! fields and reuse `super::blocking` rather than adding accessors nothing else would call.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-26-t54-ca-rotate-and-uninstall-design.md`.
 
 use std::sync::Arc;
 
@@ -28,12 +30,12 @@ use crate::jobs::Jobs;
 ///
 /// **Trust and never a file.** `certs/ca/` and every leaf are left exactly as they are: removing
 /// trust is undone by `mix doctor --repair`, and deleting a private key is undone by nothing.
-/// Deleting is uninstall's, T87.
+/// Deleting is uninstall's.
 ///
 /// **Partial progress is the right answer here and would be the wrong one for a rotation.** Each
 /// store is independent, so taking the authority out of Firefox is a complete action on Firefox
 /// whatever the system store did — the browser databases need no privilege in either direction,
-/// which is the line T49 was split on.
+/// which is what keeps them apart from the system store.
 ///
 /// # Errors
 ///
@@ -92,7 +94,7 @@ pub(crate) async fn rotate(
     .await
 }
 
-/// The body of [`rotate`], one step per line of the T54 design's D3.
+/// The body of [`rotate`], one step per line of D3.
 async fn rotating(
     certificates: &Certificates,
     elevation: &Arc<Elevation>,
@@ -113,8 +115,9 @@ async fn rotating(
     }
 
     // `None` for a damaged authority, which is a state this repairs rather than refuses. It is also
-    // the one case where the old certificate is left in the store: T49a's D5 forbids naming a
-    // removal target that could not be read, and guessing one is how a corporate root gets deleted.
+    // the one case where the old certificate is left in the store: the system trust store never
+    // names a removal target that could not be read, and guessing one is how a corporate root gets
+    // deleted.
     let previous = match &state {
         CaState::Present { ca } => Some(ca.clone()),
         _ => None,
@@ -179,7 +182,7 @@ async fn rotating(
         );
     }
 
-    // **No reissue code, and that is T50's fourth reuse question doing its job.** The moment
+    // **No reissue code, and that is the leaf's reuse rule doing its job.** The moment
     // `certs/ca/root.crt` names a different authority, every leaf on disk is stale by the existing
     // rule, so the call `mix cert issue` already runs replaces all of them.
     let issued = certificates.issue(None).await?;
@@ -187,15 +190,15 @@ async fn rotating(
     let promoted = certificates.authority().await?;
     certificates.install_in_browsers(&promoted).await;
 
-    // **And every installed JDK, which reads neither of those** — roadmap task T27e, ADR 0039. The
-    // new alias first and the old one below, beside the browsers': a moment holding both is a moment
-    // every site verifies, where a moment holding neither is not.
+    // **And every installed JDK, which reads neither of those** — ADR 0039. The new alias first and
+    // the old one below, beside the browsers': a moment holding both is a moment every site
+    // verifies, where a moment holding neither is not.
     certificates.hold_in_jdks().await.log("after a rotation");
 
-    // **And the runtimes, which read neither the store nor a browser database** — roadmap task
-    // T132. The bundle's header carries the authority's fingerprint, so this rotation makes it a
-    // changed file and every `node`, `php`, `python` or `ruby` started afterwards is handed the new
-    // authority rather than the one that has just been removed from the machine.
+    // **And the runtimes, which read neither the store nor a browser database.** The bundle's
+    // header carries the authority's fingerprint, so this rotation makes it a changed file and
+    // every `node`, `php`, `python` or `ruby` started afterwards is handed the new authority rather
+    // than the one that has just been removed from the machine.
     certificates.rebuild_trust_bundle();
 
     if let Some(ca) = previous.as_ref() {
@@ -208,8 +211,8 @@ async fn rotating(
 
     handle.progress(90, "telling the front end").await;
 
-    // The reload is T51's fingerprint and nothing new: a reissued certificate changes the rendered
-    // header, so the file differs and the installer finds a change.
+    // The reload is the fingerprint TLS wiring stamps and nothing new: a reissued certificate
+    // changes the rendered header, so the file differs and the installer finds a change.
     if let Err(error) = services.reconfigure().await {
         tracing::warn!(
             ?error,
@@ -227,7 +230,7 @@ async fn rotating(
 
 /// Generate the candidate, throwing away anything a previous rotation left staged.
 ///
-/// **`ensure` on a different root**, which is the whole of the T54 design's D3: the candidate is
+/// **`ensure` on a different root**, which is the whole of D3: the candidate is
 /// made by the code that made the authority it will replace, so the two cannot be made differently.
 async fn stage(certificates: &Certificates) -> Result<mixengine_proto::Ca, Error> {
     let certs = certificates.certs.clone();
@@ -333,7 +336,7 @@ fn held(host: &dyn mixengine_platform::Host, der: &[u8]) -> Held {
     }
 }
 
-/// Whether a rotation may replace this home's authority — the T54 design, D7.
+/// Whether a rotation may replace this home's authority (D7).
 ///
 /// The question is **not** "is the new authority in the store". A machine with no store MixEngine
 /// can write would never pass that, and such a machine is supported rather than broken. The question
@@ -401,7 +404,7 @@ async fn removing(
     let browsers = certificates.remove_from_browsers(&ca.key_id).await;
 
     // The JDKs, for the browsers' reason and with no row of its own: `cert.ca_uninstall` reports
-    // the stores a person can name, and a JDK's `cacerts` is one nobody asked about — T27e.
+    // the stores a person can name, and a JDK's `cacerts` is one nobody asked about.
     certificates
         .release_from_jdks(&ca.key_id)
         .await
@@ -419,7 +422,7 @@ async fn removing(
 
     handle.progress(80, "reading the stores back").await;
 
-    // **Measured, never reported** — the T54 design, D2. The helper is honest about what it did, but
+    // **Measured, never reported** (D2). The helper is honest about what it did, but
     // it is a separate process describing finished work; this is a fresh reading of the thing
     // itself, and it costs no privilege on any of the three systems.
     let status = certificates.status().await?;
@@ -483,8 +486,8 @@ mod tests {
 
     /// The store holds the new authority: the rotation did what it set out to do.
     ///
-    /// **These are the tests that matter most in T54.** No machine running `cargo test` can raise
-    /// an elevation prompt, so no integration test can drive a rotation to the commit branch — which
+    /// **These are the tests that matter most here.** No machine running `cargo test` can raise an
+    /// elevation prompt, so no integration test can drive a rotation to the commit branch — which
     /// is why the decision is a pure function and why this is where it is proved.
     #[test]
     fn a_store_that_holds_the_new_authority_commits() {
@@ -492,7 +495,7 @@ mod tests {
         assert_eq!(commits(&Held::No, &Held::Yes), Ok(()));
     }
 
-    /// **A machine with no store MixEngine can write is supported, not broken** — T49a's D7.
+    /// **A machine with no store MixEngine can write is supported, not broken.**
     ///
     /// Requiring an install there would make rotation impossible on it forever, and its browsers
     /// are reached through NSS rather than through a system store at all.

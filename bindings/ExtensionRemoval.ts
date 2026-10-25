@@ -19,11 +19,11 @@ service: ServiceId | null,
  */
 data_dir_kept: string | null, 
 /**
- * The domain that was released with it, for a `web-app` — roadmap task **T81b**.
+ * The domain that was released with it, for a `web-app`.
  */
 site?: string | null, 
 /**
- * The php-fpm pool that went with it, for a `web-app` — roadmap task **T82a**.
+ * The php-fpm pool that went with it, for a `web-app`.
  *
  * Said rather than left to be discovered: a `web-app` runs on a pool of its own, and an
  * uninstall that removed a service without naming it would leave somebody comparing two

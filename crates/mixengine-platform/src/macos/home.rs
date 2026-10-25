@@ -7,7 +7,7 @@ use directories::BaseDirs;
 
 use crate::{Error, HomeDirs, Result};
 
-/// Beside the released one — T95, D3.
+/// Beside the released one.
 const NAME: &str = if crate::RELEASE {
     "MixEngine"
 } else {
@@ -22,7 +22,7 @@ impl HomeDirs for Home {
         default_home()
     }
 
-    /// Anything under `/Volumes/` is TCC's to gate, and the helper cannot be granted it — T166.
+    /// Anything under `/Volumes/` is TCC's to gate, and the helper cannot be granted it.
     ///
     /// `/Volumes/` holds every mounted volume but the boot one's system/data group, and the boot
     /// volume's own entry there (`/Volumes/Macintosh HD`) is a symlink to `/`, which `in_full`

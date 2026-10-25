@@ -7,9 +7,9 @@ import CpuRing from "../CpuRing";
 import styles from "./DaemonUsage.module.css";
 
 /**
- * CPU and memory in one strip — the daemon's in the Dashboard's header, and since T168 the daemon's
- * and every service's added up in the tray panel. The Dashboard draws it `inline`, as a few words on
- * the line under its title with a ring for the CPU; the tray keeps the boxed strip with a bar.
+ * CPU and memory in one strip — the daemon's in the Dashboard's header, and the daemon's and every
+ * service's added up in the tray panel. The Dashboard draws it `inline`, as a few words on the line
+ * under its title with a ring for the CPU; the tray keeps the boxed strip with a bar.
  *
  * Always drawn, before the first frame too: `null` shows "—" in a strip that is already the size
  * it will be, instead of one that appears later and pushes everything under it down.
@@ -23,7 +23,7 @@ export default function DaemonUsage({
 }: {
   reading: MetricsSample | null;
   /** The machine's logical thread count (`MetricsFrame.cores`): CPU is shown as a percentage of the
-   *  whole machine, like Task Manager (T190c). */
+   *  whole machine, like Task Manager. */
   cores: number;
   /** What the strip measures, already translated. The daemon's by default. */
   label?: string;

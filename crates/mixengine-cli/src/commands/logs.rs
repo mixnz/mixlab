@@ -20,8 +20,8 @@ use crate::output::emit;
 /// those to restate what `--json` already carries. What the human rendering does add is the one
 /// thing that is not output: a gap, on stderr, where the daemon or this client fell behind and lines
 /// were lost. Silence there would make a log with a hole in it look complete.
-/// `subject` is the route's two segments — `service/<id>` or `job/<id>` (roadmap task **T78a**) —
-/// because what differs between the two is the path and nothing else this function does.
+/// `subject` is the route's two segments — `service/<id>` or `job/<id>` — because what differs
+/// between the two is the path and nothing else this function does.
 pub(crate) async fn logs(
     client: &mut Client,
     subject: &str,

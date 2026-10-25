@@ -4,8 +4,7 @@ use mixengine_proto::RouteTarget;
 
 use super::*;
 
-/// **Routes round-trip, replace as a whole, and go when the site does** — roadmap task
-/// **T135**.
+/// **Routes round-trip, replace as a whole, and go when the site does.**
 ///
 /// One test for three claims because they are one claim about one table: what
 /// [`write_routes`] writes is what [`records`] reads, a replacement removes what it does not
@@ -88,7 +87,7 @@ async fn routes_round_trip_and_replace_as_a_whole() {
     assert_eq!(left, 0, "the cascade takes the routes with the site");
 }
 
-/// **Longest first, and the whole order is total** — roadmap task **T135**.
+/// **Longest first, and the whole order is total.**
 ///
 /// The one place an overlap is decided, which is why it is decided here rather than twice in
 /// two templates whose native rules differ.
@@ -113,8 +112,7 @@ fn routes_sort_longest_first() {
     assert_eq!(order, ["/api/v1/items", "/api/v1", "/api", "/b"]);
 }
 
-/// **A site that is not an extension's may not run on that extension's pool** — roadmap task
-/// **T82a**, that design's D5.
+/// **A site that is not an extension's may not run on that extension's pool.**
 ///
 /// That process holds a database superuser's password, read from the keyring at spawn; the
 /// whole point of giving a `web-app` a pool of its own is that no project's PHP is in it. Both
@@ -165,7 +163,7 @@ async fn only_an_extensions_own_site_may_run_on_its_pool() {
     .expect("its own site names its own pool");
 }
 
-/// **A pool nothing answers to is refused in words, not by the schema** — roadmap task **T122**.
+/// **A pool nothing answers to is refused in words, not by the schema.**
 ///
 /// `pool_is_free_for`'s own doc already asserts *a site must name a service that exists*, and
 /// until this task nothing here enforced it: the `INSERT` reached SQLite, `php_service_id`'s
@@ -204,11 +202,10 @@ async fn a_site_may_not_name_a_pool_no_service_answers_to() {
     );
 }
 
-/// **Both halves, and nothing else's** — roadmap task **T125**. What a project needs is the
-/// link table *and* the pool the kind names; a caller reading one of the two starts a database
-/// with nothing to run the code, or the other way round. The second project is there because
-/// the answer is a project's and not a home's — the set this replaces was every service the
-/// home declared.
+/// **Both halves, and nothing else's.** What a project needs is the link table *and* the pool the
+/// kind names; a caller reading one of the two starts a database with nothing to run the code, or
+/// the other way round. The second project is there because the answer is a project's and not a
+/// home's — the set this replaces was every service the home declared.
 #[tokio::test]
 async fn the_services_of_a_project_are_its_sites_links_and_their_pool() {
     let (_temp, store, project) = home().await;
@@ -367,7 +364,7 @@ async fn a_site_may_not_link_a_service_no_row_answers_to() {
 }
 
 /// And `site.update` is held to the same rule, because `blueprint.apply` reaches it without a
-/// CLI — T81b's D6 arriving at a second field.
+/// CLI — the rule an extension site's own refusals follow, arriving at a second field.
 #[tokio::test]
 async fn an_update_cannot_move_a_project_site_onto_an_extensions_pool() {
     let (_temp, store, project) = home().await;
@@ -443,9 +440,9 @@ async fn an_extension_with_a_pool(store: &Store, id: &str) {
     .expect("the extension's pool row");
 }
 
-/// **D2, and the bug T39 paid for once.** A doc root is stored relative to the root, and both
-/// sides of the comparison are normalised — a `/tmp` project and a `/private/tmp` doc root are
-/// one directory on macOS, and a temporary directory is exactly where that shows up.
+/// **The bug the project model paid for once.** A doc root is stored relative to the root, and both
+/// sides of the comparison are normalised — a `/tmp` project and a `/private/tmp` doc root are one
+/// directory on macOS, and a temporary directory is exactly where that shows up.
 #[test]
 fn a_doc_root_is_relativised_through_whatever_the_filesystem_calls_the_root() {
     let temp = tempfile::tempdir().expect("a temporary directory");

@@ -25,8 +25,8 @@ pub(crate) struct Args {
 
     /// Put installed language runtimes here instead of `<root>/runtimes`.
     ///
-    /// **This writes `config.toml` rather than configuring one process** — roadmap task **T144**,
-    /// and it is the one flag on this binary that does. Where a runtime lives is recorded in
+    /// This writes `config.toml` rather than configuring one process, and this flag and the three
+    /// below it are the only ones on this binary that do. Where a runtime lives is recorded in
     /// `runtime_installs.install_path` when it is installed, so a value that applied to one start
     /// would let a daemon a service manager launched and one a terminal launched disagree about a
     /// home while the database agreed with neither. A setting that lives in the home cannot do
@@ -56,7 +56,7 @@ pub(crate) struct Args {
     #[arg(long, value_name = "DIR")]
     logs: Option<PathBuf>,
 
-    /// Print where this home's directories are, as JSON, and exit — roadmap task **T145**.
+    /// Print where this home's directories are, as JSON, and exit.
     ///
     /// **A read that creates nothing.** No home, no `config.toml`, no database: the caller is a
     /// window drawing its "choose a disk" screen before any daemon has run, and an answer that
@@ -77,7 +77,7 @@ pub(crate) struct Args {
     /// Without this the daemon stays in the foreground, which is what a service manager wants —
     /// systemd, launchd and Task Scheduler all supervise the process themselves and would treat a
     /// process that forked away as one that had died. This flag exists for the other caller: a
-    /// client that finds no daemon running and starts one (roadmap task T10) cannot sit holding it.
+    /// client that finds no daemon running and starts one cannot sit holding it.
     ///
     /// It returns only once the daemon answers on its endpoint, so a client that gets a zero exit
     /// status can connect immediately rather than retrying against a daemon that may still be
@@ -99,12 +99,15 @@ pub(crate) struct Args {
     pub(crate) log_format: Option<LogFormat>,
 
     /// Where credentials are kept: `os`, the machine's credential store, or `home`, a private file
-    /// in the home — roadmap task **T184**, ADR 0052.
+    /// in the home.
     ///
-    /// A release uses `os` and refuses `home`. Any other build defaults to `home`, because an
-    /// unsigned daemon is a stranger to the Keychain after every rebuild and asks for the login
-    /// password to read what the last one wrote. Pass `os` to a development build to work on the
-    /// hand-off to MixLab, which reads the machine's store.
+    /// A release uses `os`. It takes `home` only on Linux, on a machine with no credential store,
+    /// and only while nothing is stored yet; the home keeps the choice, so later starts need no
+    /// flag. Any other build defaults to `home`, because an unsigned daemon is a stranger to the
+    /// Keychain after every rebuild and asks for the login password to read what the last one
+    /// wrote. Pass `os` to a development build to work on the hand-off to MixLab, which reads the
+    /// machine's store.
+    // ADR 0052 is why a development build keeps a file, ADR 0059 why a Linux release may.
     #[arg(long, value_enum, env = "MIXENGINE_CREDENTIAL_STORE")]
     pub(crate) credential_store: Option<credentials::Store>,
 
@@ -133,7 +136,7 @@ pub(crate) struct Args {
     /// Read the update feed from here instead of the one MixEngine publishes.
     ///
     /// A staging release, or a test's own server. The index's mechanism verbatim, and for its
-    /// reason: useless without the flag below, and the two are read together — roadmap task **T88**.
+    /// reason: useless without the flag below, and the two are read together.
     #[arg(long, env = "MIXENGINE_UPDATE_URL", value_name = "URL")]
     pub(crate) update_url: Option<String>,
 
@@ -153,7 +156,7 @@ pub(crate) struct Args {
 }
 
 impl Args {
-    /// The four relocations this start was asked for — roadmap task **T144**.
+    /// The four relocations this start was asked for.
     ///
     /// Assembled here rather than read one field at a time further down, on the rule the rest of
     /// this impl follows: configuration enters the program at `main` and is passed down.
@@ -206,7 +209,7 @@ impl Args {
 }
 
 /// What this process brought with it from `main` beside its configuration: its own path, and where
-/// its credentials live (T184). Grouped for [`Sources`]' reason — `serve` is at clippy's seven.
+/// its credentials live. Grouped for [`Sources`]' reason — `serve` is at clippy's seven.
 #[derive(Debug)]
 pub(crate) struct Launch {
     /// The running binary — see the note where `run` reads it.
@@ -215,14 +218,14 @@ pub(crate) struct Launch {
     /// The store `serve` builds its host with.
     pub(crate) credentials: mixengine_platform::Credentials,
 
-    /// What `daemon.status` says about that store — roadmap task T194.
+    /// What `daemon.status` says about that store.
     pub(crate) credential_facts: credentials::Facts,
 }
 
 /// The two signed documents this daemon reads, and what verifies each.
 ///
-/// **One argument and not two**, which is what the note inside [`serve`] predicted when T88 was
-/// still ahead of it: seven parameters is what clippy allows, and the update feed would have been
+/// **One argument and not two**, which is what the note inside [`serve`] predicted before the
+/// update feed existed: seven parameters is what clippy allows, and the update feed would have been
 /// the eighth. Grouping them is also the truer shape — they are the same kind of thing, they are
 /// overridden the same way, and a third signed document would join them here rather than widen a
 /// signature again.
@@ -233,7 +236,7 @@ pub(crate) struct Sources {
     /// The package index: what can be installed, and where to get it.
     pub(crate) index: runtimes::IndexSource,
 
-    /// The update feed: whether there is a newer MixEngine — roadmap task **T88**.
+    /// The update feed: whether there is a newer MixEngine.
     pub(crate) feed: updates::FeedSource,
 }
 

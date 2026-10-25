@@ -1,4 +1,4 @@
-//! The client commands of an installed service package — roadmap task **T130**.
+//! The client commands of an installed service package.
 //!
 //! The first of the three complaints this phase answers, end to end: `bin` has no `mysql`,
 //! `mysqldump`, … — a home with a database in it had no way to open one from a terminal, because
@@ -72,10 +72,9 @@ fn mariadb_answers_to_the_spelling_people_have_in_their_fingers() {
     );
 }
 
-/// **A client is told where its own instance listens** — the design's D4, and the reason it is not
-/// a nicety: the port allocator gives 3306 to whichever database was created first and the next
-/// free port above to the other, so a client told nothing would connect to somebody else's server
-/// and report success.
+/// **A client is told where its own instance listens**, and the reason it is not a nicety: the port
+/// allocator gives 3306 to whichever database was created first and the next free port above to the
+/// other, so a client told nothing would connect to somebody else's server and report success.
 #[test]
 fn a_client_is_told_the_port_its_instance_holds() {
     let home = Home::with(&["8.3.33"]);

@@ -5,7 +5,8 @@ import type { ServiceId } from "./ServiceId";
  * Which service `service.delete` is about, and whether a site declaring it may be crossed.
  *
  * Flattened over [`ServiceQuery`] on [`crate::RuntimeUninstall`]'s precedent: the same wire shape
- * every client has sent since T31a, plus one optional key an older client's request parses without.
+ * every client has sent since `service.delete` first shipped, plus one optional key an older
+ * client's request parses without.
  *
  * **`force` crosses a declaration and never a process** (spec D4). A site naming this service is a
  * statement about the next `site.start`, which somebody shown the sites is entitled to overrule; a

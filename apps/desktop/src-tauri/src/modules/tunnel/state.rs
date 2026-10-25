@@ -1,5 +1,5 @@
-//! Every tunnel MixLab is running — T203, D3. Held here, not in the tab, so the tab and the tray
-//! panel read one list and closing the tab stops nothing.
+//! Every tunnel MixLab is running. Held here, not in the tab, so the tab and the tray panel read
+//! one list and closing the tab stops nothing.
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
@@ -239,10 +239,10 @@ fn read_output<R: Runtime>(
     let _ = app.emit(CHANGED_EVENT, ());
 }
 
-/// One `GET /` through a tunnel that has just opened — T203, D4. A dev server that refuses the
-/// tunnel's host (Vite 5 and later) answers `403 Blocked request`, which reads as a broken tunnel
-/// when it is a setting; the row then names `server.allowedHosts`. One request, once: the module does
-/// not watch the traffic.
+/// One `GET /` through a tunnel that has just opened. A dev server that refuses the tunnel's host
+/// (Vite 5 and later) answers `403 Blocked request`, which reads as a broken tunnel when it is a
+/// setting; the row then names `server.allowedHosts`. One request, once: the module does not watch
+/// the traffic.
 fn check_the_host<R: Runtime>(app: &AppHandle<R>, entries: &Entries, id: u32, url: &str) {
     let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
         .enable_all()

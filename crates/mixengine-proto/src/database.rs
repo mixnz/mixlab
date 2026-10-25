@@ -1,18 +1,17 @@
-//! Making a database and the account that reaches it — roadmap task **T77a** — and handing it to
-//! a desktop client — roadmap task **T83**.
+//! Making a database and the account that reaches it, and handing it to a desktop client.
 //!
 //! **What is not here is the password.** A response says *where* the credential is, in the address
-//! the OS keyring holds it under, and never what it is: the T77a design's D11, and the same rule
+//! the OS keyring holds it under, and never what it is — the same rule
 //! [ADR 0006](../../../docs/decisions/0006-servicespec-in-proto-and-secret-free.md) applies to a
-//! [`ServiceSpec`](crate::ServiceSpec). T83's [`DatabaseHandoff`] keeps it: the password went into
-//! the started process's environment, and what comes back is the same address.
+//! [`ServiceSpec`](crate::ServiceSpec). [`DatabaseHandoff`] keeps it: the password went into the
+//! started process's environment, and what comes back is the same address.
 
 use crate::ServiceId;
 
 /// What one call did to one object.
 ///
-/// Two words rather than a `bool`, and they are read by more than a renderer: **T78's ledger
-/// records this**, because a rollback may only undo what that apply actually created — and
+/// Two words rather than a `bool`, and they are read by more than a renderer: **a blueprint apply's
+/// ledger records this**, because a rollback may only undo what that apply actually created — and
 /// `true`/`false` on a field called `created` reads the same whichever way somebody wires it up.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -38,10 +37,11 @@ pub struct Provisioned {
 
 /// Where a credential lives in this machine's credential store: the whole address, both halves.
 ///
-/// **The convention two applications share** — roadmap task **T84**, the design's D6. Until that
-/// task a response carried the key alone and the namespace lived inside `mixengine-platform`, so
-/// anything outside this workspace that wanted to name the entry — MixLab, or any other graphical client — had
-/// to hardcode the word `mixengine`. That second copy is what item 4 of
+/// **The convention two applications share**
+/// (`docs/specs/2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md`, D6). A
+/// response used to carry the key alone, with the namespace inside `mixengine-platform`, so
+/// anything outside this workspace that wanted to name the entry — MixLab, or any other graphical
+/// client — had to hardcode the word `mixengine`. That second copy is what item 4 of
 /// `features/extensions.md`'s *Opening a database in MixLab* list exists to remove.
 ///
 /// A struct rather than one string with a separator: the two halves are two fields, so there is no
@@ -90,17 +90,17 @@ pub struct DatabaseAccount {
     /// Where the account's password lives in this machine's credential store.
     ///
     /// **Never the password.** Derivable rather than secret — telling a caller the rule is what
-    /// makes a second method for looking one up unnecessary until T83 gives that a shape.
+    /// makes a second method for looking one up unnecessary.
     ///
-    /// **Both halves since roadmap task T84**: the namespace is part of the contract, so a client
-    /// renders the address without knowing any of MixEngine's constants.
+    /// **Both halves**: the namespace is part of the contract, so a client renders the address
+    /// without knowing any of MixEngine's constants.
     pub secret: SecretAddress,
 
     /// What this call made, and what it found already there.
     pub made: Provisioned,
 }
 
-/// What a database client speaks to one of our servers — roadmap task **T83**, the design's D5.
+/// What a database client speaks to one of our servers.
 ///
 /// **The recipe's answer, and a fact about the server.** MariaDB speaks MySQL's protocol whichever
 /// client is on the other end, so `mariadb` and `mysql` are one word here. The word is what the
@@ -118,8 +118,8 @@ pub enum DatabaseProtocol {
     /// RESP — Redis. No accounts: the recipe sets no password, so a handoff carries no credential.
     Redis,
 
-    /// MongoDB's wire protocol — roadmap task **T154**. No accounts: access control is off, so the
-    /// recipe refuses every bind address but loopback and a handoff carries no credential.
+    /// MongoDB's wire protocol. No accounts: access control is off, so the recipe refuses every
+    /// bind address but loopback and a handoff carries no credential.
     Mongodb,
 }
 
@@ -149,7 +149,7 @@ impl std::fmt::Display for DatabaseProtocol {
     }
 }
 
-/// Where a database could be opened, as a state — roadmap tasks **T83** and **T165**.
+/// Where a database could be opened, as a state.
 ///
 /// **Two answers, and neither is an error.** A client renders `no_client` as an absent affordance
 /// with a sentence beside it; an error would be rendered as a failure of something the person did.
@@ -157,8 +157,7 @@ impl std::fmt::Display for DatabaseProtocol {
 #[serde(tag = "state", rename_all = "snake_case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub enum DesktopClient {
-    /// This MixEngine install has its window — roadmap task **T107** — and this is how it would be
-    /// started.
+    /// This MixEngine install has its window, and this is how it would be started.
     Installed {
         /// Its display name: `MixLab`.
         name: String,
@@ -170,7 +169,7 @@ pub enum DesktopClient {
     NoClient,
 }
 
-/// What became of the process — roadmap task **T83**, the design's D8.
+/// What became of the process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "launch", rename_all = "snake_case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -198,19 +197,18 @@ pub struct DatabaseClientReport {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub protocol: Option<DatabaseProtocol>,
 
-    /// Where the administrator's password lives, for a server that has one — roadmap task **T84**.
+    /// Where the administrator's password lives, for a server that has one.
     ///
     /// **Composed, never looked up.** This method starts nothing, opens nothing and touches the
-    /// credential store not at all — T83's D6, unchanged — because the address is what the recipe
-    /// and the service id say it is. That is what makes the convention *askable*: a client can draw
-    /// "stored in your credential store as …" beside the button without opening a database to find
-    /// out.
+    /// credential store not at all, because the address is what the recipe and the service id say
+    /// it is. That is what makes the convention *askable*: a client can draw "stored in your
+    /// credential store as …" beside the button without opening a database to find out.
     ///
     /// [`None`] for a server with no accounts, and for a service no database client opens.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub secret: Option<SecretAddress>,
 
-    /// Whether `database.create` can make a database on it — roadmap task **T155**.
+    /// Whether `database.create` can make a database on it.
     ///
     /// `false` for a server that makes none — Redis, MongoDB — so a client leaves out a form that
     /// could only be refused, without learning which products those are. [`None`] for a service no
@@ -245,9 +243,9 @@ pub struct DatabaseHandoff {
 
     /// Where the password was read from. Never the password.
     ///
-    /// Both halves since roadmap task **T84**, and the key half is also what the URL carries as
-    /// `secret_key` — so the connection the client saves can point at this entry instead of holding
-    /// a second copy of what is in it.
+    /// Both halves, and the key half is also what the URL carries as `secret_key` — so the
+    /// connection the client saves can point at this entry instead of holding a second copy of what
+    /// is in it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub secret: Option<SecretAddress>,
 
@@ -260,7 +258,7 @@ pub struct DatabaseHandoff {
 }
 
 /// `database.credentials` — the password held for one account, read from this machine's
-/// credential store. Roadmap task **T77b**.
+/// credential store.
 ///
 /// **The one exception to this module's own rule.** Every other type here answers *where* a
 /// credential is; this answers *what it is*, because its whole purpose is to put a stored password
@@ -303,8 +301,8 @@ mod tests {
     use super::*;
     use crate::{DatabaseCreate, DatabaseOpen};
 
-    /// **Both halves, because a client that composes the other one is the duplication T84 removes**
-    /// — the design's D6.
+    /// **Both halves, because a client that composes the other one is a second copy of the
+    /// namespace.**
     #[test]
     fn an_address_carries_the_namespace_and_the_key() {
         let address = SecretAddress::of("mariadb@main/blog");
@@ -355,8 +353,8 @@ mod tests {
         );
     }
 
-    /// The response says what it did to each of the two objects, because that is what T78's ledger
-    /// records: a rollback may only undo what its apply actually made.
+    /// The response says what it did to each of the two objects, because that is what a blueprint
+    /// apply's ledger records: a rollback may only undo what its apply actually made.
     #[test]
     fn an_account_reports_what_was_made_and_where_the_password_is() {
         let answer = DatabaseAccount {
@@ -511,9 +509,9 @@ mod tests {
         );
     }
 
-    /// **The exception to "never the password"** — roadmap task **T77b**, spec D2. This is the one
-    /// type in the workspace whose whole purpose is to answer a credential, so its serialised form
-    /// must contain it — the inverse of every neighbouring test in this file.
+    /// **The exception to "never the password".** This is the one type in the workspace whose whole
+    /// purpose is to answer a credential, so its serialised form must contain it — the inverse of
+    /// every neighbouring test in this file.
     #[test]
     fn a_credentials_answer_does_carry_the_password_because_that_is_what_it_is_for() {
         let answer = DatabaseCredentials {

@@ -1,4 +1,4 @@
-//! An old `mixengine.db`, migrated by this build — roadmap task **T89**.
+//! An old `mixengine.db`, migrated by this build.
 //!
 //! Every other migration test in this workspace builds "the old database" out of today's migration
 //! files: the unit tests in `store.rs` write two migrations at run time. What none of them can be
@@ -295,11 +295,11 @@ async fn opening_it_a_second_time_changes_nothing() {
 /// row's own rendering, so a changed cell leaves the old row with nothing to match.
 ///
 /// **A row a migration *adds* is not a failure**, which is the same rule [`shared`] already applies
-/// one axis over: *a migration that adds a column is not a loss*. It was an equality until T127
-/// found out why that is wrong — a migration that seeded `settings` with the id a home is known by,
-/// deliberately and for its own reasons, and an equality reported that correct migration as data
-/// loss on every fixture older than it. Seeding is a normal thing for a migration to do; losing a
-/// row is not, and only the second is what this file is for.
+/// one axis over: *a migration that adds a column is not a loss*. It was an equality until the
+/// credential repair found out why that is wrong — a migration that seeded `settings` with the id a
+/// home is known by, deliberately and for its own reasons, and an equality reported that correct
+/// migration as data loss on every fixture older than it. Seeding is a normal thing for a migration
+/// to do; losing a row is not, and only the second is what this file is for.
 ///
 /// **So nothing here polices additions**, and that gap is deliberate rather than overlooked. What
 /// would notice a migration writing a row it should not is a reader of the migration; what this
@@ -571,8 +571,8 @@ fn a_lost_row_is_found_and_an_added_one_is_not() {
         "two rows that became one read as a match"
     );
 
-    // **And the case T127 changed.** A migration seeded this row; an equality called that
-    // data loss, and this is the assertion that says it is not.
+    // **And the case the credential repair changed.** A migration seeded this row; an equality
+    // called that data loss, and this is the assertion that says it is not.
     let after = vec![
         row("home.id", "b743b62cbba8"),
         row("telemetry", "false"),

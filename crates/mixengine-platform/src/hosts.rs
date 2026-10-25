@@ -1,10 +1,10 @@
 //! The managed block in the machine's hosts file.
 //!
-//! **Mechanism here, policy in `mixengine-elevate`** — the T41 design, D3. This module finds the
-//! block, splices it, renders it and replaces the file; it decides nothing about what may be
-//! written. That split is what lets the dangerous half be tested exhaustively against files a test
-//! owns, while the half that could point `evil.com` at loopback sits in forty lines of the audited
-//! binary with nothing else in them.
+//! **Mechanism here, policy in `mixengine-elevate`.** This module finds the block, splices it,
+//! renders it and replaces the file; it decides nothing about what may be written. That split is
+//! what lets the dangerous half be tested exhaustively against files a test owns, while the half
+//! that could point `evil.com` at loopback sits in forty lines of the audited binary with nothing
+//! else in them.
 //!
 //! **Nothing outside [`BEGIN_MARKER`]…[`END_MARKER`] is ever read, moved or rewritten.** That is the
 //! platform layer's first rule — every mutation is reversible and tagged — and it is the promise a
@@ -14,6 +14,8 @@
 //!
 //! Compiled under **both** `host` and `elevated`: the daemon reads the block through
 //! [`crate::HostsFile`], and the helper writes it, and neither is worth a second implementation.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-23-t41-hosts-apply-design.md`.
 
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
@@ -69,7 +71,7 @@ pub fn path() -> PathBuf {
     crate::sys::hosts::path()
 }
 
-/// The lock that keeps two homes on one machine from interleaving their writes — the T41 design, D8.
+/// The lock that keeps two homes on one machine from interleaving their writes.
 ///
 /// In the audit directory, which is already root-owned, already machine-wide and already created by
 /// the helper on first run. The helper's own `elevate.lock` is per-home and says nothing about a
@@ -171,8 +173,7 @@ fn read(path: &Path) -> Result<String> {
 /// # Errors
 ///
 /// [`Error::MalformedBlock`] for a block that cannot be read without guessing — see
-/// [`crate::markers`] and the T41 design, D6 — and for a line inside it that names no address or no
-/// domain.
+/// [`crate::markers`] — and for a line inside it that names no address or no domain.
 pub fn parse(text: &str, tag: Option<&str>) -> Result<Vec<HostEntry>> {
     let Some(body) = block(tag).body(text)? else {
         return Ok(Vec::new());

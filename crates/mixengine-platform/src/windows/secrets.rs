@@ -20,7 +20,7 @@ pub(crate) fn absent_store(source: &KeyringError) -> Option<&'static str> {
     )
 }
 
-/// The keys under `service` — T186.
+/// The keys under `service`.
 ///
 /// `keyring` writes every generic credential with the key as its user name and `<key>.<service>` as
 /// its target. `CredEnumerateW`'s filter takes a prefix and nothing else, so this lists every
@@ -118,7 +118,7 @@ pub(crate) fn forget(service: &str, key: &str) -> Result<(), KeyringError> {
 mod tests {
     use super::*;
 
-    /// T186: a credential is this service's only when its target is exactly `<user>.<service>`, so a
+    /// A credential is this service's only when its target is exactly `<user>.<service>`, so a
     /// service whose name ends in `.<service>` never lends it a key.
     #[test]
     fn a_key_is_read_from_the_user_name_the_target_was_made_of() {

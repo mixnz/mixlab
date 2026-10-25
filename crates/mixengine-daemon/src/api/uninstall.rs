@@ -1,6 +1,6 @@
-//! `daemon.uninstall` — roadmap task **T87**: the job, and this daemon's own end when the home goes
-//! with it. What an uninstall removes is [`crate::uninstall`]'s; `daemon.uninstall_plan` is an arm
-//! in [`super::rpc`] that asks it directly.
+//! `daemon.uninstall`: the job, and this daemon's own end when the home goes with it. What an
+//! uninstall removes is [`crate::uninstall`]'s; `daemon.uninstall_plan` is an arm in [`super::rpc`]
+//! that asks it directly.
 
 use std::sync::Arc;
 
@@ -17,9 +17,9 @@ impl Api {
     /// across that wait would end the daemon the moment the wait gave up — with the prompt still on
     /// the person's screen. So this waits for the job to finish, and only then asks whether the
     /// uninstall finished: a declined grant or a refused row finishes nothing, the daemon stays up,
-    /// and the same command works when the person is ready (the T87 design, D9). **A finished one
-    /// ends the daemon whatever was kept** — a kept home is no reason to go on serving a machine
-    /// that has just been told to forget it (the T182 design, D1).
+    /// and the same command works when the person is ready. **A finished one ends the daemon
+    /// whatever was kept** — a kept home is no reason to go on serving a machine that has just been
+    /// told to forget it.
     pub(super) async fn uninstall_now(&self, query: UninstallQuery) -> Result<JobSummary, Error> {
         let uninstall = Arc::clone(&self.uninstall);
         let started = self
@@ -86,7 +86,7 @@ mod tests {
     use crate::api::test_daemon::{Daemon, daemon_on, undeclared};
     use crate::services::fixture;
 
-    /// T87. The plan is a read: it answers on a home with nothing in it, it names every row, and it
+    /// The plan is a read: it answers on a home with nothing in it, it names every row, and it
     /// asks for nothing — a home whose queue is still empty afterwards is the assertion that it
     /// enqueued nothing.
     #[tokio::test]
@@ -103,7 +103,7 @@ mod tests {
 
         // Eleven rows before any relocation, and this fixture relocates nothing. On Windows a
         // twelfth: the fixture's copy is self-updatable, which there is what the installer placed,
-        // so the plan keeps a `package` row naming the Windows uninstaller (T182a, D3).
+        // so the plan keeps a `package` row naming the Windows uninstaller.
         let expected = if cfg!(windows) { 12 } else { 11 };
         assert_eq!(report.items.len(), expected, "{report:?}");
 
@@ -159,9 +159,9 @@ mod tests {
         }
     }
 
-    /// T87. Without `grant`, nothing outside this home is touched and every privileged row that had
-    /// something to remove says what it is waiting for. That is the two-call path T64 exists for: a
-    /// person reads the batch before they allow it.
+    /// Without `grant`, nothing outside this home is touched and every privileged row that had
+    /// something to remove says what it is waiting for. That is the two-call path every elevation
+    /// follows: a person reads the batch before they allow it.
     #[tokio::test]
     async fn an_uninstall_that_was_not_asked_to_grant_removes_nothing_privileged() {
         let daemon = undeclared().await;
@@ -193,8 +193,7 @@ mod tests {
     }
 
     /// And `keep_home` leaves the home where it is, says so on its row, and arms no directory. The
-    /// daemon ends when the run finished and not otherwise — whatever was kept (the T182 design,
-    /// D1).
+    /// daemon ends when the run finished and not otherwise — whatever was kept.
     #[tokio::test]
     async fn keeping_the_home_arms_no_directory_and_says_so() {
         let daemon = undeclared().await;
@@ -232,7 +231,7 @@ mod tests {
         );
     }
 
-    /// T182, D5. Without a grant, the three things that need no token are not touched either: an
+    /// Without a grant, the three things that need no token are not touched either: an
     /// uninstall that cannot finish the privileged half changes nothing else.
     #[tokio::test]
     async fn without_a_grant_nothing_that_needs_no_token_is_touched_either() {
@@ -322,8 +321,8 @@ mod tests {
         assert!(body.contains("hosts-apply"), "{body}");
     }
 
-    /// T182, D4. A process running from the home refuses the act before anything is enqueued.
-    /// T182b, D6. The uninstall's prompt carries only what the uninstall asked for: a producer's
+    /// A process running from the home refuses the act before anything is enqueued.
+    /// The uninstall's prompt carries only what the uninstall asked for: a producer's
     /// operation waiting in the same queue is not in the batch, and is still waiting afterwards.
     #[tokio::test]
     async fn an_uninstall_grants_only_its_own_operations() {
@@ -372,7 +371,7 @@ mod tests {
             !body.contains("firewall-apply"),
             "a producer's operation rode the uninstall's prompt: {body}"
         );
-        // T182b. The batch removes the audit log it writes itself, even where the inventory found
+        // The batch removes the audit log it writes itself, even where the inventory found
         // none. The inventory reads this machine's real log directory, so on a machine that has a log
         // the row was planned anyway; CI's runners have none, which is where this is decided.
         assert!(
@@ -393,7 +392,7 @@ mod tests {
         );
     }
 
-    /// T182b, D6. A declined uninstall leaves the queue as it found it — including a site's hosts
+    /// A declined uninstall leaves the queue as it found it — including a site's hosts
     /// block, which the uninstall's own empty block had displaced under the same key.
     #[tokio::test]
     async fn a_declined_uninstall_puts_back_what_it_displaced() {

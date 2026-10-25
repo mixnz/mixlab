@@ -17,7 +17,8 @@ import { newRequest } from "./requests";
 import { currentLists, replaceSaved, requestsReady } from "./requestsStore";
 import type { RestRequest } from "./types";
 
-/** An allow-list: `lastUsedAt` changes on every send, and `auth` may hold a credential (D5). */
+/** An allow-list: `lastUsedAt` changes on every send, and `auth` may hold a credential (D5 of
+ *  `docs/specs/2026-09-20-t177-a-copy-only-you-can-read-design.md`). */
 export function requestToSync(request: RestRequest): SyncItem {
   const { name, method, url, params, headers, body, origin, createdAt } = request;
   return { id: request.id, data: { name, method, url, params, headers, body, origin, createdAt } };
@@ -42,7 +43,7 @@ export function requestFromSync(synced: SyncItem, local: RestRequest | undefined
   return { ...base, ...(data as Partial<RestRequest>), id: synced.id, auth: base.auth, lastUsedAt: base.lastUsedAt };
 }
 
-/** A secret variable travels as a name and a flag; its value is `rest-env-secrets`' (T177f). */
+/** A secret variable travels as a name and a flag; its value is `rest-env-secrets`'. */
 export function environmentToSync(env: Environment): SyncItem {
   return {
     id: env.id,
@@ -167,7 +168,7 @@ export const environmentSecretsSyncable: SyncableCollection = {
         continue;
       }
       // Not arrived yet: the values wait in the vault, and the environment fills from it (D5).
-      // `read` does not return them until then (L4).
+      // `read` does not return them until then.
       await envSecretsSave(secretIdOf(synced.id), secrets);
       skipped.push(synced.id);
     }

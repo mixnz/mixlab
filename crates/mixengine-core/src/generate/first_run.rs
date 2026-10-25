@@ -1,8 +1,8 @@
-//! What has to happen once, before a service is ever started — roadmap task **T33**.
+//! What has to happen once, before a service is ever started.
 //!
-//! A [`Recipe`](super::Recipe) can describe a service completely and still not say "before this ever
-//! runs, bootstrap a data directory and set a password in it". MariaDB is the first service that
-//! needs it and PostgreSQL (T34) is the second, which is why this is a hook on the trait rather than
+//! A [`Recipe`](super::Recipe) can describe a service completely and still not say "before this
+//! ever runs, bootstrap a data directory and set a password in it". MariaDB is the first service
+//! that needs it and PostgreSQL is the second, which is why this is a hook on the trait rather than
 //! something inside one recipe.
 //!
 //! # Two halves, and the reason is the keyring
@@ -79,8 +79,7 @@ pub struct Ritual {
     /// Builds the steps, from a context that already carries those credentials.
     pub steps: BuildSteps,
 
-    /// Re-sets those same credentials in a data directory that already exists — roadmap task
-    /// **T127**.
+    /// Re-sets those same credentials in a data directory that already exists.
     ///
     /// **A field on the ritual rather than a hook of its own**, because the credentials a reset
     /// writes are the ritual's: named by its [`secrets`](Self::secrets), stored at the addresses
@@ -98,9 +97,8 @@ pub struct Ritual {
     pub reset: Option<BuildSteps>,
 }
 
-// **The shape moved to [`super::step`]** when provisioning needed it too — roadmap task
-// **T77a**. Re-exported rather than renamed at every call site: a ritual's steps *are* steps,
-// and nothing about them changed.
+// **The shape moved to [`super::step`]** when provisioning needed it too. Re-exported rather than
+// renamed at every call site: a ritual's steps *are* steps, and nothing about them changed.
 pub use super::step::{SecretFile, Step};
 
 /// A ritual, bound to the service it is for — what a [`Generated`](super::Generated) carries.
@@ -191,13 +189,13 @@ impl FirstRun {
         Millis(steps.iter().map(|step| step.timeout.0).sum())
     }
 
-    /// Whether this ritual can repair a data directory rather than only create one — **T127**.
+    /// Whether this ritual can repair a data directory rather than only create one.
     #[must_use]
     pub fn has_reset(&self) -> bool {
         self.ritual.reset.is_some()
     }
 
-    /// The steps that re-set this service's superuser credential in place — roadmap task **T127**.
+    /// The steps that re-set this service's superuser credential in place.
     ///
     /// [`None`] where the ritual declares no reset. That is not an error here: the caller is what
     /// knows whether being unable to repair this service is worth reporting, and it says so in its

@@ -1,4 +1,4 @@
-//! Which home this is — roadmap task **T126**.
+//! Which home this is.
 //!
 //! The OS credential store is one store per *user*, not one per home, and `MIXENGINE_HOME` means a
 //! user can have several: a sandbox for a real run, a suite's temporary home, a second install for
@@ -124,7 +124,7 @@ mod tests {
         assert_ne!(
             id(&first).await.expect("an id"),
             id(&second).await.expect("an id"),
-            "two homes sharing an id share their credentials, which is T126's whole subject"
+            "two homes sharing an id share their credentials, which is what a home id prevents"
         );
     }
 

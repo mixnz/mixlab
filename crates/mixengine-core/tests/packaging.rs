@@ -1,6 +1,6 @@
 //! `packaging/common.sh`'s two arrays, against the names this crate actually looks for.
 //!
-//! **Roadmap task T85c is what this file exists to stop happening a second time.** `MIX_BINARIES`
+//! **What this file exists to stop happening a second time.** `MIX_BINARIES`
 //! named three binaries and [`mixengine_core::shims::source`] looked for a fourth beside the
 //! running `mixengined`, so every release built from those scripts installed cleanly, started,
 //! reported itself healthy, and could not run `php` — the `bin/` it fills was empty and
@@ -82,11 +82,11 @@ fn the_release_ships_every_binary_this_code_looks_for() {
         "mix".to_owned(),
         mixengine_core::updates::apply::SMOKE_EXECUTABLE.to_owned(),
         mixengine_core::shims::BINARY.to_owned(),
-        // T185: what `<root>/bin` holds per name on Windows, looked for beside the daemon.
+        // What `<root>/bin` holds per name on Windows, looked for beside the daemon.
         mixengine_core::shims::TRAMPOLINE.to_owned(),
         // The helper beside the program, which the daemon installs the privileged copy from.
         "mixengine-elevate".to_owned(),
-        // The window — T105. Read out of the manifest that produces the file rather than spelled
+        // The window. Read out of the manifest that produces the file rather than spelled
         // here: `cargo` names the executable after `[package].name` and Tauri leaves that alone
         // (`mainBinaryName` is unset), so this is the one string that cannot drift from the file
         // the installers place.
@@ -162,10 +162,10 @@ fn the_window_is_one_of_the_binaries_and_is_named_as_such() {
 ///
 /// **What this stops.** `swap` resolves every other payload name by appending this platform's
 /// executable suffix; the window is the one entry whose on-disk name that rule does not produce, so
-/// it is looked up by these two constants instead. A rename on the packaging side alone would give a
-/// feed whose `provides` names something no installed copy ever looks for — no error, no log line,
-/// and a window that is never updated again. It is the failure T105 argued the executable's spelling
-/// out of, one layer down.
+/// it is looked up by these two constants instead. A rename on the packaging side alone would give
+/// a feed whose `provides` names something no installed copy ever looks for — no error, no log
+/// line, and a window that is never updated again. It is the failure
+/// [`mixengine_core::window::EXECUTABLE`] argues the executable's spelling out of, one layer down.
 #[test]
 fn the_window_is_named_the_same_on_both_sides() {
     assert_eq!(
@@ -183,8 +183,7 @@ fn the_window_is_named_the_same_on_both_sides() {
     );
 }
 
-/// This system's install location is the one its packaging script writes to — roadmap task
-/// **T107**.
+/// This system's install location is the one its packaging script writes to.
 ///
 /// **What this stops.** An installer that moved and a lookup that did not is a window whose Start
 /// Menu shortcut works and whose `mix database open` says *MixLab is not installed*, on the machine
@@ -216,7 +215,7 @@ fn this_systems_install_location_is_the_one_packaging_writes_to() {
 }
 
 /// The desktop entry that makes a `mixlab://` link reach the window names the scheme the daemon
-/// writes into every handoff URL — roadmap task **T107**.
+/// writes into every handoff URL.
 ///
 /// **What this stops.** The daemon composes `<scheme>://connect?…` and starts the window with it;
 /// the `.desktop` file is what makes the operating system hand a link over at all; `handoff.rs`
@@ -265,10 +264,9 @@ fn the_window_is_called_what_it_is_built_as() {
 /// The three files the desktop build reads its version out of, read at compile time.
 ///
 /// None of them can inherit from `[workspace.package]`: the desktop application's crate is a
-/// workspace of its own, excluded from this one (ADR 0027, and the design's D1). So the
-/// inheritance is the test below — see the T104 design's D2. `include_str!` for the same reason as
-/// the two constants above: a file that moved is a build error rather than a test that reads
-/// nothing and passes.
+/// workspace of its own, excluded from this one (ADR 0027). So the inheritance is the test below.
+/// `include_str!` for the same reason as the two constants above: a file that moved is a build
+/// error rather than a test that reads nothing and passes.
 const DESKTOP_PACKAGE_JSON: &str = include_str!("../../../apps/desktop/package.json");
 /// The fourth: `npm ci` is what CI installs with, and it reads this file rather than the manifest
 /// beside it.
@@ -359,11 +357,11 @@ const BUILD_AND_RELEASE: &str = include_str!("../../../docs/operations/build-and
 
 /// Every document that promises the window's floor promises the one `packaging/common.sh` declares.
 ///
-/// **T105a, and the reason this is a test rather than a habit.** ADR 0028 settled that the AppImage
-/// does not carry WebKitGTK, which turns the floor into a promise to a person rather than an
-/// implementation detail: three documents name a glibc version, two of them name three package
-/// names, `packaging/linux/window-floor.sh` holds the binary to the first of those on every Linux
-/// build leg — and nothing but this connects the two ends. A floor raised in `common.sh` without the
+/// **The reason this is a test rather than a habit.** ADR 0028 settled that the AppImage does not
+/// carry WebKitGTK, which turns the floor into a promise to a person rather than an implementation
+/// detail: three documents name a glibc version, two of them name three package names,
+/// `packaging/linux/window-floor.sh` holds the binary to the first of those on every Linux build
+/// leg — and nothing but this connects the two ends. A floor raised in `common.sh` without the
 /// documents following is somebody told their distribution is supported by a page, and told
 /// otherwise by a window that does not open.
 #[test]
@@ -413,8 +411,7 @@ fn every_document_promises_the_floor_the_packaging_declares() {
     }
 }
 
-/// Every download link on the install pages carries the prefix of what it installs — T176f,
-/// ADR 0049.
+/// Every download link on the install pages carries the prefix of what it installs — ADR 0049.
 ///
 /// **The handbook links unversioned aliases, and nothing but this connects them to the scripts that
 /// publish them.** A link left on the old prefix is a `404` on the one page a person reads before
@@ -459,9 +456,9 @@ fn every_download_link_carries_the_prefix_of_what_it_installs() {
     }
 }
 
-/// The helper removes what `packaging/macos/build.sh` places, by constants of its own — roadmap task
-/// **T182a**, spec D2: the four command-line binaries of `MIX_BINARIES` (all but the helper and the
-/// window), the bundle `MIX_WINDOW_APP`, and MixLab's identifier.
+/// The helper removes what `packaging/macos/build.sh` places, by constants of its own: the four
+/// command-line binaries of `MIX_BINARIES` (all but the helper and the window), the bundle
+/// `MIX_WINDOW_APP`, and MixLab's identifier.
 #[test]
 fn the_package_paths_the_helper_removes_are_what_the_pkg_places() {
     let paths = mixengine_platform::install::package_paths();

@@ -13,8 +13,8 @@ pub(super) fn table<const N: usize>(headings: [&str; N], rows: &[[String; N]]) -
     table_of(&headings, &rows)
 }
 
-/// [`table`] for a column count decided at run time — roadmap task **T151**, where a listing may
-/// grow `RUNS`, `NEEDS`, both or neither.
+/// [`table`] for a column count decided at run time, where a listing may grow `RUNS`, `NEEDS`, both
+/// or neither.
 pub(super) fn table_of(headings: &[&str], rows: &[Vec<String>]) -> String {
     let widths: Vec<usize> = (0..headings.len())
         .map(|column| {

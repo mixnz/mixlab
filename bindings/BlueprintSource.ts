@@ -3,8 +3,8 @@
 /**
  * Where a blueprint came from.
  *
- * Three words rather than a boolean, because T78a's trust marking is what reads this: a
- * hand-imported blueprint carries arbitrary scaffold code and stays untrusted for good, and
- * "not built in" would not distinguish it from one captured on this machine.
+ * Three words rather than a boolean, because the scaffold's trust marking is what reads this: a
+ * hand-imported blueprint carries arbitrary scaffold code and stays untrusted for good, and "not
+ * built in" would not distinguish it from one captured on this machine.
  */
 export type BlueprintSource = "builtin" | "captured" | "imported";

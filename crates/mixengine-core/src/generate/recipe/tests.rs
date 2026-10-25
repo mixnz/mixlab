@@ -3,7 +3,7 @@ use mixengine_proto::ServiceId;
 use super::*;
 use crate::generate::settings::Settings;
 
-/// **`msys2` is installable and never runnable** — roadmap task **T206a**, D5.
+/// **`msys2` is installable and never runnable.**
 #[test]
 fn msys2_is_installable_and_never_runnable() {
     let catalogue = Catalogue::builtin();
@@ -14,11 +14,10 @@ fn msys2_is_installable_and_never_runnable() {
     assert!(!catalogue.is_toolchain("caddy"));
 }
 
-/// **Every database names its superuser, and nothing else names anything** — roadmap task
-/// **T82**, the design's D5.
+/// **Every database names its superuser, and nothing else names anything.**
 ///
 /// The account name is the recipe's rather than the manifest's: a `web-app` that wrote `root`
-/// itself would be a manifest that is wrong the day a recipe changes its mind, and T83's
+/// itself would be a manifest that is wrong the day a recipe changes its mind, and MixLab's
 /// connection handoff has to read the same answer out of the same place.
 #[test]
 fn only_the_databases_name_an_administrator() {
@@ -43,7 +42,7 @@ fn only_the_databases_name_an_administrator() {
     }
 }
 
-/// **Only MariaDB asks for a certificate** — roadmap task **T99**.
+/// **Only MariaDB asks for a certificate.**
 ///
 /// MySQL writes its own pair once at `--initialize`, PostgreSQL ships with `ssl` off, and
 /// nothing else here speaks TLS to a client. A recipe that started asking would be a decision
@@ -86,8 +85,8 @@ fn only_mariadb_asks_for_a_certificate() {
     }
 }
 
-/// **A template can branch on `certificate` and on nothing else that is optional** — roadmap
-/// task **T99**. `service.instance` renders the word `none`; this group renders a falsy value.
+/// **A template can branch on `certificate` and on nothing else that is optional.**
+/// `service.instance` renders the word `none`; this group renders a falsy value.
 #[test]
 fn a_context_with_no_certificate_renders_a_falsy_group() {
     let service = ServiceId::parse("mariadb@main").expect("an id");
@@ -131,7 +130,7 @@ const fn root() -> &'static str {
 }
 
 /// **While saving resources: an hour for the databases and the caches, half an hour for a pool,
-/// never for a front end** — T70, T70a, and T167b which moved them behind the switch.
+/// never for a front end**, and only behind the *Save battery* switch.
 ///
 /// A number that idles a service nothing can start again is a home that broke, so each of these
 /// names only a service something can wake; the two front ends stay [`None`] for ever, because
@@ -236,9 +235,9 @@ fn a_recipe_that_listens_on_a_port_says_which_one_it_would_like() {
     );
 }
 
-/// **T97.** The free function and the method are one join, and this is what keeps them one: a
-/// switch writes a port-80 grant against the first and the supervisor runs the second, so a
-/// suffix spelled in one place and not the other would be a capability on a file nothing runs.
+/// The free function and the method are one join, and this is what keeps them one: a switch writes
+/// a port-80 grant against the first and the supervisor runs the second, so a suffix spelled in one
+/// place and not the other would be a capability on a file nothing runs.
 #[test]
 fn a_package_executable_is_spelled_once_however_it_is_asked_for() {
     let service = ServiceId::parse("nginx").expect("an id");

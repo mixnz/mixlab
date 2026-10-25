@@ -146,8 +146,7 @@ pub async fn mixengine_database_explore_data(
 mod tests {
     use super::*;
 
-    /// Each protocol the daemon returns opens exactly one workspace — `mongodb` is the Mongo tab
-    /// (T155).
+    /// Each protocol the daemon returns opens exactly one workspace — `mongodb` is the Mongo tab.
     #[test]
     fn every_protocol_the_daemon_answers_opens_a_workspace() {
         assert_eq!(db_kind_of("mysql").unwrap(), DbKind::Mysql);

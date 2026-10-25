@@ -26,8 +26,7 @@ pub enum PageOutcome {
 
 /// The two calls the engine makes, as a trait so the engine is tested without a server.
 pub trait Remote {
-    /// `resync`: `since` came from a read that began at 0, so the server does not expire it
-    /// (T178b, M4).
+    /// `resync`: `since` came from a read that began at 0, so the server does not expire it.
     fn page(
         &self,
         collection: &str,
@@ -41,7 +40,7 @@ pub trait Remote {
     ) -> impl Future<Output = Result<Vec<BatchResult>, AppError>> + Send;
 }
 
-/// `POST /v1/records/heads` (T189). A trait of its own rather than a third method of [`Remote`]:
+/// `POST /v1/records/heads`. A trait of its own rather than a third method of [`Remote`]:
 /// every fake that pages or pushes would have to answer a question it is never asked.
 pub trait AskHeads {
     fn heads(
@@ -175,7 +174,7 @@ impl AskHeads for Transport {
     }
 }
 
-/// `resync=1`: this cursor came from a read that began at 0 (T178b, M4).
+/// `resync=1`: this cursor came from a read that began at 0, so the server does not expire it.
 fn resync_flag(resync: bool) -> &'static str {
     if resync {
         "&resync=1"

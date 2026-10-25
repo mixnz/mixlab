@@ -20,9 +20,9 @@ import type { StopBehaviour } from "./StopBehaviour";
  * rather than merely intended: a public `program` could be reassigned to a relative path after
  * `build` refused one, and a public `depends_on` could be pushed onto until it named the service
  * itself. Nothing needs to mutate a spec — a changed service is a new spec, built and checked the
- * same way — so the ability to is only the ability to get it wrong. Private fields also leave T16,
- * T68 and T69 free to grow the struct, which is what `#[non_exhaustive]` would otherwise be here
- * for.
+ * same way — so the ability to is only the ability to get it wrong. Private fields also leave
+ * limits, idle stopping and log retention free to grow the struct, which is what
+ * `#[non_exhaustive]` would otherwise be here for.
  *
  * **Deserialisation does not run those checks.** A spec arriving from SQLite or from an
  * `extension.toml` is validated by whoever loads it, at the point where a bad one can be reported
@@ -68,10 +68,10 @@ cwd: string,
  * query names none, and a web server's admin endpoint is not the port its sites are served on.
  * The recipe wrote the number into the configuration and is the only thing that knows it.
  *
- * What reads this is the diagnosis of a failed start (roadmap task **T38**): the daemon asks
- * the OS who is listening on each of these before it decides what to call the failure. Nothing
- * reserves a port by declaring it here, and nothing binds one — see `service.create` for where
- * a port is *allocated*.
+ * What reads this is the diagnosis of a failed start: the daemon asks the OS who is listening
+ * on each of these before it decides what to call the failure. Nothing reserves a port by
+ * declaring it here, and nothing binds one — see `service.create` for where a port is
+ * *allocated*.
  */
 ports: Array<number>, 
 /**
@@ -98,17 +98,17 @@ reload: ReloadBehaviour | null,
 /**
  * Services that must be ready before this one starts, and that stop after it.
  *
- * The edges of a DAG; a cycle among several specs is caught when they are assembled (roadmap
- * task T17). The one case a single spec can see for itself — depending on itself — is rejected
- * by [`ServiceSpecBuilder::build`].
+ * The edges of a DAG; a cycle among several specs is caught when they are assembled into a
+ * graph. The one case a single spec can see for itself — depending on itself — is rejected by
+ * [`ServiceSpecBuilder::build`].
  */
 depends_on: Array<ServiceId>, 
 /**
- * CPU and memory ceilings. Enforcement is roadmap task T68.
+ * CPU and memory ceilings, enforced where the service runs.
  */
 limits: ResourceLimits, 
 /**
- * Whether a memory watchdog may restart this service — roadmap task **T71a**.
+ * Whether a memory watchdog may restart this service.
  *
  * **The recipe's answer and not a person's.** Whether a program survives being restarted under
  * memory pressure is a property of the program: a php-fpm pool loses the requests in flight,
@@ -121,10 +121,10 @@ limits: ResourceLimits,
  */
 restart_over_memory: boolean, 
 /**
- * When to stop it for being unused. Enforcement is roadmap task T69.
+ * When to stop it for being unused, which the daemon's idle sweep acts on.
  */
 idle: IdlePolicy | null, 
 /**
- * How much of its output to keep. Enforcement is roadmap task T16.
+ * How much of its output to keep, which the supervisor's log capture applies.
  */
 logs: LogPolicy, };

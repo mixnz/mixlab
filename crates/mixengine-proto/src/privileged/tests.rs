@@ -2,8 +2,8 @@ use super::*;
 
 use crate::PROTOCOL_VERSION;
 
-/// T182b, D1. The helper's version is its own, and every helper stamped before it (the product
-/// versions, and the stray `0.1.0` from before the renumbering) compares older.
+/// The helper's version is its own, and every helper stamped before it (the product versions, and
+/// the stray `0.1.0` from before the renumbering) compares older.
 #[test]
 fn the_helper_version_is_ahead_of_every_stamp_before_it() {
     let own = crate::PackageVersion::parse(HELPER_VERSION.to_owned()).expect("a version");
@@ -90,8 +90,8 @@ fn the_name_of_an_operation_is_its_wire_tag() {
     assert_eq!(PrivilegedOp::ALL.len(), 14, "ALL and the enum have drifted");
 }
 
-/// T182a, D2: the one operation that removes the program itself carries nothing, like the two
-/// removals before it, needs a token, and has a key of its own.
+/// The one operation that removes the program itself carries nothing, like the two removals before
+/// it, needs a token, and has a key of its own.
 #[test]
 fn package_remove_carries_nothing_needs_a_token_and_has_its_own_key() {
     let op = PrivilegedOp::PackageRemove {};
@@ -112,8 +112,9 @@ fn package_remove_carries_nothing_needs_a_token_and_has_its_own_key() {
 }
 
 /// The operation carries nothing, so its dedupe key is its name and two enqueues are one row
-/// — the T85 design, D2. Asserted because this is the first operation since `Probe` with no
-/// data in it at all, and `Probe`'s key is its *serialisation* rather than its name.
+/// (`docs/specs/2026-09-04-t85-installers-design.md`, D2). Asserted because this is the first
+/// operation since `Probe` with no data in it at all, and `Probe`'s key is its *serialisation*
+/// rather than its name.
 #[test]
 fn installing_the_helper_is_one_pending_operation_however_often_it_is_asked_for() {
     let op = PrivilegedOp::HelperInstall {};
@@ -181,7 +182,7 @@ fn every_outcome_round_trips() {
     );
 }
 
-/// T40a's vocabulary, defined here so that task has a word to use — D11.
+/// The launchers' vocabulary, defined here so they have a word to use.
 #[test]
 fn a_declined_prompt_is_a_word_rather_than_a_number() {
     let encoded = serde_json::to_string(&ElevationOutcome::Declined).unwrap();
@@ -271,7 +272,7 @@ fn writing_the_hosts_file_needs_an_administrative_token() {
     );
 }
 
-/// The screen T64 renders exists to be read before somebody clicks Allow, so the description is
+/// The screen `mix` renders exists to be read before somebody clicks Allow, so the description is
 /// the domains themselves and not a count.
 #[test]
 fn a_hosts_change_describes_itself_by_naming_every_domain() {
@@ -374,9 +375,10 @@ fn port_access_needs_an_administrative_token_in_both_directions() {
     );
 }
 
-/// The screen T64 renders is read before somebody clicks Allow. D11 leaves exactly one control
-/// against a compromised daemon pointing a grant at a binary of its own choosing, and it is that
-/// the whole path is printed here.
+/// The screen `mix` renders is read before somebody clicks Allow.
+/// `docs/specs/2026-08-23-t42-port-access-design.md`, D11, leaves exactly one control against a
+/// compromised daemon pointing a grant at a binary of its own choosing, and it is that the whole
+/// path is printed here.
 #[test]
 fn a_port_access_change_describes_what_it_will_do_to_the_machine() {
     let capability = PrivilegedOp::PortAccessGrant {
@@ -446,10 +448,10 @@ fn a_port_access_plan_with_a_field_this_build_does_not_know_is_fatal() {
     assert!(serde_json::from_value::<PrivilegedOp>(value).is_err());
 }
 
-/// The T45 design, D3, written as a test so that putting the field back is a failure rather
-/// than a review comment. The plan names TLDs and a port. It cannot name an address, because a
-/// request that could name one is a request that could point this machine's name resolution
-/// anywhere — with a valid signature and the user's own Allow click.
+/// `docs/specs/2026-08-23-t45-resolver-wiring-design.md`, D3, written as a test so that putting the
+/// field back is a failure rather than a review comment. The plan names TLDs and a port. It cannot
+/// name an address, because a request that could name one is a request that could point this
+/// machine's name resolution anywhere — with a valid signature and the user's own Allow click.
 #[test]
 fn a_resolver_plan_cannot_name_a_nameserver() {
     let plan = ResolverPlan::ResolverDirectory {
@@ -506,8 +508,8 @@ fn resolver_operations_need_a_token_and_have_names() {
     assert!(PrivilegedOp::ALL.contains(&"resolver-revoke"));
 }
 
-/// T64's screen prints this before anything is raised, so it says the names and the files
-/// rather than the mechanism's jargon.
+/// `mix` prints this before anything is raised, so it says the names and the files rather than the
+/// mechanism's jargon.
 #[test]
 fn a_resolver_apply_describes_the_names_and_the_port() {
     let described = PrivilegedOp::ResolverApply {
@@ -606,7 +608,7 @@ fn a_trust_install_is_tagged_the_way_the_existing_fixtures_spell_it() {
     assert_eq!(encoded["plan"]["der"], serde_json::json!([1, 2, 3]));
 }
 
-/// Two values of one question, as the resolver pair is — D3, on T45's D4.
+/// Two values of one question, as the resolver pair is.
 #[test]
 fn installing_and_removing_supersede_each_other_in_the_queue() {
     let install = PrivilegedOp::TrustCaInstall {
@@ -671,9 +673,9 @@ fn what_a_person_is_asked_to_allow_names_the_store() {
     assert!(described.contains("ca-certificates"), "{described}");
 }
 
-/// T87's two operations carry nothing, on `HelperInstall`'s rule: where each file is is a
-/// constant compiled into the helper, so neither hands a compromised daemon a *delete this file
-/// as root* primitive.
+/// Uninstall's two operations carry nothing, on `HelperInstall`'s rule: where each file is is a
+/// constant compiled into the helper, so neither hands a compromised daemon a *delete this file as
+/// root* primitive.
 #[test]
 fn the_two_removals_carry_no_field_and_refuse_one() {
     for (op, wire) in [
@@ -705,8 +707,8 @@ fn installing_and_removing_the_helper_are_one_key() {
     );
 }
 
-/// T88a. The operation that makes an upgrade possible at all, and the one that carries a
-/// signature requirement rather than a path.
+/// The operation that makes an upgrade possible at all, and the one that carries a signature
+/// requirement rather than a path.
 #[test]
 fn replacing_the_helper_is_an_operation_with_no_fields() {
     let op = PrivilegedOp::HelperReplace {};

@@ -1,16 +1,15 @@
-//! What a domain may be, and which TLDs this home will answer for — roadmap task T39a.
+//! What a domain may be, and which TLDs this home will answer for.
 //!
 //! One module owns the policy for the same reason [`crate::projects`] owns the project walk: a
 //! second copy of "is this a domain?" is a second answer to a question with exactly one. `site.*`
-//! asks it here, T46's `domain.*` will ask it here, and T44's DNS server answers only for what this
-//! module let through.
+//! and `domain.*` ask it here, and the DNS server answers only for what this module let through.
 //!
 //! # The table itself is in `mixengine-proto`
 //!
-//! Moved there by T41 (design D4), because `mixengine-elevate` has to refuse a domain outside a
-//! managed TLD *itself* and being handed the permitted list in a request would be the helper
-//! trusting the daemon. What stays here is everything that is not the table: which error each
-//! refusal becomes, `.local` needing `accept_risky_tld`, and the slug a project's name makes.
+//! Moved there because `mixengine-elevate` has to refuse a domain outside a managed TLD *itself*
+//! and being handed the permitted list in a request would be the helper trusting the daemon. What
+//! stays here is everything that is not the table: which error each refusal becomes, `.local`
+//! needing `accept_risky_tld`, and the slug a project's name makes.
 
 use mixengine_proto::domains::{MANAGED_TLDS, domain_syntax};
 
@@ -82,7 +81,7 @@ pub fn slug(name: &str) -> Option<String> {
 ///
 /// **A collision is not this function's business** — it is refused by the caller, naming the site
 /// that holds the domain, because appending `-2` would hand somebody a domain they never typed and
-/// would not remember (spec D10).
+/// would not remember.
 ///
 /// # Errors
 ///
@@ -98,11 +97,11 @@ pub fn default_for(project_name: &str) -> Result<String> {
     normalised(&format!("{slug}.{DEFAULT_TLD}"), false)
 }
 
-/// This site's domains with `domain` on the end — roadmap task **T46**.
+/// This site's domains with `domain` on the end.
 ///
 /// **On the end, never at the head.** The head is the primary, which decides the site's canonical
 /// URL and, from phase 5, the name on its certificate; a verb that says "add a domain" does not get
-/// to change that (T46 design, D3).
+/// to change that.
 ///
 /// Adding a name the site already has is not an error. The caller asked for a state, and it is the
 /// state they get — which is also what makes a client retrying a request harmless.
@@ -120,7 +119,7 @@ pub fn after_adding(current: &[String], domain: &str) -> Vec<String> {
     after
 }
 
-/// This site's domains without `domain` — roadmap task **T46**.
+/// This site's domains without `domain`.
 ///
 /// # Errors
 ///
@@ -170,7 +169,7 @@ mod tests {
             "-blog.test",  // a label starting with a hyphen
             "blog-.test",  // or ending with one
             "bl og.test",  // a space
-            "*.blog.test", // a wildcard is T44's answer, not a row
+            "*.blog.test", // a wildcard is the DNS server's answer, not a row
             "blög.test",   // IDN, refused by name rather than mangled
             "blog..test",  // an empty label
             "",
@@ -267,7 +266,7 @@ mod tests {
     }
 
     /// Removing the primary would change what the site *is* under a verb that says "remove a
-    /// domain" — the T46 design, D3.
+    /// domain".
     #[test]
     fn the_primary_cannot_be_removed() {
         let current = vec!["blog.test".to_owned(), "www.blog.test".to_owned()];

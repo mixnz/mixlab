@@ -1,12 +1,12 @@
-//! Index schema 2: one signed root and one file per kind — roadmap task **T196**.
+//! Index schema 2: one signed root and one file per kind.
 //!
 //! An encoding of schema 1 and nothing more: [`decode`] gives back the packages `index.json` lists,
 //! value for value. The root names every kind file by sha256, which is what lets one signature
 //! cover all of them — a kind file is believed only because a signed root states its hash.
 //!
 //! The reference is `tools/catalogue.py` in `mixengine-packages`. Where this is stricter than its
-//! `decode_kind`, the T196 design's D12 says why; none of those places is reachable from what the
-//! publisher's encoder writes.
+//! `decode_kind`, D12 of `docs/specs/2026-09-30-t196-mixengine-reads-index-schema-2-design.md` says
+//! why; none of those places is reachable from what the publisher's encoder writes.
 //!
 //! Like [`super::format`], nothing here is `#[serde(deny_unknown_fields)]`: a field this build does
 //! not know is ignored, so adding an optional one is not a schema change.
@@ -88,7 +88,7 @@ pub struct KindFile {
 
 /// What an artifact says that is not about its bytes.
 ///
-/// **Only these five fields are read** (`lacks` since T206). The reference decoder spreads the shape over the artifact,
+/// **Only these five fields are read.** The reference decoder spreads the shape over the artifact,
 /// so a shape carrying `sha256` would win there; here a shape has nowhere to put one.
 #[derive(Debug, Clone, Deserialize)]
 struct Shape {
@@ -233,7 +233,7 @@ mod tests {
     }
 
     /// **`lacks` travels in the shape**, where the packaging repository's encoder puts every field
-    /// that is not about the bytes — roadmap task **T206**, D1.
+    /// that is not about the bytes.
     #[test]
     fn a_shape_carries_what_its_cells_lack() {
         let mut file = php();
@@ -291,8 +291,7 @@ mod tests {
         );
     }
 
-    /// The reference decoder merges the shape over the artifact; this one must not — the T196
-    /// design's D12.
+    /// The reference decoder merges the shape over the artifact; this one must not.
     #[test]
     fn a_shape_cannot_overwrite_what_an_artifact_says_about_its_bytes() {
         let mut file = php();

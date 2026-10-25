@@ -6,7 +6,8 @@ use windows_sys::Win32::System::SystemServices::SE_GROUP_ENABLED;
 use super::spawn::Arguments;
 use super::*;
 
-/// **The assertion T34a exists to make**, and it is made by reading rather than by trying.
+/// **The assertion the restricted token exists to make true**, and it is made by reading rather
+/// than by trying.
 ///
 /// `docs/standards/testing.md` says why: this repository's Windows CI leg holds a *full*
 /// token where `BUILTIN\Administrators` is an enabled group, so a test that proved the exclusion

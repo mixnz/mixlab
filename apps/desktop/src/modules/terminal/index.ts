@@ -21,6 +21,6 @@ export const terminalModule: ModuleDefinition = {
   settings: { labelKey: "terminal.settingsTitle", Icon: TerminalIcon, Section: TerminalSettings },
   shortcuts: TERMINAL_SHORTCUTS,
   syncable: [settingsSyncable, hostsSyncable, hostSecretsSyncable],
-  // What the MixEngine module's *Save as Terminal target* asks for — T205.
+  // What the MixEngine module's *Save as Terminal target* asks for.
   actions: { saveTarget: saveDraftTarget },
 };

@@ -112,7 +112,7 @@ pub async fn request(verb: &str, path: &str, body: Option<Value>) -> Result<Vec<
 /// Performs the HTTP/1.1 handshake on an already open IO and sends one request.
 ///
 /// Generic over the IO type: there used to be two `#[cfg]` branches with two types (pipe and
-/// socket) calling in here; since T102 `transport::Io` is a single type from `mixengine-platform`,
+/// socket) calling in here; now `transport::Io` is a single type from `mixengine-platform`,
 /// and the generic stays so this function does not know what that type is.
 type Sent = (
     hyper::client::conn::http1::SendRequest<Full<Bytes>>,

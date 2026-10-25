@@ -84,7 +84,7 @@ export function createActivity(): ActivityStore {
     downloading() {
       // A run that only asks shows nothing. A push is the local check every focus and every half
       // minute runs, and reading eleven collections took 240–465ms; a full run first asks the
-      // server what changed (T189). Shown for either, alt-tabbing looked like syncing. `down` is
+      // server what changed. Shown for either, alt-tabbing looked like syncing. `down` is
       // for a pull the server said has something to fetch, and it still waits its delay.
       want("down", SHOW_AFTER_MS);
     },

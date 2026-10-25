@@ -1,4 +1,4 @@
-//! The generated ini set against a **real** PHP — roadmap task **T28**.
+//! The generated ini set against a **real** PHP.
 //!
 //! **The terminal and the pool are why this suite exists.** Everything else is provable in one
 //! process and is proved there: the merge, the ordering, the two `zend_extension` names, the sweep.
@@ -328,7 +328,7 @@ fn eventually(
     }
 }
 
-/// **The whole of T28, in the order a user meets it.**
+/// **The whole of the ini set, in the order a user meets it.**
 ///
 /// One test rather than seven, for `php_fpm.rs`' reason: each step is the previous one's
 /// precondition, and seven tests would be seven real PHP installs performed to re-reach the state

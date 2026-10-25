@@ -1,4 +1,4 @@
-//! Builds the published documentation site out of the embedded corpus — roadmap task T90.
+//! Builds the published documentation site out of the embedded corpus.
 //!
 //! **Not a `[[bin]]`, and not compiled into anything shipped.** It is reached from
 //! `examples/build-site.rs` and from `tests/site.rs`, both of which include this file with

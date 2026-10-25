@@ -1,14 +1,14 @@
 //! The ways updating MixEngine and its helper can fail — what `updates` reports.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 use std::path::PathBuf;
 
 /// The ways updating MixEngine and its helper can fail
 #[derive(Debug, thiserror::Error)]
 pub enum UpdateError {
-    /// A `settings` row could not be written as JSON — roadmap task **T88**.
+    /// A `settings` row could not be written as JSON.
     ///
     /// Unreachable for the same reason as [`JobError::JobOutcomeUnwritable`]: every value written
     /// to that table is one of ours. Reported rather than unwrapped because nothing in this crate
@@ -24,7 +24,7 @@ pub enum UpdateError {
         source: serde_json::Error,
     },
 
-    /// This copy of MixEngine is not one that may replace itself — roadmap task **T88**.
+    /// This copy of MixEngine is not one that may replace itself.
     ///
     /// A `.deb`, an `.rpm`, a `.pkg` or an AppImage put it where it is, and whatever did that is
     /// what updates it. **Refused before a byte is downloaded**, and never by attempting an
@@ -40,7 +40,7 @@ pub enum UpdateError {
         because: String,
     },
 
-    /// The version a client asked to install is not the one the feed offers — roadmap task **T88**.
+    /// The version a client asked to install is not the one the feed offers.
     ///
     /// **Which is what stops an update nobody read the notes for.** `update.apply` takes the version
     /// the client showed the user, and a check that landed between the prompt and the answer would
@@ -53,7 +53,7 @@ pub enum UpdateError {
         offered: Option<String>,
     },
 
-    /// The published release has no build for this machine — roadmap task **T88**.
+    /// The published release has no build for this machine.
     ///
     /// Named rather than reported as "no update", because the two send a reader to entirely
     /// different places: one is a machine that is up to date and the other is a release that skipped
@@ -66,16 +66,16 @@ pub enum UpdateError {
         arch: String,
     },
 
-    /// This copy was installed by the macOS `.pkg`, and the next `.pkg` updates it — roadmap task
-    /// **T88f**. What `update.apply` answers for it, naming the way that does work.
+    /// This copy was installed by the macOS `.pkg`, and the next `.pkg` updates it. What
+    /// `update.apply` answers for it, naming the way that does work.
     #[error("the .pkg installed MixEngine in {}, so the next .pkg updates it", directory.display())]
     UpdateUsesInstaller {
         /// Where this copy is installed.
         directory: PathBuf,
     },
 
-    /// The published release has no installer for this machine — roadmap task **T88f**. A feed from
-    /// before the task lists none at all.
+    /// The published release has no installer for this machine. A feed from before installers
+    /// were published lists none at all.
     #[error("the published release has no installer for {os}/{arch}")]
     InstallerUnavailable {
         /// This machine's operating system, as the feed spells it.
@@ -84,15 +84,14 @@ pub enum UpdateError {
         arch: String,
     },
 
-    /// `update.finish` was asked for before the new binaries were on disk — roadmap task **T88f**.
+    /// `update.finish` was asked for before the new binaries were on disk.
     #[error("MixEngine {version} is not installed yet")]
     UpdateNotInstalled {
         /// The version that was handed to the installer.
         version: String,
     },
 
-    /// A candidate privileged helper is not signed by the key this build trusts — roadmap task
-    /// **T88a**.
+    /// A candidate privileged helper is not signed by the key this build trusts.
     ///
     /// Checked here as well as inside the elevated process, and the two are not one check twice:
     /// the elevated one is the security boundary, and this one is what stops a mirror serving
@@ -112,14 +111,14 @@ pub enum UpdateError {
     ///
     /// The trusted comment is the one place a fact about a signed artifact travels without being
     /// taken on trust, so a comment in a grammar this build does not know is a refusal rather than
-    /// a value to guess at — roadmap task **T88a**.
+    /// a value to guess at.
     #[error("the helper's signature carries {comment:?}, which is not what this build can read")]
     HelperStampUnreadable {
         /// The trusted comment, as it arrived.
         comment: String,
     },
 
-    /// A correctly signed helper for a machine that is not this one — roadmap task **T88a**.
+    /// A correctly signed helper for a machine that is not this one.
     ///
     /// Named rather than folded into [`Error::HelperSignature`], because the two send a reader
     /// somewhere different: one is an artifact somebody tampered with, and the other is a release
@@ -135,10 +134,10 @@ pub enum UpdateError {
         arch: String,
     },
 
-    /// The published release has no privileged helper for this machine — roadmap task **T88a**.
+    /// The published release has no privileged helper for this machine.
     ///
-    /// A release from before T88a lists none at all, which reads the same way and is the honest
-    /// answer: there is nothing to fetch.
+    /// A release from before helpers were published lists none at all, which reads the same way and
+    /// is the honest answer: there is nothing to fetch.
     #[error("the published release has no privileged helper for {os}/{arch}")]
     HelperUnavailable {
         /// This machine's operating system, as the feed spells it.

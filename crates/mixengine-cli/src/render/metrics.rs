@@ -82,8 +82,8 @@ pub(crate) fn metrics_history(history: &MetricsHistory, now: SystemTime) -> Stri
     )
 }
 
-/// A share of the whole machine with one decimal, as Task Manager shows it — roadmap task T190c —
-/// or a dash where no figure was taken.
+/// A share of the whole machine with one decimal, as Task Manager shows it, or a dash where no
+/// figure was taken.
 ///
 /// `cpu` is percent of one core and `cores` what one core is worth here; `0` is read as one. A
 /// figure above zero that rounds to `0.0` prints `<0.1%`, so a running service never reads as idle.
@@ -150,8 +150,8 @@ mod tests {
         );
     }
 
-    /// **CPU is a share of the machine with one decimal, as Task Manager shows it** — roadmap task
-    /// T190c. The frame's figure is percent of one core; `cores` is what one core is worth here.
+    /// **CPU is a share of the machine with one decimal, as Task Manager shows it.** The frame's
+    /// figure is percent of one core; `cores` is what one core is worth here.
     #[test]
     fn cpu_is_a_share_of_the_machine() {
         let rendered = metrics_frame(&MetricsFrame {
@@ -215,7 +215,7 @@ mod tests {
         assert!(rendered.contains("60"), "{rendered}");
         assert!(
             rendered.contains("0.4%") && rendered.contains("2.4%"),
-            "1.5 and 9.5 percent of one core on four cores (T190c): {rendered}"
+            "1.5 and 9.5 percent of one core on four cores: {rendered}"
         );
         assert!(
             rendered.contains("ago"),

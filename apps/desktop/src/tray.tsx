@@ -18,7 +18,7 @@ import "./shell/App.css";
 import "./shell/chrome.css";
 
 /**
- * The tray panel's window — T168, T192, `src-tauri/src/tray.rs`.
+ * The tray panel's window — `src-tauri/src/tray.rs`.
  *
  * The shell's frame around the sections the visible modules lend (ADR 0058), and nothing when none
  * does — the backend never shows the window then, because the main window said there is no panel.

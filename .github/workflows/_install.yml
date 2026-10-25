@@ -1,7 +1,7 @@
-# T197: the one-command installers. `check` is static and offline; `dry-run` asks the newest
-# published release for every URL the scripts would fetch; `install` installs the headless package
-# for real on five systems. pages.yml calls this with `real: false` and deploys only if it passes;
-# install.yml calls it with `real: true` when a release is published, weekly, and when asked (T197a).
+# The one-command installers. `check` is static and offline; `dry-run` asks the newest published
+# release for every URL the scripts would fetch; `install` installs the headless package for real on
+# five systems. pages.yml calls this with `real: false` and deploys only if it passes; install.yml
+# calls it with `real: true` when a release is published, weekly, and when asked.
 # Design: docs/specs/2026-10-05-t197-one-command-installs-mixlab-design.md
 name: install
 

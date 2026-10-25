@@ -45,9 +45,9 @@ const en = {
     moduleTunnel: "Tunnel",
     moduleMixEngine: "MixEngine",
   },
-  /* Which modules this window draws — T108. The first-run screen and the Settings pane share these
-     words on purpose: a person meets the three presets once at the start and finds the same three
-     names when they go looking for them again. */
+  /* Which modules this window draws. The first-run screen and the Settings pane share these words
+     on purpose: a person meets the three presets once at the start and finds the same three names
+     when they go looking for them again. */
   profiles: {
     title: "Modules",
     question: "What will you use MixLab for?",
@@ -144,9 +144,8 @@ const en = {
     prevTab: "Previous tab",
     reload: "Reload the pane on screen",
   },
-  // The tray (T168, T192): the frame's header, and the menu's items — sent to
-  // `src-tauri/src/tray.rs` rather than kept in Rust. The slogan is a brand line and stays in
-  // English in every language.
+  // The tray: the frame's header, and the menu's items — sent to `src-tauri/src/tray.rs` rather
+  // than kept in Rust. The slogan is a brand line and stays in English in every language.
   tray: {
     openPanel: "Open control panel",
     openMain: "Open MixLab",
@@ -161,7 +160,7 @@ const en = {
     noTray: "Your desktop shows no tray icons, so MixLab will open its window at login instead.",
     unsupported: "A development build does not start at login.",
   },
-  // MixLab's own updater, in Settings → Updates (T187). It checks, downloads and installs whether
+  // MixLab's own updater, in Settings → Updates. It checks, downloads and installs whether
   // or not MixEngine is running, and never installs without a click.
   update: {
     title: "Updates",
@@ -207,8 +206,8 @@ const en = {
     openPage: "Open the download page",
     available: "MixLab {{version}} is available.",
   },
-  // MixLab ▸ Remove MixLab from this Mac… (T182a): the dialog that removes MixLab from a Mac the
-  // .pkg installed it on, then quits.
+  // MixLab ▸ Remove MixLab from this Mac…: the dialog that removes MixLab from a Mac the .pkg
+  // installed it on, then quits.
   remove: {
     title: "Remove MixLab from this Mac",
     menuItem: "Remove MixLab from this Mac…",
@@ -232,7 +231,7 @@ const en = {
   error: {
     // MixEngine — the local daemon this app manages. `message` is the daemon's own words and is
     // never translated: it is what a search engine and MixEngine's own manual both index.
-    // Restarting the window — T106, `src-tauri/src/relaunch.rs`. The first is a machine whose
+    // Restarting the window — `src-tauri/src/relaunch.rs`. The first is a machine whose
     // operating system will not name this process's own executable; the second is one that would
     // not start it.
     relaunchNoExecutable: "MixLab could not work out which program to start again.",

@@ -2,8 +2,8 @@
 
 use super::*;
 
-/// **T135, D11.** A round trip that silently dropped half of what a site is would be worse than
-/// one that refused, so `[[site.routes]]` is written by an export and read by an import.
+/// A round trip that silently dropped half of what a site is would be worse than one that refused,
+/// so `[[site.routes]]` is written by an export and read by an import.
 #[test]
 fn routes_survive_an_export_and_come_back() {
     let home = somewhere();
@@ -54,8 +54,8 @@ fn routes_survive_an_export_and_come_back() {
     );
 }
 
-/// **D9.** The export writes the site, and everything the daemon does not own survives it —
-/// including a hand-written key inside an entry it *does* update.
+/// The export writes the site, and everything the daemon does not own survives it — including a
+/// hand-written key inside an entry it *does* update.
 #[test]
 fn an_export_writes_the_site_and_leaves_every_hand_written_key_alone() {
     let home = somewhere();
@@ -172,8 +172,8 @@ fn an_export_with_no_site_leaves_a_hand_written_one_alone() {
     assert!(after.contains("typed.test"), "{after}");
 }
 
-/// **D7.** `[site]` with no `kind` is a manifest this build has always accepted, and the type
-/// has to keep accepting it.
+/// `[site]` with no `kind` is a manifest this build has always accepted, and the type has to keep
+/// accepting it.
 #[test]
 fn a_site_with_no_kind_reads_as_one_that_named_none() {
     let home = somewhere();
@@ -244,8 +244,8 @@ fn a_proxy_with_no_upstream_is_refused_by_the_definition() {
     );
 }
 
-/// **D8.** `[[services]]` is read as a name, an instance and a constraint — and the keys this
-/// build does not interpret survive being read past.
+/// `[[services]]` is read as a name, an instance and a constraint — and the keys this build does
+/// not interpret survive being read past.
 #[test]
 fn services_are_read_as_names_instances_and_constraints() {
     let home = somewhere();
@@ -275,7 +275,7 @@ fn services_are_read_as_names_instances_and_constraints() {
     assert_eq!(services[1].version, None);
 }
 
-/// **T77, and the note this overturns.** `database` and `user` used to pass through unread, on
+/// **The note this overturns.** `database` and `user` used to pass through unread, on
 /// the rule that a key nothing acts on is a promise not kept. `blueprint.capture` is what acts
 /// on them: without this, a blueprint captured from a Laravel project carries no database name
 /// and the site it creates elsewhere connects to nothing.

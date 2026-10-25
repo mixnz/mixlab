@@ -30,9 +30,9 @@ impl Reading {
     /// something that was never there.
     ///
     /// **The privileged helper is the one exception, and it is Windows'.** A file whose image is
-    /// mapped cannot be unlinked, and the helper is the running program when it removes itself,
-    /// so there the assertion is that the operating system has *accepted* the removal — the path
-    /// appearing in its own pending-rename queue (the T87 design, D8).
+    /// mapped cannot be unlinked, and the helper is the running program when it removes itself, so
+    /// there the assertion is that the operating system has *accepted* the removal — the path
+    /// appearing in its own pending-rename queue.
     pub(super) fn gone(&self, after: &Reading) {
         for ((name, before), (_, left)) in self.rows().iter().zip(after.rows()) {
             let Some(before) = before else {
@@ -204,10 +204,10 @@ fn port_access() -> Option<String> {
 
 /// This home's authority, in whichever store this system keeps trusted roots in.
 ///
-/// **By key-id on the two systems that keep certificates by subject.** T48 names every authority
-/// `MixEngine Local CA <key-id>`, so the id is what tells one home's from another's — and telling
-/// them apart is the whole point here, because the suites that ran before this one left their
-/// own in the same store.
+/// **By key-id on the two systems that keep certificates by subject.** The generator names every
+/// authority `MixEngine Local CA <key-id>`, so the id is what tells one home's from another's — and
+/// telling them apart is the whole point here, because the suites that ran before this one left
+/// their own in the same store.
 ///
 /// Linux needs no such scoping: the anchor is one file with one fixed name, so the file being
 /// there *is* the answer.

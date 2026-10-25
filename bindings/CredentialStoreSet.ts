@@ -2,7 +2,7 @@
 import type { CredentialStore } from "./CredentialStore";
 
 /**
- * What `daemon.set_credential_store` takes — roadmap task **T194**.
+ * What `daemon.set_credential_store` takes.
  */
 export type CredentialStoreSet = { 
 /**

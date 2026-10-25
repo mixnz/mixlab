@@ -11,8 +11,7 @@ use crate::error::ToWire as _;
 use super::{Chosen, Elevation, Route};
 
 impl Elevation {
-    /// Ask for this helper to be installed where only an administrator can rewrite it — roadmap
-    /// task **T85**.
+    /// Ask for this helper to be installed where only an administrator can rewrite it.
     ///
     /// **Called at every daemon start, before the other three and for their reason**: what it asks
     /// for lands in the single grant first-run setup already costs rather than behind a prompt of
@@ -20,7 +19,7 @@ impl Elevation {
     /// *by*. Reading the answer costs two `stat`s in the ordinary case, which is what makes asking
     /// every time affordable.
     ///
-    /// Five answers, and only two of them queue anything (the T85 design, D6):
+    /// Five answers, and only two of them queue anything:
     ///
     /// - **no helper shipped beside this program** — there is nothing to install, so nothing is
     ///   asked for. That is a daemon somebody moved on its own, and `elevation.grant` already says
@@ -32,7 +31,8 @@ impl Elevation {
     ///   behind an explicit prompt and not an auto-update**: nothing is copied until somebody
     ///   allows a batch, which is exactly what
     ///   `docs/architecture/security-model.md`'s auto-update boundary asks for. The signature
-    ///   check that decides whether the new binary deserved that prompt at all is **T88a**;
+    ///   check that decides whether the new binary deserved that prompt at all is
+    ///   `HelperReplace`'s;
     /// - **installed and not an administrator's** — nothing is asked for, and a warning is logged.
     ///   The helper would refuse the operation anyway, and `elevation.status` is already saying so
     ///   through [`mixengine_core::elevation::helper`]'s own refusal.
@@ -80,10 +80,10 @@ impl Elevation {
 
     /// Ask the installed helper what it is, and remember the answer for `helper::keep_in_step`.
     ///
-    /// **Version and not bytes, and nothing is enqueued** — roadmap task T88a. The bytes beside this
-    /// daemon are *not* the newer helper after a `mix self-update`, which keeps the helper by name;
-    /// and in a development tree they differ on every rebuild, which put a row on `mix status` whose
-    /// only meaning was "you rebuilt". What decides is what the installed helper says it is — and a
+    /// **Version and not bytes, and nothing is enqueued.** The bytes beside this daemon are *not*
+    /// the newer helper after a `mix self-update`, which keeps the helper by name; and in a
+    /// development tree they differ on every rebuild, which put a row on `mix status` whose only
+    /// meaning was "you rebuilt". What decides is what the installed helper says it is — and a
     /// replacement needs a signed candidate, which has to be fetched, which is `mix elevation
     /// upgrade`'s job. A daemon start that reached the network would be a start an offline machine
     /// pays for, which `docs/features/updates.md` forbids in as many words.
@@ -128,9 +128,9 @@ impl Elevation {
         }
     }
 
-    /// Ask for the hosts file to say what this home's sites say it should — roadmap task **T41**.
+    /// Ask for the hosts file to say what this home's sites say it should.
     ///
-    /// **The disk is read before a prompt is spent** (T41 design, D11). A machine that already
+    /// **The disk is read before a prompt is spent.** A machine that already
     /// agrees needs nothing, and enqueueing anyway would put a row on `mix status` whose only
     /// possible outcome is `AlreadyDone`.
     ///
@@ -140,18 +140,19 @@ impl Elevation {
     /// for nothing.
     ///
     /// A read that fails does not stop the operation being queued: the helper is the authority on
-    /// what is in that file, and it will refuse with the reason on the screen T64 built.
+    /// what is in that file, and it will refuse with the reason on the window's permissions screen.
     ///
-    /// **What the block should hold depends on which TLDs this machine routes here** — roadmap task
-    /// **T45**, design D6. A TLD the resolver sends to our server is answered by pattern, so a hosts
-    /// entry under it adds nothing; a TLD nothing routes has no other mechanism. Asking for a block
-    /// without the routed names is also what clears one an earlier, unwired daemon left behind —
-    /// skipping the queue instead would leave those stale names resolving to loopback for ever.
+    /// **What the block should hold depends on which TLDs this machine routes here.** A TLD the
+    /// resolver sends to our server is answered by pattern, so a hosts entry under it adds nothing;
+    /// a TLD nothing routes has no other mechanism. Asking for a block without the routed names is
+    /// also what clears one an earlier, unwired daemon left behind — skipping the queue instead
+    /// would leave those stale names resolving to loopback for ever.
     ///
-    /// **Per TLD rather than per mode**, which is T45's correction to T44: T44 computed the whole
-    /// block from one home-wide `DnsMode`, which was right only while nothing could be wired at all.
-    /// Every mechanism there is scopes to one TLD, and `.local` is never routed — so a home with
-    /// both `blog.test` and `shop.local` needs a block with exactly one line in it.
+    /// **Per TLD rather than per mode**, which is the resolver's correction to the first DNS
+    /// server: that computed the whole block from one home-wide `DnsMode`, which was right only
+    /// while nothing could be wired at all. Every mechanism there is scopes to one TLD, and
+    /// `.local` is never routed — so a home with both `blog.test` and `shop.local` needs a block
+    /// with exactly one line in it.
     ///
     /// # Errors
     ///
@@ -174,7 +175,7 @@ impl Elevation {
             Ok(present)
                 if PrivilegedOp::hosts_apply(Some(tag.clone()), present.clone()) == wanted =>
             {
-                // Nothing to ask for — and nothing to keep asking for either (T179).
+                // Nothing to ask for — and nothing to keep asking for either.
                 self.no_longer_needed(&wanted.dedupe_key()).await
             }
             Ok(_) => self.enqueue_needing_a_helper(&wanted).await,
@@ -249,8 +250,7 @@ impl Elevation {
         }
     }
 
-    /// Ask for this machine to send its managed TLDs to this daemon's DNS server — roadmap task
-    /// **T45**.
+    /// Ask for this machine to send its managed TLDs to this daemon's DNS server.
     ///
     /// **Called at every daemon start, beside [`require_port_access`](Self::require_port_access),
     /// and that ordering is what makes M4's promise true.** On a fresh home this queues the
@@ -265,12 +265,12 @@ impl Elevation {
     ///
     /// **A machine with no DNS server of its own asks for nothing**, because there would be nothing
     /// to route names to; and a machine with no scoped mechanism asks for nothing either, which is
-    /// a Linux without systemd and is a mode rather than a failure (the T45 design, D2).
+    /// a Linux without systemd and is a mode rather than a failure.
     ///
     /// A probe that fails asks for nothing, as `require_port_access` does and unlike
     /// [`require_hosts`](Self::require_hosts): there the helper is the authority on the file and
-    /// will refuse with a reason on the screen T64 built, and here a probe that could not read the
-    /// machine has said nothing about what to ask for.
+    /// will refuse with a reason on the window's permissions screen, and here a probe that could
+    /// not read the machine has said nothing about what to ask for.
     ///
     /// # Errors
     ///
@@ -304,12 +304,12 @@ impl Elevation {
                 )
                 .await
             }
-            // The machine already routes what it should, so a row queued earlier is stale (T179).
+            // The machine already routes what it should, so a row queued earlier is stale.
             None => self.no_longer_needed("resolver").await,
         }
     }
 
-    /// Ask this machine to trust MixEngine's own certificate authority — roadmap task **T49a**.
+    /// Ask this machine to trust MixEngine's own certificate authority.
     ///
     /// **Called at every daemon start, immediately after the authority is made.** Reading a trust
     /// store costs no privilege on any of the three systems — measured by
@@ -317,18 +317,18 @@ impl Elevation {
     /// makes asking on every start affordable, and what notices a store an operating-system update
     /// or another account cleared.
     ///
-    /// **And here rather than when the first HTTPS site is created**, which is the ordering T48
-    /// generated the authority for: `docs/architecture/security-model.md` promises one elevation
-    /// prompt at first run covering the CA, the resolver and the port grant together, and an install
-    /// that first appeared with the first site would be a second batch behind a second prompt.
+    /// **And here rather than when the first HTTPS site is created**, which is why the authority is
+    /// generated at start: `docs/architecture/security-model.md` promises one elevation prompt at
+    /// first run covering the CA, the resolver and the port grant together, and an install that
+    /// first appeared with the first site would be a second batch behind a second prompt.
     ///
     /// `None` is a home whose authority could not be made or read: nothing is asked for, because
     /// there is nothing to ask about.
     ///
-    /// A probe that fails asks for nothing, as [`require_resolver`](Self::require_resolver) does and
-    /// unlike [`require_hosts`](Self::require_hosts): there the helper is the authority on the file
-    /// and refuses with a reason on the screen T64 built, and here a store that could not be read has
-    /// said nothing about what to ask for.
+    /// A probe that fails asks for nothing, as [`require_resolver`](Self::require_resolver) does
+    /// and unlike [`require_hosts`](Self::require_hosts): there the helper is the authority on the
+    /// file and refuses with a reason on the window's permissions screen, and here a store that
+    /// could not be read has said nothing about what to ask for.
     ///
     /// # Errors
     ///
@@ -337,7 +337,7 @@ impl Elevation {
         let Some(der) = der else {
             tracing::debug!("this home has no certificate authority, so nothing is asked to trust");
 
-            // Nothing to trust means nothing to ask about, including what was asked before (T179).
+            // Nothing to trust means nothing to ask about, including what was asked before.
             return self.no_longer_needed("trust-store").await;
         };
 
@@ -359,16 +359,16 @@ impl Elevation {
                 )
                 .await
             }
-            // This machine already trusts it (T179).
+            // This machine already trusts it.
             None => self.no_longer_needed("trust-store").await,
         }
     }
 
-    /// The ports a site is reached on. Fixed, per the T42 design, D2: a front end renumbered to 81
+    /// The ports a site is reached on. Fixed: a front end renumbered to 81
     /// is not a front end anybody asked for, and the recipes say so too.
     pub(crate) const ANSWERING: [u16; 2] = [80, 443];
 
-    /// Ask for this machine to let `binary` answer on 80 and 443 — roadmap task **T42**.
+    /// Ask for this machine to let `binary` answer on 80 and 443.
     ///
     /// **Called at every daemon start, and that is also the re-probe the roadmap asks for.** A
     /// capability is cleared by any write to the binary, so an update loses it; asking here catches
@@ -377,13 +377,14 @@ impl Elevation {
     /// measured, not assumed.
     ///
     /// `None` is a home with no front end: nothing is asked for. **And nothing is ever revoked
-    /// here** — the T42 design, D12: on Linux the question needs the binary, which is precisely what
-    /// a home with no front end cannot supply, so "no row, therefore withdraw" is a question this
-    /// system cannot be asked. Uninstall (T87) is the producer that can.
+    /// here**: on Linux the question needs the binary, which is precisely what a home with no front
+    /// end cannot supply, so "no row, therefore withdraw" is a question this system cannot be
+    /// asked. Uninstall is the producer that can.
     ///
-    /// A probe that fails asks for nothing, unlike [`require_hosts`](Self::require_hosts): there the
-    /// helper is the authority on the file and will refuse with a reason on the screen T64 built,
-    /// and here a probe that could not read one attribute has told us nothing about what to ask for.
+    /// A probe that fails asks for nothing, unlike [`require_hosts`](Self::require_hosts): there
+    /// the helper is the authority on the file and will refuse with a reason on the window's
+    /// permissions screen, and here a probe that could not read one attribute has told us nothing
+    /// about what to ask for.
     ///
     /// # Errors
     ///
@@ -409,12 +410,12 @@ impl Elevation {
 
         if state.granted {
             // The binary already answers, so the grant nobody answered is stale. Withdrawing the
-            // request is not revoking the capability: the machine keeps what it holds (T179).
+            // request is not revoking the capability: the machine keeps what it holds.
             return self.no_longer_needed("port-access").await;
         }
 
         // Derived from the method rather than from a `#[cfg]`, which is the whole reason
-        // `PortAccessState` carries one — the T42 design, D1.
+        // `PortAccessState` carries one.
         let Some(plan) = state.plan(binary) else {
             return self.no_longer_needed("port-access").await;
         };
@@ -446,7 +447,7 @@ impl Elevation {
             .await
             .map_err(|error| error.to_wire())?;
 
-        // T182b, D6: a caller that queued its own operations raises the prompt over those alone.
+        // A caller that queued its own operations raises the prompt over those alone.
         if let Some(only) = only {
             waiting.retain(|pending| only.contains(&pending.id));
         }

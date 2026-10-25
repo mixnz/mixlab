@@ -112,10 +112,10 @@ pub struct Daemon {
     ///
     /// The template offered it as "where the daemon listens", and `mixengine-core` parsed it, but
     /// the endpoint has always been `mixengine-platform`'s answer, computed from `<home>/run`:
-    /// neither the daemon nor `mix` ever looked here, and MixLab stopped looking in phase 11
-    /// (T102). The key is **read and ignored, never refused**, the way [`RetiredBin`] is: the
-    /// struct is `deny_unknown_fields`, `config.toml` is never rewritten, and a home whose owner
-    /// uncommented the template's line must still start. The daemon logs that it does nothing.
+    /// neither the daemon nor `mix` ever looked here, and MixLab stopped looking in phase 11. The
+    /// key is **read and ignored, never refused**, the way [`RetiredBin`] is: the struct is
+    /// `deny_unknown_fields`, `config.toml` is never rewritten, and a home whose owner uncommented
+    /// the template's line must still start. The daemon logs that it does nothing.
     #[serde(rename = "ipc_path")]
     pub retired_ipc_path: Option<PathBuf>,
 
@@ -175,7 +175,7 @@ impl Default for Daemon {
     }
 }
 
-/// The built-in DNS server — roadmap task **T44**.
+/// The built-in DNS server.
 ///
 /// It answers `A` for every name under a TLD MixEngine manages and refuses everything else, which
 /// is what lets a site be created without an elevation prompt: a wildcard needs no record per
@@ -218,7 +218,7 @@ impl Default for Dns {
     }
 }
 
-/// `[bin]`: the period of the two-second poll T185b replaced with a watch on each runtime's bindir.
+/// `[bin]`: the period of the two-second poll a watch on each runtime's bindir replaced.
 ///
 /// **Read and ignored, never refused.** `config.toml` is written once and never rewritten, and the
 /// template of every release from 0.0.7 to 0.0.9 has a `[bin]` line that is not commented out — so
@@ -232,7 +232,7 @@ pub struct RetiredBin {
     pub rescan_seconds: Option<u64>,
 }
 
-/// How MixEngine keeps this home's certificates from expiring — roadmap task **T52**.
+/// How MixEngine keeps this home's certificates from expiring.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Certs {
@@ -247,8 +247,9 @@ pub struct Certs {
     /// make the alarm accurate, the check is made cheap enough that its accuracy stops mattering.
     ///
     /// It is a key at all because the daemon's own renewal suite has to watch the loop run, and a
-    /// period no test can move would leave the loop the one part of that task nothing exercises —
-    /// which is how T51 nearly shipped an nginx TLS port no unprivileged machine could bind.
+    /// period no test can move would leave the loop the one part of renewal nothing exercises —
+    /// which is how the web servers' TLS wiring nearly shipped an nginx TLS port no unprivileged
+    /// machine could bind.
     #[serde(deserialize_with = "renew_check")]
     pub renew_check_seconds: u64,
 }
@@ -289,7 +290,7 @@ where
     Ok(seconds)
 }
 
-/// How MixEngine ends a share nobody ended — roadmap task **T76**.
+/// How MixEngine ends a share nobody ended.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Sharing {
@@ -310,7 +311,7 @@ pub struct Sharing {
     pub check_seconds: u64,
 }
 
-/// What a site answers when it has nothing behind it — roadmap task **T124**.
+/// What a site answers when it has nothing behind it.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Sites {
@@ -325,7 +326,7 @@ pub struct Sites {
     /// **A property of the machine rather than of any one site**, which is why there is no per-site
     /// field: the page cannot appear on a site that serves anything at `/` or has anything
     /// listening, so the population that wants it off is not "this site" but "this machine's
-    /// owner" — someone whose tests assert a bare 404. The T124 design, D6.
+    /// owner" — someone whose tests assert a bare 404.
     pub welcome_page: bool,
 }
 
@@ -369,7 +370,7 @@ where
     Ok(seconds)
 }
 
-/// `[updates]` — read and ignored since T187.
+/// `[updates]` — read and ignored.
 ///
 /// **Neither key does anything any more** ([ADR 0056](../../../docs/decisions/0056-mixlab-stands-without-mixengine.md)
 /// rule 8): the daemon never reads the update feed unprompted, so there is no check at start and no
@@ -380,14 +381,14 @@ where
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Updates {
-    /// Whether the daemon read the update feed on its own, before T187. Ignored.
+    /// Whether the daemon read the update feed on its own, back when it did. Ignored.
     pub enabled: Option<bool>,
 
-    /// How long there was between those checks, before T187. Ignored.
+    /// How long there was between those checks, back then. Ignored.
     pub check_seconds: Option<u64>,
 }
 
-/// What the daemon writes down about a bug in itself — roadmap task **T91**.
+/// What the daemon writes down about a bug in itself.
 ///
 /// **One key, and it is not the consent that task's sentence asked for**, because there is nothing
 /// here to consent to. Nothing is transmitted: the file is written into this home and stays there,
@@ -414,7 +415,7 @@ impl Default for Crash {
     }
 }
 
-/// How MixEngine stops paying for services nobody is using — roadmap task **T69**.
+/// How MixEngine stops paying for services nobody is using.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Services {
@@ -432,7 +433,7 @@ pub struct Services {
     #[serde(deserialize_with = "idle_check")]
     pub idle_check_seconds: u64,
 
-    /// How many finished minutes over its ceiling a service is given — roadmap task **T71a**.
+    /// How many finished minutes over its ceiling a service is given.
     ///
     /// **Minutes, and not seconds, because the unit is the metrics row**: the sampler completes one
     /// per subject per minute, and this count is spent in *those* exactly as an idle policy is spent
@@ -522,7 +523,7 @@ where
     Ok(minutes)
 }
 
-/// How often this home measures what it is running — roadmap task **T71**.
+/// How often this home measures what it is running.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Metrics {

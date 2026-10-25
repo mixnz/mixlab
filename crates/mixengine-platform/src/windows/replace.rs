@@ -1,7 +1,7 @@
 //! Replacing a system file on Windows without losing the ACL it carried.
 //!
-//! **Moved out of `windows/hosts.rs` by T42**, which brought a second caller. Nothing here is
-//! specific to the hosts file any more except the reason the mechanism was chosen, which the
+//! **Moved out of `windows/hosts.rs` by port access**, which brought a second caller. Nothing here
+//! is specific to the hosts file any more except the reason the mechanism was chosen, which the
 //! architecture document already records.
 
 use std::path::Path;

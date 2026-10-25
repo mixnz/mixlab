@@ -70,8 +70,7 @@ describe("POST /v1/records/batch", () => {
   });
 
   it("refuses a delete entry that does not say when it was made", async () => {
-    // The same rule as the single route: a deletion is weighed by D4, so it carries its time
-    // (T178c, C1).
+    // The same rule as the single route: a deletion is weighed by D4, so it carries its time.
     const { collection, id, stored } = await seed(session.accessToken);
     const result = await batch(session.accessToken, [{ op: "delete", collection, id, ifMatch: stored.version }]);
     expect(result.body.results[0]?.status).toBe(400);

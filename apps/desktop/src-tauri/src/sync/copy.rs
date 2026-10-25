@@ -16,7 +16,7 @@ use crate::error::AppError;
 
 /// Something that pages through every record an account holds.
 pub trait Source {
-    /// `resync`: `since` came from a read that began at 0 (T178b, M4).
+    /// `resync`: `since` came from a read that began at 0, so the server does not expire it.
     fn page_all(
         &self,
         since: i64,
@@ -41,7 +41,7 @@ pub async fn copy_account<S: Source, R: Remote>(
     let mut since = 0;
     loop {
         // A copy is a read from 0, so every later page says so: a tombstone reaped while it runs
-        // must not end it halfway (M4).
+        // must not end it halfway.
         let page = from.page_all(since, since > 0).await?;
         let mut operations = Vec::new();
         for record in page.records.into_iter().filter(|record| !record.deleted) {

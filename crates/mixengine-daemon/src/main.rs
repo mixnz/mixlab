@@ -54,7 +54,8 @@ use detach::{detach, take_over};
 use error::ToWire as _;
 use serve::{CONFIRMATION_REPRIEVE, serve};
 
-/// What `--version` prints. `mix`'s reason, in the binary a service manager starts — T95.
+/// What `--version` prints. `mix`'s reason, in the binary a service manager starts: a build that is
+/// not a release says so, because it keeps a home of its own (ADR 0024).
 const VERSION: &str = if mixengine_platform::RELEASE {
     env!("CARGO_PKG_VERSION")
 } else {
@@ -131,7 +132,7 @@ async fn run() -> anyhow::Result<()> {
 
     let mut args = Args::parse();
 
-    // T184, T194: refused before the home is opened when no recorded row could make it right — a
+    // Refused before the home is opened when no recorded row could make it right — a
     // release on a system that is not Linux asked to keep its passwords in a file.
     credentials::refuse_early(
         mixengine_platform::RELEASE,
@@ -146,8 +147,8 @@ async fn run() -> anyhow::Result<()> {
     let host = mixengine_platform::host();
 
     // A development checkout's suggested home, weighed here at the binary's edge and not inside
-    // `mixengine_core::paths::resolve_root` — T166, ADR 0040. The library reads no environment,
-    // which is what lets every test hand it a mock host and know which home it gets; `--home` and
+    // `mixengine_core::paths::resolve_root` — ADR 0040. The library reads no environment, which is
+    // what lets every test hand it a mock host and know which home it gets; `--home` and
     // `MIXENGINE_HOME` arrive through clap for the same reason.
     if args.home.is_none() {
         args.home = mixengine_platform::home::development_home(host.as_ref());
@@ -156,9 +157,9 @@ async fn run() -> anyhow::Result<()> {
     // hint is written, and a startup failure — the wrong MIXENGINE_HOME, a `[paths]` override onto
     // a disk nobody mounted — is exactly the kind that needs one. Whoever is reading stderr now
     // gets the same sentence a client would get later.
-    // **Before `open_home`, deliberately** — roadmap task **T145**. This one answers a question
-    // *about* a home rather than working in one, and the home it is asked about is routinely a home
-    // that does not exist yet. Everything below this line creates something.
+    // **Before `open_home`, deliberately.** This one answers a question *about* a home rather than
+    // working in one, and the home it is asked about is routinely a home that does not exist yet.
+    // Everything below this line creates something.
     if args.storage {
         let report = storage::report(args.home.as_deref(), host.as_ref()).await?;
 
@@ -203,10 +204,10 @@ async fn run() -> anyhow::Result<()> {
     // daemons that both got as far as opening the database could both read the schema as behind and
     // both migrate it. A single-instance lock acquired afterwards would guard nothing.
     let Some(lock) = take_over(home.paths.lock_file(), &endpoint).await? else {
-        // Not a failure, and the exit status says so. The caller asked for a running daemon for this
-        // home and there is one — `docs/architecture/daemon-and-ipc.md` has this print the
+        // Not a failure, and the exit status says so. The caller asked for a running daemon for
+        // this home and there is one — `docs/architecture/daemon-and-ipc.md` has this print the
         // endpoint and stop, which is also what makes two clients autostarting at the same instant
-        // (roadmap task T10) produce one daemon and no error message.
+        // produce one daemon and no error message.
         println!("{endpoint}");
         return Ok(());
     };
@@ -258,11 +259,11 @@ async fn run() -> anyhow::Result<()> {
     // which the next daemon starts against a file this one is still finishing with.
     drop(lock);
 
-    // **T87, and the last thing this process ever does.** `daemon.uninstall` cannot remove the
-    // directory holding the database it has open, so it armed these and stopped the daemon; by here
-    // every service has been stopped in dependency order, the write-ahead log has been checkpointed
-    // and the lock file is closed, which is the only point at which every handle this process holds
-    // inside the home is closed.
+    // **The uninstall's last step, and the last thing this process ever does.** `daemon.uninstall`
+    // cannot remove the directory holding the database it has open, so it armed these and stopped
+    // the daemon; by here every service has been stopped in dependency order, the write-ahead log
+    // has been checkpointed and the lock file is closed, which is the only point at which every
+    // handle this process holds inside the home is closed.
     //
     // Empty on every other run.
     if let Ok(armed) = &served
@@ -274,10 +275,10 @@ async fn run() -> anyhow::Result<()> {
         logging::release();
 
         // **And out of the home.** `detach` starts a background daemon with the home as its working
-        // directory, and Windows will not rename a directory some process is standing in — this
-        // one included — so every uninstall of a daemon a client had autostarted kept its home
-        // (T182b, the first real Windows uninstall). The temporary directory is outside anything
-        // armed; a failure here is left for the rename to report.
+        // directory, and Windows will not rename a directory some process is standing in — this one
+        // included — so every uninstall of a daemon a client had autostarted kept its home (found
+        // by the first real Windows uninstall). The temporary directory is outside anything armed;
+        // a failure here is left for the rename to report.
         let _ = std::env::set_current_dir(std::env::temp_dir());
 
         remove_what_the_uninstall_armed(armed, home.paths.bin());
@@ -367,9 +368,9 @@ fn say_what_config_no_longer_does(config: &config::Config) {
     // check the daemon no longer makes, and `enabled = false` in particular reads as a promise.
     if config.updates.enabled.is_some() || config.updates.check_seconds.is_some() {
         tracing::warn!(
-            "`[updates] enabled` and `check_seconds` in config.toml no longer do anything since \
-             T187: the daemon never looks for a newer MixEngine on its own, and MixLab checks for \
-             itself; the lines can be removed"
+            "`[updates] enabled` and `check_seconds` in config.toml no longer do anything: the \
+             daemon never looks for a newer MixEngine on its own, and MixLab checks for itself; \
+             the lines can be removed"
         );
     }
 }
@@ -479,22 +480,23 @@ async fn apply_storage(
 ///
 /// **Standard error and a note outside the home, not the log**, for the obvious reason: the log is
 /// one of the things being removed. A daemon started in the background has nowhere for standard
-/// error to go, so the same lines go to [`tombstone::note_for`](mixengine_platform::tombstone::note_for),
-/// where `mix` reads them (T182b). `mix uninstall` reads these paths back once this process is gone, which is what makes
-/// its exit code mean *nothing is left behind* rather than *the daemon said so* — so a failure here
-/// is reported by the client whether or not anybody reads this line.
+/// error to go, so the same lines go to
+/// [`tombstone::note_for`](mixengine_platform::tombstone::note_for), where `mix` reads them.
+/// `mix uninstall` reads these paths back once this process is gone, which is what makes its exit
+/// code mean *nothing is left behind* rather than *the daemon said so* — so a failure here is
+/// reported by the client whether or not anybody reads this line.
 ///
-/// **All of them or none** (the T182 design, D6): every directory is renamed aside first, and one
-/// that refuses — a file held open inside it, a shell whose working directory it is — puts every
-/// other one back, so no database is ever left half deleted. What could be renamed and then not
-/// deleted stays as a tombstone the next uninstall finds.
+/// **All of them or none**: every directory is renamed aside first, and one that refuses — a file
+/// held open inside it, a shell whose working directory it is — puts every other one back, so no
+/// database is ever left half deleted. What could be renamed and then not deleted stays as a
+/// tombstone the next uninstall finds.
 ///
 /// A path that is already gone is not a failure: on a home with no relocation the root removes
 /// everything under it, and a `[paths]` entry pointing inside the root would be removed with it.
 ///
-/// `bin/` goes out on its own first — it is on `PATH`, and an editor watching it would otherwise keep
-/// the whole home (T182b, measured with VS Code) — and on a refusal, whatever else another program
-/// holds that can be moved goes out on its own too (T182e, D5). See
+/// `bin/` goes out on its own first — it is on `PATH`, and an editor watching it would otherwise
+/// keep the whole home (measured with VS Code) — and on a refusal, whatever else another program
+/// holds that can be moved goes out on its own too. See
 /// [`remove_all_or_nothing`](mixengine_platform::tombstone::remove_all_or_nothing).
 fn remove_what_the_uninstall_armed(armed: &[PathBuf], bin: &Path) {
     use mixengine_platform::tombstone::{PATIENCE, QUICK, remove_all_or_nothing};
@@ -506,9 +508,9 @@ fn remove_what_the_uninstall_armed(armed: &[PathBuf], bin: &Path) {
     let _ = std::fs::remove_file(&note);
 
     // **Once as before, with `bin/` lifted**, and on a machine nothing else holds that is the whole
-    // of it — no scan is paid for. **On a refusal, look** (T182e, D5): everything was put back, so
-    // what other programs hold is read, whatever can be moved is lifted out too, and the renames go
-    // again with the full patience. What cannot be moved is named below.
+    // of it — no scan is paid for. **On a refusal, look**: everything was put back, so what other
+    // programs hold is read, whatever can be moved is lifted out too, and the renames go again with
+    // the full patience. What cannot be moved is named below.
     let mut lifted = vec![bin.to_path_buf()];
     let mut stuck: Vec<mixengine_platform::occupants::HeldItem> = Vec::new();
 
@@ -535,10 +537,10 @@ fn remove_what_the_uninstall_armed(armed: &[PathBuf], bin: &Path) {
                 )
             })
             .collect(),
-        // **What refused, and who, before where** (T182b): an uninstaller's log cuts a long line
-        // off, and the path is the part a person can most easily do without. The handle table's
-        // answer comes first, since it names the program and says it cannot be moved (T182e);
-        // `first_held`'s is what is left when the table could not see the holder.
+        // **What refused, and who, before where**: an uninstaller's log cuts a long line off, and
+        // the path is the part a person can most easily do without. The handle table's answer comes
+        // first, since it names the program and says it cannot be moved; `first_held`'s is what is
+        // left when the table could not see the holder.
         Err(refused) => {
             let seconds = refused.tried_for.as_secs();
             let named = stuck.iter().find(|item| !item.holders.is_empty());
@@ -677,7 +679,7 @@ mod tests {
             .status();
     }
 
-    /// T182e, D5, end to end: other programs watching `bin/` and `etc/caddy/` — VS Code and File
+    /// End to end: other programs watching `bin/` and `etc/caddy/` — VS Code and File
     /// Explorer on the machine that found this — do not keep the home. The removal moves both
     /// watched folders out on its own and every armed directory goes, relocated `logs/` included.
     #[test]
@@ -704,7 +706,7 @@ mod tests {
         );
     }
 
-    /// T182e, D5, end to end: a program standing in `data/` cannot be moved past, and the removal
+    /// End to end: a program standing in `data/` cannot be moved past, and the removal
     /// puts every directory back — nothing half deleted — and names it in the note `mix` reads.
     #[test]
     fn a_program_standing_in_the_home_keeps_all_of_it() {

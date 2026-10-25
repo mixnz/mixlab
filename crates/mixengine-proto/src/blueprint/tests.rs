@@ -1,6 +1,6 @@
 use super::*;
 
-/// T202, D2. A `done` written by a build from before the note still reads, a `done` with
+/// A `done` written by a build from before the note still reads, a `done` with
 /// nothing to say still writes as before, and a note round-trips.
 #[test]
 fn a_done_step_reads_without_a_note_and_carries_one() {
@@ -21,7 +21,7 @@ fn a_done_step_reads_without_a_note_and_carries_one() {
     assert_eq!(json["note"], said);
 }
 
-/// **T152.** A dry run from before T152 has no `needs`, and still parses.
+/// **A dry run from before `needs` existed has none, and still parses.**
 #[test]
 fn a_planned_answer_without_needs_is_the_answer_it_always_was() {
     let planned: BlueprintApplyResponse = serde_json::from_value(serde_json::json!({
@@ -30,7 +30,7 @@ fn a_planned_answer_without_needs_is_the_answer_it_always_was() {
             "blueprint": "laravel", "project": "blog", "root": "/tmp/blog", "steps": []
         }
     }))
-    .expect("the shape every client has read since T77");
+    .expect("the shape every client has read since blueprints first shipped");
 
     assert!(matches!(
         planned,
@@ -66,9 +66,8 @@ fn an_action_and_its_disposition_are_flat_tagged_objects() {
     assert_eq!(back, step);
 }
 
-/// One method, two answers. A client knows which it got from the object rather than from its
-/// own request, which is what keeps `--dry-run` and a real apply one method (T77's argument,
-/// one task on).
+/// One method, two answers. A client knows which it got from the object rather than from its own
+/// request, which is what keeps `--dry-run` and a real apply one method.
 #[test]
 fn an_apply_answers_either_a_plan_or_a_job() {
     let planned = BlueprintApplyResponse::Planned {
@@ -90,8 +89,8 @@ fn an_apply_answers_either_a_plan_or_a_job() {
     assert_eq!(json["plan"]["project"], "shop");
 }
 
-/// A step that did not run says why in words a person reads, because the whole of what T78
-/// leaves undone — a `[scaffold]` command — is a sentence somebody has to act on.
+/// A step that did not run says why in words a person reads, because what an apply leaves undone —
+/// a `[scaffold]` command nobody agreed to — is a sentence somebody has to act on.
 #[test]
 fn a_step_that_did_not_run_carries_its_reason() {
     let outcome = StepOutcome {
@@ -99,7 +98,7 @@ fn a_step_that_did_not_run_carries_its_reason() {
             command: "composer create-project laravel/laravel .".to_owned(),
         },
         result: StepResult::NotRun {
-            why: "running a blueprint's own command arrives with roadmap task T78a".to_owned(),
+            why: "a blueprint's own command runs only once somebody agrees to it".to_owned(),
         },
     };
 
@@ -109,13 +108,13 @@ fn a_step_that_did_not_run_carries_its_reason() {
     assert!(
         json["result"]["why"]
             .as_str()
-            .is_some_and(|why| why.contains("T78a")),
+            .is_some_and(|why| why.contains("agrees to it")),
         "{json}"
     );
 }
 
-/// **A step that ran and failed is its own outcome** — roadmap task **T78a**, its design's D7,
-/// and not the same fact as one nothing attempted.
+/// **A step that ran and failed is its own outcome**, and not the same fact as one nothing
+/// attempted.
 #[test]
 fn a_step_that_ran_and_failed_is_not_a_step_that_was_skipped() {
     let failed = StepOutcome {
@@ -164,7 +163,8 @@ fn a_plan_carries_where_its_blueprint_came_from() {
     assert_eq!(older.source, BlueprintSource::Captured);
 }
 
-/// A source is a closed word, because the column stores it and T78a's trust marking reads it.
+/// A source is a closed word, because the column stores it and the scaffold's trust marking reads
+/// it.
 #[test]
 fn a_source_is_one_of_three_words_in_both_directions() {
     assert_eq!(
@@ -195,7 +195,7 @@ fn a_service_without_a_pinned_version_carries_no_key_for_one() {
     assert!(json.get("version").is_none(), "{json}");
 }
 
-/// **The reason rides beside the answer, not instead of it** — roadmap task **T79b**.
+/// **The reason rides beside the answer, not instead of it.**
 /// [`BlueprintSummary::trusted`] is what behaviour reads; this is what a person is told.
 #[test]
 fn a_summary_says_why_it_is_not_trusted() {
@@ -235,9 +235,9 @@ fn a_summary_older_than_this_task_has_no_reason() {
     assert_eq!(older.signature, None);
 }
 
-/// **A word this build does not know must not take the response down with it** — roadmap task
-/// **T79b**, its design's D3. A `mix` older than a variant some later phase adds would
-/// otherwise fail to parse a whole listing over the one field on it that is decoration.
+/// **A word this build does not know must not take the response down with it.** A `mix` older than
+/// a variant some later phase adds would otherwise fail to parse a whole listing over the one field
+/// on it that is decoration.
 #[test]
 fn a_reason_this_build_does_not_know_is_no_reason() {
     let newer: BlueprintSummary = serde_json::from_value(serde_json::json!({

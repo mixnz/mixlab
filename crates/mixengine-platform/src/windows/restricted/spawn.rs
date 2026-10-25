@@ -58,7 +58,7 @@ pub(crate) fn spawn(
 
 /// [`spawn`], with everything after the program handed over verbatim.
 ///
-/// **For `cmd.exe /C <command>` and nothing else** — roadmap task **T78a**, its design's D12.
+/// **For `cmd.exe /C <command>` and nothing else.**
 pub(crate) fn spawn_raw(
     program: &Path,
     tail: &OsStr,
@@ -268,8 +268,7 @@ fn null_device() -> Result<OwnedHandle> {
 /// line the way `CommandLineToArgvW` does, and [`Arguments::Quoted`] is that rule. `cmd.exe` is not
 /// one of those programs: its own parser does not honour a backslash-escaped quote, so a command
 /// with a quote in it would arrive mangled — [`Arguments::Raw`] hands the tail over byte for byte
-/// instead, which is what a blueprint's `[scaffold]` needs (roadmap task **T78a**, its design's
-/// D12).
+/// instead, which is what a blueprint's `[scaffold]` needs.
 pub(crate) enum Arguments<'a> {
     /// A list, quoted only where it has to be.
     Quoted(&'a [OsString]),

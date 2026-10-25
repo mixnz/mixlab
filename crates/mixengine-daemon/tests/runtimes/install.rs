@@ -3,7 +3,7 @@
 
 use super::*;
 
-/// The whole of T23 in one test, because the whole of T23 is one sequence: a version is offered,
+/// The whole of `runtime.*` in one test, because it is one sequence: a version is offered,
 /// installed, listed, made the default and removed — and the file on disk agrees at every step.
 #[tokio::test]
 async fn a_version_the_index_offers_is_installed_listed_chosen_and_removed() {
@@ -131,7 +131,7 @@ async fn an_install_reports_where_it_has_got_to_and_is_listed_as_a_job() {
     assert_eq!(jobs["jobs"][0]["kind"], "runtime.install");
 }
 
-/// **T149.** A version this machine lacks something for is marked in the listing, answered by
+/// A version this machine lacks something for is marked in the listing, answered by
 /// `runtime.requirements`, and refused before a job exists — naming the release that does run.
 #[tokio::test]
 async fn a_version_this_machine_cannot_run_is_refused_before_anything_downloads() {
@@ -291,8 +291,9 @@ async fn uninstalling_something_that_was_never_installed_says_what_was_looked_fo
     );
 }
 
-/// **T24 over the wire**, and the whole of the order it settles: the same directory answers
-/// differently as each source appears above the last, and every answer says which one decided it.
+/// **`runtime.resolve` over the wire**, and the whole of the order it settles: the same directory
+/// answers differently as each source appears above the last, and every answer says which one
+/// decided it.
 ///
 /// Only the manifest and the default are exercised end to end here — a project record needs
 /// `project.create`, which is Phase 4's, and `core::resolve`'s own tests write that row by hand.
@@ -462,7 +463,7 @@ async fn a_question_a_daemon_cannot_make_sense_of_is_refused_as_a_bad_argument()
 }
 /// An installed PHP arrives with the pool that serves its sites, and nobody asked for one.
 ///
-/// **The post-install hook, seen from the outside** — roadmap task T32.
+/// **The post-install hook, seen from the outside.**
 /// `docs/features/runtime-versions.md` decided this before there was a pool to create: a PHP
 /// without one is a language no site can be served by, so `runtime.install` makes the record and
 /// `service.create` refuses to. The other half of the pair is here too, because the two are one
@@ -576,8 +577,9 @@ async fn extensions_are_listed_with_a_reason_and_turned_round_one_at_a_time() {
     );
 }
 
-/// **The other half of the promise [runtime-versions.md] made.** T32 delivered the running-pool
-/// refusal and left this one written down in a doc comment; this is the test that comment named.
+/// **The other half of the promise [runtime-versions.md] made.** The pools delivered the
+/// running-pool refusal and left this one written down in a doc comment; this is the test that
+/// comment named.
 ///
 /// [runtime-versions.md]: ../../../docs/features/runtime-versions.md
 #[tokio::test]

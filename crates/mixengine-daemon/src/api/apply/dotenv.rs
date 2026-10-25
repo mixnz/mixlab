@@ -11,19 +11,18 @@ use super::steps;
 
 /// One line of an apply's own narration.
 ///
-/// **A job's log carries what the apply did, and not only what somebody else's command printed** —
-/// roadmap task **T120**, its design's D5. Until then `LogSubject::Job` was written by exactly one
-/// step, the `[scaffold]` command, so a failure anywhere before it left a log with nothing in it —
-/// which is precisely what a client rendering that log then had to show. `mix job logs <id>` gets
-/// the same narration, with no client change at all.
+/// **A job's log carries what the apply did, and not only what somebody else's command printed.**
+/// `LogSubject::Job` was once written by exactly one step, the `[scaffold]` command, so a failure
+/// anywhere before it left a log with nothing in it — which is precisely what a client rendering
+/// that log then had to show. `mix job logs <id>` gets the same narration, with no client change at
+/// all.
 ///
 /// [`Stream::Stderr`] for a step that did not go well, on the ordinary convention: a client
 /// colouring its output has something to colour by.
 ///
 /// [`Stream::Stderr`]: super::Stream::Stderr
 impl Api {
-    /// The `.env` line — roadmap task **T205a**: the URL of the database this apply made, appended
-    /// to the person's file.
+    /// The `.env` line: the URL of the database this apply made, appended to the person's file.
     ///
     /// **A failure is a failed step**, as the scaffold's is: the project works, and the person can
     /// set the key by hand. No sentence here carries the value.
@@ -33,7 +32,7 @@ impl Api {
         key: &str,
         path: &str,
     ) -> StepResult {
-        // **The account this apply made**, not the plan's: T202 may have renamed it.
+        // **The account this apply made**, not the plan's: the step may have renamed it.
         let Some(made) = context.database.clone() else {
             return StepResult::Failed {
                 why: format!("{key} was not written to {path}: no database was made"),
@@ -75,8 +74,8 @@ impl Api {
     }
 }
 
-/// A key agreed to that this plan does not write, or [`None`] — roadmap task **T205a**, on
-/// [`consent_refusal`]'s rule: a consent names what was read.
+/// A key agreed to that this plan does not write, or [`None`], on [`consent_refusal`]'s rule: a
+/// consent names what was read.
 ///
 /// [`consent_refusal`]: super::consent_refusal
 pub(super) fn dotenv_refusal(plan: &BlueprintPlan, agreed: &[String]) -> Option<Error> {
@@ -99,7 +98,7 @@ pub(super) fn dotenv_refusal(plan: &BlueprintPlan, agreed: &[String]) -> Option<
     )
 }
 
-/// The URL written for the database this apply made — roadmap task **T205a**.
+/// The URL written for the database this apply made.
 pub(super) fn dotenv_value(
     made: &AppliedDatabase,
     protocol: DatabaseProtocol,

@@ -7,8 +7,8 @@ use mixengine_proto::{
 
 /// `mix database create` — what was made, and where the credential is.
 ///
-/// **It says where the password lives and never what it is** — the T77a design, D11. Two lines,
-/// aligned on the noun, in the words this file uses everywhere else rather than a glyph.
+/// **It says where the password lives and never what it is.** Two lines, aligned on the noun, in
+/// the words this file uses everywhere else rather than a glyph.
 pub(crate) fn database_created(
     account: &DatabaseAccount,
     store: Option<mixengine_proto::CredentialStore>,
@@ -31,7 +31,7 @@ pub(crate) fn database_created(
 
 /// `mix database credentials` — the address, and the password itself, last and alone.
 ///
-/// **The last line is the value and nothing else** — roadmap task **T77b**'s D3 — so that
+/// **The last line is the value and nothing else**, so that
 /// `mix database credentials mariadb@main --user blog | tail -1` is the password, for a script
 /// writing a project's `.env`.
 pub(crate) fn database_credentials(
@@ -49,9 +49,8 @@ pub(crate) fn database_credentials(
     )
 }
 
-/// Where a credential is, in words — roadmap task T194, D5. A home that keeps its passwords in a
-/// file says so; any other answer, an older daemon's included, names the store's namespace as it
-/// always has.
+/// Where a credential is, in words. A home that keeps its passwords in a file says so; any other
+/// answer, an older daemon's included, names the store's namespace as it always has.
 fn where_kept(
     secret: &mixengine_proto::SecretAddress,
     store: Option<mixengine_proto::CredentialStore>,
@@ -64,7 +63,7 @@ fn where_kept(
     }
 }
 
-/// `mix database client`, for a person — roadmap task **T83**.
+/// `mix database client`, for a person.
 ///
 /// Two lines: what the service speaks, and where it could be opened. A service no client opens is
 /// said in those words rather than left as a blank, since a blank reads as "nothing installed".
@@ -80,9 +79,8 @@ pub(crate) fn database_client(report: &DatabaseClientReport) -> String {
         desktop_client(&report.client)
     );
 
-    // **Where the credential is, without opening anything** — roadmap task **T84**, the design's
-    // D6. An address is a name, and printing it is what stops the next question being *"and where
-    // would I find the password?"*.
+    // **Where the credential is, without opening anything.** An address is a name, and printing it
+    // is what stops the next question being *"and where would I find the password?"*.
     if let Some(at) = &report.secret {
         out.push_str(&format!(
             "  its administrator's password is in the {} credentials at {}\n",
@@ -93,7 +91,7 @@ pub(crate) fn database_client(report: &DatabaseClientReport) -> String {
     out
 }
 
-/// `mix database open`, for a person — roadmap task **T83**.
+/// `mix database open`, for a person.
 ///
 /// **The password is never printed**, and neither is anything that looks like one: what is printed
 /// is where it was read from and that it went to one process. A client that did not open prints
@@ -146,8 +144,8 @@ mod tests {
 
     use super::*;
 
-    /// It says where the credential is and never what it is — the T77a design, D11. The test is the
-    /// guard: a renderer that grew a password would put one in a terminal's scrollback.
+    /// It says where the credential is and never what it is. The test is the guard: a renderer that
+    /// grew a password would put one in a terminal's scrollback.
     #[test]
     fn a_created_database_says_where_the_password_lives() {
         let rendered = database_created(&blog_account(), None);
@@ -180,9 +178,9 @@ mod tests {
         }
     }
 
-    /// T77b, D3: the last line is the password and nothing else, so `| tail -1` hands a script the
-    /// value a client accepts. It carried the block's two-space indent until the T202 walk piped it
-    /// into `mariadb -p` and was refused.
+    /// The last line is the password and nothing else, so `| tail -1` hands a script the value a
+    /// client accepts. It carried the block's two-space indent until a check by hand piped it into
+    /// `mariadb -p` and was refused.
     #[test]
     fn the_last_line_of_the_credentials_is_the_password_alone() {
         let answer = DatabaseCredentials {
@@ -201,7 +199,7 @@ mod tests {
         );
     }
 
-    /// T194, D5: a home that keeps its passwords in a file says so where it says where one is.
+    /// A home that keeps its passwords in a file says so where it says where one is.
     #[test]
     fn a_database_in_a_file_store_says_so() {
         let home = Some(mixengine_proto::CredentialStore::Home);

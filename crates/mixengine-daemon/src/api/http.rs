@@ -32,7 +32,7 @@ use super::{Api, logs, metrics, rpc};
 /// The largest `POST /rpc` body the daemon will read.
 ///
 /// Every request in this API is a method name and a handful of scalars; the biggest thing a client
-/// ever sends is a blueprint (roadmap task T78), measured in kilobytes. The limit is here so that a
+/// ever sends is a blueprint, measured in kilobytes. The limit is here so that a
 /// client sending an endless body meets a `413` instead of the daemon's memory meeting the
 /// machine's.
 const MAX_BODY: usize = 1024 * 1024;
@@ -163,7 +163,7 @@ async fn handle(
 ///
 /// **Answering "not this route" rather than "not found"** is what lets the table above stay a table:
 /// a path with a value in it cannot be matched there, and a route that returned a `404` itself would
-/// shadow every other one. Roadmap task **T16b**.
+/// shadow every other one.
 async fn logs_route(
     api: &Arc<Api>,
     query: Option<&str>,

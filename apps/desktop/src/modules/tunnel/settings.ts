@@ -1,5 +1,5 @@
 /**
- * The one setting this module has: a `cloudflared` the person chose, by path — T203, D2.
+ * The one setting this module has: a `cloudflared` the person chose, by path.
  *
  * In `localStorage` because it is about this machine and nothing else: it is not synced, and it is
  * not in a tab's session slot, which holds ids only. Empty means *use one on PATH, or the one MixLab

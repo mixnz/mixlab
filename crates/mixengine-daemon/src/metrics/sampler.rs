@@ -1,4 +1,4 @@
-//! One loop, two rates — roadmap task **T71**.
+//! One loop, two rates.
 //!
 //! Sixty seconds by default, one second while a client holds `GET /metrics` open. **One loop and not
 //! two**: a slow loop for the history beside a fast one for the stream would measure the same
@@ -6,9 +6,9 @@
 //! somebody watched, every minute stored would have been measured twice.
 //!
 //! **What is measured is decided from the rows, not from the registry's own list.** A service is
-//! measurable when its row names a pid *and* the moment that pid began — the pair T18 stores for
-//! adoption — because a pid alone would let a service that exited between two ticks be drawn as
-//! whatever program the system handed its number to next.
+//! measurable when its row names a pid *and* the moment that pid began — the pair crash recovery
+//! stores for adoption — because a pid alone would let a service that exited between two ticks be
+//! drawn as whatever program the system handed its number to next.
 
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
@@ -41,7 +41,7 @@ const STREAM_CAPACITY: usize = 8;
 /// How many snapshot requests may be waiting for the loop at once.
 const REQUESTS: usize = 8;
 
-/// How many minutes the watchdog may fall behind by — roadmap task **T71a**.
+/// How many minutes the memory watchdog may fall behind by.
 ///
 /// Eight, on [`STREAM_CAPACITY`]'s reasoning and with a safer failure: a consumer that missed a
 /// minute treats it as *nobody measured*, which resets a count. A watchdog eight minutes behind has
@@ -52,7 +52,7 @@ const MINUTE_CAPACITY: usize = 8;
 /// How many milliseconds an hour is, for the retention arithmetic.
 const HOUR: i64 = 3_600_000;
 
-/// How far back the figure on the stream reaches — roadmap task **T190c**.
+/// How far back the figure on the stream reaches.
 ///
 /// **Five seconds, because a second is a count of quanta.** Windows adds CPU time to a process
 /// 15.6 ms at a time, so a one-second reading can only be 0, 1.56, 3.12… percent of a core: a
@@ -147,7 +147,7 @@ fn frame_from(host: &dyn Host, at: Timestamp, subjects: &[Subject]) -> MetricsFr
     MetricsFrame {
         at,
         samples,
-        // What one core is worth here, so every client divides by the same number (T190c).
+        // What one core is worth here, so every client divides by the same number.
         cores: host.resource_control().support().cores,
     }
 }
@@ -186,13 +186,13 @@ pub(crate) struct Sampler {
     /// difference is taken against, and each would see the interval since the *other's* refresh.
     latest: Option<(Instant, MetricsFrame)>,
 
-    /// The last five seconds of readings, for the figure the stream publishes (T190c).
+    /// The last five seconds of readings, for the figure the stream publishes.
     smoother: Smoother,
 
     /// Where an open stream reads its frames from.
     frames: broadcast::Sender<MetricsFrame>,
 
-    /// Where the memory watchdog reads finished minutes from — roadmap task **T71a**.
+    /// Where the memory watchdog reads finished minutes from.
     ///
     /// **The rows, not the frames**, because the watchdog counts *minutes* and would otherwise have
     /// to assemble them a second time from the stream — at a rate that changes with who is watching.
@@ -236,7 +236,7 @@ impl Sampler {
         }
     }
 
-    /// Where a memory watchdog reads the minutes this loop finishes — roadmap task **T71a**.
+    /// Where a memory watchdog reads the minutes this loop finishes.
     ///
     /// Deliberately not on [`Handle`]: that is what the *API* holds, and a client has no business
     /// subscribing to the input of a decision the daemon makes about its own services.
@@ -305,8 +305,8 @@ impl Sampler {
         let at = Timestamp::from_system_time(SystemTime::now());
         let frame = frame_from(self.host.as_ref(), at, &subjects);
 
-        // **The stream and a snapshot get the five-second mean; the history gets the reading** —
-        // roadmap task T190c. See `Smoother`.
+        // **The stream and a snapshot get the five-second mean; the history gets the reading.** See
+        // `Smoother`.
         let now = Instant::now();
         let published = self.smoother.publish(&frame, now);
 
@@ -317,7 +317,7 @@ impl Sampler {
 
         let rolled = self.accumulator.observe(&frame);
 
-        // **Published before it is written, and not conditional on the write** — roadmap task T71a.
+        // **Published before it is written, and not conditional on the write.**
         // A database that will not take a metrics row is not a reason to stop watching a ceiling:
         // the watchdog's decision is made from the minute itself, and the row is the history.
         // Nobody listening is the ordinary state of a daemon whose home watches nothing.
@@ -495,7 +495,7 @@ mod tests {
         )
     }
 
-    // ---- The five-second mean on the stream — roadmap task T190c. ----
+    // ---- The five-second mean on the stream. ----
 
     /// A frame with the daemon alone, at `cpu`.
     fn daemon_at(cpu: Option<f32>) -> MetricsFrame {

@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// **T179.** A site is created, deleted before anybody clicks Allow, and the row it queued goes
+/// A site is created, deleted before anybody clicks Allow, and the row it queued goes
 /// with it: the queue never describes a home that no longer declares the name, and a grant
 /// cannot write one into the machine's hosts file.
 #[tokio::test]
@@ -51,7 +51,7 @@ async fn a_hosts_entry_nobody_declares_any_more_leaves_the_queue() {
 }
 
 /// A machine this daemon could not read is a machine it knows nothing about, so the queue is
-/// left exactly as it was (the T179 design, D2).
+/// left exactly as it was.
 #[tokio::test]
 async fn a_hosts_file_that_cannot_be_read_withdraws_nothing() {
     let (home, elevation, _events, _machine) = registry(mock::Host::unable_to_read_the_hosts_file(
@@ -86,7 +86,7 @@ async fn a_hosts_file_that_cannot_be_read_withdraws_nothing() {
     );
 }
 
-/// **T179**, for the resolver: a machine that already routes what it should has nothing waiting
+/// The same for the resolver: a machine that already routes what it should has nothing waiting
 /// for it, whatever an earlier reading queued.
 #[tokio::test]
 async fn a_resolver_that_already_routes_withdraws_what_was_queued() {
@@ -212,8 +212,8 @@ async fn a_start_with_no_hosts_row_queued_asks_for_nothing() {
     );
 }
 
-/// **T179**, for the trust store: a home with no authority has nothing to be trusted, so an
-/// install queued for an authority that is gone goes with it (the design's Settled 1).
+/// The same for the trust store: a home with no authority has nothing to be trusted, so an install
+/// queued for an authority that is gone goes with it.
 #[tokio::test]
 async fn a_home_with_no_authority_withdraws_a_queued_trust_install() {
     let (home, elevation, _events, _machine) =
@@ -238,7 +238,7 @@ async fn a_home_with_no_authority_withdraws_a_queued_trust_install() {
     );
 }
 
-/// **T179**, for the port grant: a binary that already holds what it needs withdraws the grant
+/// The same for the port grant: a binary that already holds what it needs withdraws the grant
 /// nobody answered. **Withdrawing is not revoking** — the machine keeps the capability.
 #[tokio::test]
 async fn a_binary_that_already_answers_withdraws_the_grant_nobody_answered() {
@@ -271,7 +271,7 @@ async fn a_binary_that_already_answers_withdraws_the_grant_nobody_answered() {
 }
 
 /// A probe that could not read the machine says nothing about what to stop asking for, so a
-/// home with no front end leaves the queue alone (the T179 design, D2).
+/// home with no front end leaves the queue alone.
 #[tokio::test]
 async fn a_home_with_no_front_end_withdraws_nothing() {
     let (home, elevation, _events, _machine) =
@@ -298,7 +298,7 @@ async fn a_home_with_no_front_end_withdraws_nothing() {
     );
 }
 
-/// **T180.** A grant that carried a firewall plan records it, so the producer can tell a plan
+/// A grant that carried a firewall plan records it, so the producer can tell a plan
 /// this machine already holds from one it does not.
 #[tokio::test]
 async fn a_settled_firewall_plan_is_recorded() {

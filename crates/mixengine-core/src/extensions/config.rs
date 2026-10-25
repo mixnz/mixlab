@@ -1,4 +1,4 @@
-//! The one file MixEngine generates for a `web-app` — roadmap task **T82**, the design's D1 and D2.
+//! The one file MixEngine generates for a `web-app`.
 //!
 //! # Why it lives inside the install directory
 //!
@@ -12,9 +12,9 @@
 //! from state in SQLite and thrown away, which is the rule `etc/` follows rather than an exception
 //! to it.
 //!
-//! **What a person changes lives in `{data_dir}`**, which outlives an uninstall (T81's D13). A
-//! manifest ends its text with an `@include` of a file there; nothing here enforces that it does,
-//! because a manifest that did not would simply have no user half.
+//! **What a person changes lives in `{data_dir}`**, which outlives an uninstall. A manifest ends
+//! its text with an `@include` of a file there; nothing here enforces that it does, because a
+//! manifest that did not would simply have no user half.
 //!
 //! # A database that is gone is a skip, not a rewrite
 //!
@@ -72,7 +72,7 @@ pub async fn of(store: &Store, installed: &Installed, secret: &str) -> Result<Op
 
         // **The link, and only the link.** Re-resolving `engines` here would quietly re-point an
         // application at a different server than the one it was installed against — the pool is
-        // frozen for the same reason (T81b's D5).
+        // frozen for the same reason.
         let mut found = None;
 
         for service in &site.services {
@@ -121,10 +121,10 @@ pub fn rendered(
     context.database = database;
     context.secret = Some(secret.to_owned());
 
-    // **The name, and only when the manifest asked for it** — roadmap task **T82a**, the design's
-    // D2. Read out of the table the database is declared in, because `engines` and `signs_in` are
-    // one statement: this application administers that server, signed in. What is put on the
-    // context is a variable's name; the password itself is never in this crate.
+    // **The name, and only when the manifest asked for it.** Read out of the table the database is
+    // declared in, because `engines` and `signs_in` are one statement: this application administers
+    // that server, signed in. What is put on the context is a variable's name; the password itself
+    // is never in this crate.
     context.password_env = app
         .database
         .as_ref()
@@ -216,8 +216,8 @@ mod tests {
         assert!(rendered.text.contains(&"s".repeat(32)), "{}", rendered.text);
     }
 
-    /// **The application's own braces survive** — the design's D8, proved on the shape a real
-    /// `config.inc.php` has rather than on a template written to suit the renderer.
+    /// **The application's own braces survive**, proved on the shape a real `config.inc.php` has
+    /// rather than on a template written to suit the renderer.
     #[test]
     fn the_php_around_the_placeholders_is_left_alone() {
         let installed = a_phpmyadmin();
@@ -276,8 +276,8 @@ mod tests {
         }
     }
 
-    /// An installed `web-app` whose configuration exercises every placeholder T82 adds, and whose
-    /// PHP has braces of its own.
+    /// An installed `web-app` whose configuration exercises every placeholder a `[web-app.config]`
+    /// can use, and whose PHP has braces of its own.
     fn a_phpmyadmin() -> Installed {
         installed(
             "phpmyadmin",

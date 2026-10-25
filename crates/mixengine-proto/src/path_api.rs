@@ -55,7 +55,7 @@ pub struct PathReport {
     ///
     /// Carried by all three methods because it is the other half of the same question: a PATH entry
     /// naming a directory with no `php` in it is a PATH entry that does nothing, and the two are
-    /// set up together (roadmap task T26).
+    /// set up together.
     pub commands: Vec<String>,
 
     /// What was in `<root>/bin` that no command answers to and could not be removed.
@@ -66,7 +66,7 @@ pub struct PathReport {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stale: Vec<String>,
 
-    /// Where each of those commands came from — roadmap tasks **T130** and **T131**.
+    /// Where each of those commands came from.
     ///
     /// **Beside [`commands`](Self::commands) rather than replacing it**, because the two answer
     /// different questions and only one of them is the old one: `commands` is what `bin/` holds,

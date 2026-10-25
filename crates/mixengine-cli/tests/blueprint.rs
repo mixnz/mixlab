@@ -1,4 +1,4 @@
-//! `mix blueprint capture` and `mix blueprint apply` against a real daemon — roadmap task **T78**.
+//! `mix blueprint capture` and `mix blueprint apply` against a real daemon.
 //!
 //! What is proved here is what no unit test can: that a project captured on this machine can be
 //! applied under another name, that applying it twice is applying it once, and that a capture of the
@@ -102,9 +102,10 @@ async fn a_captured_project_is_applied_under_a_new_name() {
     );
 }
 
-/// **The proof of D2 and D3 at once.** A second apply finds nothing left to do, which is what makes
-/// a failed apply resumable rather than restartable — and it is asserted on the *steps*, because
-/// "it did not fail" would also be true of an apply that did everything twice.
+/// **The proof that resuming is planning again and every action is an ensure.** A second apply
+/// finds nothing left to do, which is what makes a failed apply resumable rather than restartable —
+/// and it is asserted on the *steps*, because "it did not fail" would also be true of an apply that
+/// did everything twice.
 #[tokio::test(flavor = "multi_thread")]
 async fn applying_the_same_blueprint_twice_leaves_nothing_to_do_the_second_time() {
     let home = Home::new();
@@ -202,9 +203,9 @@ async fn a_resumed_apply_makes_the_directory_somebody_deleted() {
     assert_eq!(named_shop, 1, "{listed}");
 }
 
-/// **The round trip**, which is what catches D7 and D14 cheaply: a capture of the applied project is
-/// the blueprint that made it, header aside. T77 made the renderer byte-identical on purpose, and
-/// this is the assertion that spends it.
+/// **The round trip**, which is what catches a lost pin or a site put together wrong cheaply: a
+/// capture of the applied project is the blueprint that made it, header aside. Capturing made the
+/// renderer byte-identical on purpose, and this is the assertion that spends it.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_capture_of_an_applied_project_is_the_blueprint_it_came_from() {
     let home = Home::new();
@@ -254,8 +255,8 @@ async fn a_capture_of_an_applied_project_is_the_blueprint_it_came_from() {
     );
 }
 
-/// **The gallery is applied, not just listed** — roadmap task **T79**. `static` is the one that
-/// needs no runtime and no service, so this stays offline exactly as this suite's own fixture does.
+/// **The gallery is applied, not just listed.** `static` is the one that needs no runtime and no
+/// service, so this stays offline exactly as this suite's own fixture does.
 ///
 /// **What is asserted about the certificate step is that it did not fail.** `https = true` puts one
 /// in this plan and an apply really runs it; a certificate that could not be issued comes back
@@ -313,8 +314,7 @@ async fn a_gallery_blueprint_is_listed_as_this_builds_own() {
     assert_eq!(found["trusted"], true, "{listed}");
 }
 
-/// **A blueprint captured on Windows applies here** — the feature's own acceptance criterion, and
-/// roadmap task **T79**, its design's D11.
+/// **A blueprint captured on Windows applies here** — the feature's own acceptance criterion.
 ///
 /// The fixture is a real capture taken on a Windows machine and committed, rather than a gallery
 /// file: a gallery manifest is hand-written and byte-identical on all three systems, so applying one
@@ -360,7 +360,7 @@ async fn a_blueprint_captured_on_windows_applies_on_this_system() {
     );
 }
 
-/// **A manifest with a `[site]` plans a front end on a home that has none** — roadmap task T115.
+/// **A manifest with a `[site]` plans a front end on a home that has none.**
 ///
 /// `core::sites` is explicit that "a home with no front end renders nothing and this succeeds", so
 /// an apply that stopped at the site row left a project nothing serves — which is the whole of the
@@ -414,7 +414,7 @@ async fn a_site_blueprint_plans_a_front_end_for_a_home_that_has_none() {
     );
 }
 
-/// **And plans nothing without the flag** — roadmap task T115.
+/// **And plans nothing without the flag.**
 ///
 /// The other half, and the one that keeps an apply from provisioning a machine nobody asked it to:
 /// the same blueprint on the same home, planned twice, differs only by `--with-front-end`. What a
@@ -456,7 +456,7 @@ async fn a_site_blueprint_plans_no_front_end_unless_it_is_asked_to() {
     );
 }
 
-/// **`--autostart` reaches the service the apply creates, and nothing it found** — roadmap task T116.
+/// **`--autostart` reaches the service the apply creates, and nothing it found.**
 ///
 /// The whole of what the flag claims, from the end a person is at. The fixture declares one
 /// `fakeservice` instance and no site, so this stays offline: the package row is already there from
@@ -520,7 +520,7 @@ async fn an_apply_hands_the_autostart_setting_to_what_it_creates() {
     );
 }
 
-/// **And without the flag, nothing carries it** — roadmap task T116.
+/// **And without the flag, nothing carries it.**
 ///
 /// The default is a constraint rather than a taste: `warm_start.rs` is the `bench` job and times a
 /// single `mix service start`, so an apply that quietly set this would put a boot walk beside that
@@ -567,18 +567,18 @@ async fn an_apply_sets_no_autostart_unless_it_is_asked_to() {
     );
 }
 
-/// **`--start` leaves this project's services running, and only those** — roadmap tasks T117 and
-/// **T125**.
+/// **`--start` leaves this project's services running, and only those.**
 ///
 /// The last step of *get me a working site*, and the one the apply itself may not take: an apply
 /// never raises an elevation prompt, so a front end started inside the job would serve the new site
 /// at a name this machine does not resolve.
 ///
-/// **T117 sent no target at all**, which means *every service this home declares*, because a client
-/// may not derive the apply's own set and the daemon had no narrower question to ask. T125 gave it
-/// one, and the home here is the case that made it matter: two instances of the same service, one
-/// this project's and one somebody else's. A start that leaves the second running is a machine
-/// where installing a second stack turns on every database its owner has.
+/// **The first `--start` sent no target at all**, which means *every service this home declares*,
+/// because a client may not derive the apply's own set and the daemon had no narrower question to
+/// ask. Starting one project's services gave it one, and the home here is the case that made it
+/// matter: two instances of the same service, one this project's and one somebody else's. A start
+/// that leaves the second running is a machine where installing a second stack turns on every
+/// database its owner has.
 #[tokio::test(flavor = "multi_thread")]
 async fn an_apply_starts_what_the_project_needs_and_leaves_the_rest_alone() {
     let home = Home::new();
@@ -637,10 +637,9 @@ async fn an_apply_starts_what_the_project_needs_and_leaves_the_rest_alone() {
     );
 }
 
-/// **The steps a blueprint declares reach the person, and its projects keep them** — roadmap task
-/// **T205**, D5 and D6. The apply's answer carries them expanded, `project show` reads them back
-/// through `blueprint_id`, and a capture of the applied project writes them back with the token,
-/// not the slug.
+/// **The steps a blueprint declares reach the person, and its projects keep them.** The apply's
+/// answer carries them expanded, `project show` reads them back through `blueprint_id`, and a
+/// capture of the applied project writes them back with the token, not the slug.
 #[tokio::test(flavor = "multi_thread")]
 async fn an_applied_blueprints_next_steps_are_reported_kept_and_captured() {
     let home = Home::new();
@@ -733,8 +732,8 @@ fn site_shown(home: &Home, domain: &str) -> (Vec<String>, Vec<String>) {
     )
 }
 
-/// **T204a.** A blueprint with two sites makes both, each with its own names and only its own
-/// links — and applying it again finds nothing left to do.
+/// A blueprint with two sites makes both, each with its own names and only its own links — and
+/// applying it again finds nothing left to do.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_blueprint_with_two_sites_makes_both_with_their_own_links() {
     let home = Home::new();
@@ -773,8 +772,8 @@ async fn a_blueprint_with_two_sites_makes_both_with_their_own_links() {
     );
 }
 
-/// **T204a, D4 — a resumed apply.** Since the first run, the second site was deleted; running the
-/// apply again makes only the missing site, under its own names.
+/// **A resumed apply.** Since the first run, the second site was deleted; running the apply again
+/// makes only the missing site, under its own names.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_resumed_apply_makes_only_the_missing_site() {
     let home = Home::new();
@@ -808,9 +807,9 @@ async fn a_resumed_apply_makes_only_the_missing_site() {
     assert_eq!(names, ["shop.test", "www.shop.test"]);
 }
 
-/// **T204a, D4 — a name goes back to its own site.** Both sites are there and the first lost its
-/// alias; running the apply again gives the alias back to that site — not to whichever site the
-/// project's root finds, which with two sites at one root is a guess.
+/// **A name goes back to its own site.** Both sites are there and the first lost its alias; running
+/// the apply again gives the alias back to that site — not to whichever site the project's root
+/// finds, which with two sites at one root is a guess.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_missing_name_goes_back_to_its_own_site() {
     let home = Home::new();
@@ -843,8 +842,8 @@ async fn a_missing_name_goes_back_to_its_own_site() {
     assert_eq!(names, ["docs.shop.test"]);
 }
 
-/// **T204a, D3 — and the fix it carries.** A shared instance that was already here plans
-/// `Satisfied`, and the site is still linked to it.
+/// **A shared instance that was already here.** It plans `Satisfied`, and the site is still linked
+/// to it.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_service_that_was_already_here_is_still_linked() {
     let home = Home::new();

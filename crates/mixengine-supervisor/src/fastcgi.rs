@@ -1,5 +1,4 @@
-//! A FastCGI responder client, for the one probe that has to ask php-fpm about itself — roadmap
-//! task **T72a**.
+//! A FastCGI responder client, for the one probe that has to ask php-fpm about itself.
 //!
 //! **Because there is no cross-platform way to count connections to a Unix socket.** Linux
 //! publishes them in `/proc/net/unix`, one row per connection with the path on it; macOS's `lsof`

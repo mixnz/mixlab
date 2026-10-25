@@ -1,4 +1,4 @@
-//! Whether this home stops services nobody is using — roadmap task **T167b**, ADR 0041.
+//! Whether this home stops services nobody is using — ADR 0041.
 //!
 //! **Off unless a person turned it on.** While it is off, a service whose `idle_minutes` is `NULL`
 //! gets its recipe's `idle_default()` (which is [`None`] for every recipe), so nothing is

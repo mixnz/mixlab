@@ -31,8 +31,8 @@ kind: ExtensionKind,
  */
 description: string, 
 /**
- * Where it is from, when the manifest says — on the plan since roadmap task **T84**, because
- * *"where is this from"* is part of deciding.
+ * Where it is from, when the manifest says — on the plan because *"where is this from"* is
+ * part of deciding.
  */
 homepage?: string | null, 
 /**
@@ -60,6 +60,6 @@ install_dir: string,
  */
 data_dir: string, 
 /**
- * The site it would be served on, for a `web-app` — roadmap task **T81b**.
+ * The site it would be served on, for a `web-app`.
  */
 site?: PlannedSite | null, };

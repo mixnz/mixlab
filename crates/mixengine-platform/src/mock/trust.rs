@@ -7,7 +7,7 @@ use crate::{Error, Result, TrustState, TrustStoreMethod};
 pub(crate) struct Trust {
     answer: std::result::Result<Answer, String>,
 
-    /// What this machine's store holds, for the bundle T132 writes out of it.
+    /// What this machine's store holds, for the bundle the daemon writes out of it.
     ///
     /// **A count and not certificates**, because nothing here parses them: what a fixture has to be
     /// able to say is *how many* roots a machine offers, which is the one thing
@@ -29,10 +29,10 @@ struct Answer {
 impl Default for Trust {
     /// A machine with no store, trusting nothing.
     ///
-    /// **Which is what every suite written before T49a should keep looking like.** They were written
-    /// against a home nothing trusts, and a default that quietly held the authority would rewrite
-    /// what they are about — the same reasoning as [`super::resolver`]'s default, and the same
-    /// mistake it exists to prevent.
+    /// **Which is what every suite written before the system trust store was asked about should
+    /// keep looking like.** They were written against a home nothing trusts, and a default that
+    /// quietly held the authority would rewrite what they are about — the same reasoning as
+    /// [`super::resolver`]'s default, and the same mistake it exists to prevent.
     fn default() -> Self {
         Self {
             answer: Ok(Answer {
@@ -53,7 +53,7 @@ impl Trust {
         }
     }
 
-    /// The same machine, with `roots` certificates in its store — roadmap task **T132**.
+    /// The same machine, with `roots` certificates in its store.
     pub(crate) fn with_roots(mut self, roots: usize) -> Self {
         self.roots = roots;
         self
@@ -146,8 +146,8 @@ mod tests {
         assert!(state.plan(&[1]).is_some());
     }
 
-    /// The default is a machine with no store, so every suite written before T49a keeps the shape
-    /// it was written against.
+    /// The default is a machine with no store, so every suite written before the system trust store
+    /// was asked about keeps the shape it was written against.
     #[test]
     fn the_default_mock_has_no_store_and_asks_for_nothing() {
         let host = crate::mock::Host::with_home("/mixengine");

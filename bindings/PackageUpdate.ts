@@ -3,7 +3,7 @@ import type { PackageVersion } from "./PackageVersion";
 import type { Requirement } from "./Requirement";
 
 /**
- * One installed package version and the newer release of its line — roadmap task **T193a**, D2.
+ * One installed package version and the newer release of its line.
  */
 export type PackageUpdate = { 
 /**

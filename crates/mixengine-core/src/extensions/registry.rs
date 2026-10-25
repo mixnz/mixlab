@@ -1,4 +1,4 @@
-//! The published list of extensions, and the reading of it — roadmap task **T81**.
+//! The published list of extensions, and the reading of it.
 //!
 //! # A second document, and the key that already exists
 //!
@@ -140,7 +140,7 @@ impl Registry {
 
 /// A client for the registry at `url`, verified against `public_key` and cached under `cache_dir`,
 /// over `http` — the daemon's own transport, shared with the package index client and the update
-/// feed client rather than built fresh here (roadmap task **T72b**).
+/// feed client rather than built fresh here.
 ///
 /// **The key is a parameter for [`index::Client::with_transport`]'s reason**: a test cannot hold the
 /// production private key, and a verification path switched off for tests is one nothing checks.
@@ -173,7 +173,7 @@ pub fn parse(text: &str) -> Result<Registry> {
     })
 }
 
-/// Build the document the packaging repository publishes — roadmap task **T81a**.
+/// Build the document the packaging repository publishes.
 ///
 /// `manifests` is `data/extensions/` in a `mixnz/mixengine-packages` checkout, `public_key` is the
 /// `minisign.pub` committed beside it, and `generated_at` is the moment the run started. What comes
@@ -259,8 +259,8 @@ pub fn assemble(manifests: &Path, public_key: &Path, generated_at: Timestamp) ->
 
 /// Every `*.toml` directly inside `directory`, and nothing else that lives there.
 ///
-/// A `README.md` beside the manifests is not an error: until T82 it is the only thing in that
-/// directory, because git does not carry an empty one.
+/// A `README.md` beside the manifests is not an error: before the first manifest it was the only
+/// thing in that directory, because git does not carry an empty one.
 fn toml_files(directory: &Path) -> Result<Vec<PathBuf>> {
     let failed = |source: std::io::Error| Error::Io {
         action: "read",
@@ -283,8 +283,7 @@ fn toml_files(directory: &Path) -> Result<Vec<PathBuf>> {
     Ok(files)
 }
 
-/// Prove the key this repository would sign with is the key an installed MixEngine checks against —
-/// the T81a design's D3.
+/// Prove the key this repository would sign with is the key an installed MixEngine checks against.
 ///
 /// `tools/blueprints.py` does the equivalent over in the packaging repository, and pays for it with
 /// a regex over a source file and a failure mode for the regex missing. This runs *inside* a build
@@ -346,8 +345,7 @@ mod tests {
         manifest::to_value(&manifest)
     }
 
-    /// **One entry this build cannot read costs that entry and nothing else** — the T81 design's
-    /// D4.
+    /// **One entry this build cannot read costs that entry and nothing else.**
     #[test]
     fn an_unreadable_entry_is_skipped_and_counted() {
         let registry = registry(vec![

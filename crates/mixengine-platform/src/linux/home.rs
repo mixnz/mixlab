@@ -7,7 +7,7 @@ use directories::BaseDirs;
 
 use crate::{Error, HomeDirs, Result};
 
-/// Beside the released one — T95, D3. Lowercase, like everything else under `$XDG_DATA_HOME`.
+/// Beside the released one. Lowercase, like everything else under `$XDG_DATA_HOME`.
 const NAME: &str = if crate::RELEASE {
     "mixengine"
 } else {

@@ -1,4 +1,4 @@
-//! Running one [`Step`], and removing whatever credential file it needed — roadmap task **T77a**.
+//! Running one [`Step`], and removing whatever credential file it needed.
 //!
 //! Lifted out of [`first_run`](super::first_run) beside the core-side move, and for the same
 //! reason: a bootstrap step and a database provisioning step are run the same way, and the way is
@@ -29,11 +29,11 @@ pub(crate) async fn run(step: &Step) -> Result<Ran, Error> {
     let args: Vec<std::ffi::OsString> = step.args.iter().map(std::ffi::OsString::from).collect();
     let patience = step.timeout.as_duration();
 
-    // **Written here and removed below, whatever happens in between** — roadmap task T34c. A recipe
-    // that wrote it would be a recipe touching the disk, and a *step* that removed it would be a
-    // cleanup that does not run when the step before it failed, which is precisely the case a
-    // credential must not survive. `run/` is one of the directories `Paths::bootstrap` restricts to
-    // this account on every start, which is what makes the file's exposure the keyring's own floor.
+    // **Written here and removed below, whatever happens in between.** A recipe that wrote it would
+    // be a recipe touching the disk, and a *step* that removed it would be a cleanup that does not
+    // run when the step before it failed, which is precisely the case a credential must not
+    // survive. `run/` is one of the directories `Paths::bootstrap` restricts to this account on
+    // every start, which is what makes the file's exposure the keyring's own floor.
     if let Some(file) = &step.secret_file {
         tokio::fs::write(&file.path, &file.content)
             .await
@@ -116,8 +116,8 @@ pub(crate) async fn run(step: &Step) -> Result<Ran, Error> {
 /// How many lines of a failed step's output the log keeps.
 ///
 /// Forty is more than a `mariadbd` prints between its first `[ERROR]` and `Aborting` — measured at
-/// nine for the InnoDB failures of T33a — and less than a system-table load that fails on every
-/// statement, which would otherwise be a thousand lines in a log read by eye.
+/// nine for the InnoDB failures met against a real server — and less than a system-table load that
+/// fails on every statement, which would otherwise be a thousand lines in a log read by eye.
 const SAID_AT_MOST: usize = 40;
 
 /// The last `count` lines of `text`, as one string.
@@ -165,9 +165,9 @@ mod tests {
 
     /// A step's secret file exists while it runs, and is gone the moment it is over.
     ///
-    /// **Both halves are the point** — roadmap task **T34c**. MySQL takes the statement that sets
-    /// its root password as a *path*, so the file has to exist; and a generated credential left
-    /// lying in the home afterwards would be the thing ADR 0006 exists to prevent.
+    /// **Both halves are the point.** MySQL takes the statement that sets its root password as a
+    /// *path*, so the file has to exist; and a generated credential left lying in the home
+    /// afterwards would be the thing ADR 0006 exists to prevent.
     #[tokio::test]
     async fn a_secret_file_is_there_for_the_step_and_gone_after_it() {
         let home = tempfile::tempdir().expect("a directory");

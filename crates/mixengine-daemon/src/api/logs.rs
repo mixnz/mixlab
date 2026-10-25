@@ -1,9 +1,9 @@
 //! `GET /logs/service/{id}` and `GET /logs/job/{id}` — one subject's output, and nobody else's.
 //!
-//! **Two kinds of subject since roadmap task T78a**, and one difference between them: a service is
-//! followed across a stop, a crash and a restart, because its output outlives any one run of the
-//! process; a job has one life, so a follow on it ends when the job does rather than leaving a
-//! client waiting on output that can never arrive.
+//! **Two kinds of subject**, and one difference between them: a service is followed across a stop,
+//! a crash and a restart, because its output outlives any one run of the process; a job has one
+//! life, so a follow on it ends when the job does rather than leaving a client waiting on output
+//! that can never arrive.
 //!
 //! **The whole log surface, and deliberately not an event.** The event stream is a bounded broadcast
 //! sized for state changes, shared by every client; a service in debug mode prints more in a second
@@ -22,7 +22,7 @@
 //! **The tail and the follow are one request.** A client that asked for the last lines and then
 //! subscribed would lose whatever was printed in between, or see it twice, with no way to tell
 //! which; [`ServiceLog::read`](crate::services::logs::ServiceLog::read) hands over both under one
-//! lock so there is no in between. Roadmap task **T16b**.
+//! lock so there is no in between.
 
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -50,7 +50,7 @@ const DEFAULT_TAIL: usize = 200;
 /// What a client asked for.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Ask {
-    /// Whose output — a service's, or a job's (roadmap task **T78a**, its design's D13).
+    /// Whose output — a service's, or a job's.
     subject: LogSubject,
 
     /// How many of the lines already printed to begin with. Zero is a client that only wants what
@@ -64,10 +64,10 @@ pub(crate) struct Ask {
 impl Ask {
     /// Read one from the path and query of a request.
     ///
-    /// **Two segments always** — roadmap task **T78a**, its design's D13: `/logs/service/<id>` and
-    /// `/logs/job/<id>`, so nothing has to decide whether a first segment is a package name or the
-    /// word `job`. The one-segment form T16b shipped is refused with the two that replaced it,
-    /// because serving it as a guess would be serving somebody else's log.
+    /// **Two segments always**: `/logs/service/<id>` and `/logs/job/<id>`, so nothing has to decide
+    /// whether a first segment is a package name or the word `job`. The one-segment form the first
+    /// service logs used is refused with the two that replaced it, because serving it as a guess
+    /// would be serving somebody else's log.
     ///
     /// **The id is parsed with the daemon's own rule** — `ServiceId::parse`, or a job number — so a
     /// name this API would refuse anywhere else is refused here too, and with the same sentence. A
@@ -156,7 +156,7 @@ impl Ask {
 /// The order of the two questions matters. **Whether the subject exists is asked first**, so that a
 /// mistyped id is a `404` naming it rather than an empty stream that looks like a quiet service —
 /// which is the failure a person would sit and wait through. A job is asked of the `jobs` table for
-/// the same reason (roadmap task **T78a**).
+/// the same reason.
 pub(crate) async fn respond(api: &Arc<Api>, ask: Ask) -> Response<ResponseBody> {
     match &ask.subject {
         LogSubject::Service { id } => match api.services().graph().await {
@@ -193,7 +193,7 @@ pub(crate) async fn respond(api: &Arc<Api>, ask: Ask) -> Response<ResponseBody> 
     // which is the better answer, and joining them would mean guessing where one ends in a file the
     // service is still appending to.
     //
-    // **A job has no such file** (D13): what a daemon did not keep in memory is gone, because a
+    // **A job has no such file**: what a daemon did not keep in memory is gone, because a
     // directory per job on a machine that never prunes the `jobs` table would be growth nothing
     // bounds. What survives a scaffold instead is the last of its output, quoted into the step.
     let recent = match (&ask.subject, recent.is_empty() && ask.tail > 0) {
@@ -235,10 +235,10 @@ fn following(
     recent: Vec<LogFrame>,
     subscription: broadcast::Receiver<LogFrame>,
 ) -> Response<ResponseBody> {
-    // **A job's follow ends with the job** — roadmap task **T78a**. A service is followed across a
-    // stop, a crash and a restart, which is what makes `mix service logs -f` worth leaving open;
-    // a job has one life, and a stream that outlived it would be a client waiting on output that
-    // can never arrive. The daemon's own token is still the other way out, for both.
+    // **A job's follow ends with the job.** A service is followed across a stop, a crash and a
+    // restart, which is what makes `mix service logs -f` worth leaving open; a job has one life,
+    // and a stream that outlived it would be a client waiting on output that can never arrive. The
+    // daemon's own token is still the other way out, for both.
     let shutdown = match subject {
         LogSubject::Job { id } => until_the_job_ends(api, *id),
         LogSubject::Service { .. } => api.shutdown().token().clone(),
@@ -405,7 +405,7 @@ mod tests {
         assert!(asked.follow);
     }
 
-    /// **A job is the second kind of subject** — roadmap task **T78a**, its design's D13.
+    /// **A job is the second kind of subject.**
     #[test]
     fn a_job_has_a_route_of_its_own() {
         let asked = ask("/logs/job/7", Some("follow=1"));
@@ -414,8 +414,9 @@ mod tests {
         assert!(asked.follow);
     }
 
-    /// The one-segment form T16b shipped is refused with the two that replaced it, rather than
-    /// being read as a guess: serving a guess here would be serving somebody else's log.
+    /// The one-segment form the first service logs used is refused with the two that replaced it,
+    /// rather than being read as a guess: serving a guess here would be serving somebody else's
+    /// log.
     #[test]
     fn the_one_segment_form_is_refused_with_what_replaced_it() {
         let error = Ask::parse("/logs/caddy", None).expect_err("it is refused");

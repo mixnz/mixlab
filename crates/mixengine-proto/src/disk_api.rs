@@ -1,4 +1,4 @@
-//! What `daemon.disk_usage` and `daemon.cleanup` answer — roadmap task **T96**.
+//! What `daemon.disk_usage` and `daemon.cleanup` answer.
 //!
 //! **Five categories, and four different answers about them.** The screen this exists for asks for
 //! runtimes, data, logs and certs; `cache/` is the fifth and it is the only one anybody actually
@@ -11,10 +11,10 @@
 //! them; a report that stopped at five would be one from which a client draws a pie chart missing
 //! its largest slice.
 //!
-//! **A plan and an act, on `daemon.uninstall_plan`/`daemon.uninstall`'s split (T87)** — a call that
-//! measured and deleted in one breath would leave no moment in which somebody could be shown what is
-//! about to go. [`Reclaim::ByCleanup`] *is* the plan: it is what the act would take, counted before
-//! it goes.
+//! **A plan and an act, on `daemon.uninstall_plan`/`daemon.uninstall`'s split** — a call that
+//! measured and deleted in one breath would leave no moment in which somebody could be shown what
+//! is about to go. [`Reclaim::ByCleanup`] *is* the plan: it is what the act would take, counted
+//! before it goes.
 
 use crate::Timestamp;
 
@@ -58,13 +58,14 @@ pub struct DiskUsage {
     /// Everything else this home holds: `bin/`, `etc/`, `packages/`, `extensions/`, `blueprints/`,
     /// `run/`, the database with its write-ahead log, and `config.toml`.
     ///
-    /// **Dominated by `packages/`** — nginx, MariaDB, Redis — on any home with a database installed.
-    /// That is a compromise rather than a conclusion: `packages/` is reclaimable through
+    /// **Dominated by `packages/`** — nginx, MariaDB, Redis — on any home with a database
+    /// installed. That is a compromise rather than a conclusion: `packages/` is reclaimable through
     /// `package.uninstall`, which [`Reclaim::ByMethod`] could say, and it is in here only because
-    /// T96's sentence says *five categories*. A sixth is a roadmap edit.
+    /// the disk-usage design names *five categories*. A sixth is a change to
+    /// `docs/specs/2026-09-06-t96-disk-usage-and-cleanup-design.md`.
     ///
     /// Measured from that closed list of directories and not from a walk of whatever happens to be
-    /// sitting in the home — `daemon.bundle`'s rule (**T93**) applied in the other direction.
+    /// sitting in the home — `daemon.bundle`'s rule applied in the other direction.
     pub other_bytes: u64,
 }
 
@@ -189,7 +190,7 @@ impl DiskCategory {
 /// **Four answers for five categories, and the API states them rather than letting a client work
 /// them out.** A client that derived *"runtimes go through `runtime.uninstall`"* would be holding a
 /// copy of a table the daemon owns — and a cleanup button that deleted a runtime directly would be
-/// the back door around **T32**'s refusal to uninstall a runtime under a running pool.
+/// the back door around the refusal to uninstall a runtime under a running pool.
 ///
 /// **Internally tagged**, so a client matches on a word rather than working out which fields
 /// arrived — [`Outcome`](crate::Outcome)'s rule.
@@ -437,7 +438,7 @@ mod tests {
     }
 
     /// The five do not sum to the home, so the remainder is on the wire and the total is the six of
-    /// them — see the T96 design, D2.
+    /// them — see `docs/specs/2026-09-06-t96-disk-usage-and-cleanup-design.md`, D2.
     #[test]
     fn the_total_is_the_five_and_the_remainder() {
         let usage = DiskUsage {
@@ -473,7 +474,8 @@ mod tests {
     }
 
     /// A query that leaves both fields out is the complete cleanup, and nothing else can be asked
-    /// for at all: `data` and `runtimes` are not fields — see the T96 design, D4.
+    /// for at all: `data` and `runtimes` are not fields — see
+    /// `docs/specs/2026-09-06-t96-disk-usage-and-cleanup-design.md`, D4.
     #[test]
     fn a_query_with_no_fields_is_the_complete_cleanup_and_nothing_else_is_spellable() {
         let query: CleanupQuery = serde_json::from_str("{}").expect("no options is a shape");

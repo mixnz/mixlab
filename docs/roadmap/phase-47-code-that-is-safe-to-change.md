@@ -66,6 +66,13 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       `scripts/check-task-citations.mjs` counts every `T` and number in the files
       `check-file-sizes.mjs` reads, comments and strings alike, except the scripts that read the
       roadmap. The baseline was written at 6,066 citations in 1,024 files.
+- [x] **T209m** No roadmap task numbers left in code. Waiting for the code around each citation to
+      change left 6,040 of them in 1,024 files on `139e02e8`. Each is rewritten by hand to say the
+      reason itself, or to link the ADR or spec, and the strings and test names that carry one
+      are changed with it. Then the baseline goes: `check-task-citations.mjs` fails on any
+      citation, one line per occurrence, and `--shrink` and the JSON are removed. Behaviour does
+      not change. Design:
+      [2026-10-24-t209m-no-task-numbers-in-code-design.md](../specs/2026-10-24-t209m-no-task-numbers-in-code-design.md).
 - [x] **T209c** Measure duplication in the `db` module's SQL drivers before changing anything.
       `drivers/mssql/` is 4,740 lines, `sqlite/` 3,825, `clickhouse/` 3,641, `postgres/` 3,092,
       `mysql/` 2,383, and the shared `drivers/sql/` only 872. Run a duplicate-code scanner
@@ -261,6 +268,6 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
 `Workspace.tsx` and `RestTab.tsx` turn off no React hooks lint. No integration suite starts
 `mixengined` with its own copy of the harness. `cargo tree -p mixengine-shim -e normal` has no
 `reqwest`; it keeps `sqlx` on purpose
-([ADR 0067](../decisions/0067-the-shim-reads-the-database-and-fetches-nothing.md)). The task-citation baseline from T209b is lower than the 6,066 it was written at.
+([ADR 0067](../decisions/0067-the-shim-reads-the-database-and-fetches-nothing.md)). No source file cites a roadmap task number.
 `bash scripts/gate.sh`, `cargo test --workspace`, and `npm run build`, `npm test` and
 `npm run lint` in `apps/desktop` are green.

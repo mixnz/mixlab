@@ -1,4 +1,4 @@
-//! A daemon going away — roadmap task **T207d** gave it a file.
+//! A daemon going away.
 //!
 //! The [`Budget`] a shutdown grants every stop still to come, the flag that refuses a start once one
 //! has begun, and the wait for everything still supervised. The state it reads and writes is the
@@ -13,18 +13,19 @@ use tokio::time::Instant;
 
 use super::{Registry, Running, Stopping, lock};
 
-/// The moment every stop now in flight has to be finished by — roadmap task **T9a**.
+/// The moment every stop now in flight has to be finished by.
 ///
 /// **One deadline for the whole daemon, not one per service, and that is the point.** A
 /// [`ServiceSpec`] says how long *its* service needs in order to shut down cleanly, which is a
 /// statement about MariaDB and stays true however many other services there are; what nothing owned
-/// until this task is the sum. Eight of them each asking for ten seconds is eighty seconds a user is
-/// sitting through after typing `mix daemon stop`, and a `StopBehaviour::Command` that really runs a
-/// program is what turned that from arithmetic into something that happens (see T15a).
+/// until this budget is the sum. Eight of them each asking for ten seconds is eighty seconds a user
+/// is sitting through after typing `mix daemon stop`, and a `StopBehaviour::Command` that really
+/// runs a program is what turned that from arithmetic into something that happens.
 ///
 /// So a shutdown sets this once and every runner reads it as it stops: each service gets what its
-/// spec asks for or what is left, whichever is less. The rule is the one T15a applied a level down,
-/// inside a single grace period — whatever is allowed, minus what has already been spent.
+/// spec asks for or what is left, whichever is less. The rule is the one a stop command already
+/// follows a level down, inside a single grace period — whatever is allowed, minus what has already
+/// been spent.
 ///
 /// [`None`] is the ordinary state of the daemon and means *no ceiling but the spec's*: a
 /// `mix service stop mariadb` on a running machine is not a shutdown and has no total to divide.
@@ -108,7 +109,7 @@ impl Budget {
 
 impl Registry {
     /// Everything that stops from now on has until `now + grace`, however long its own spec asks
-    /// for — roadmap task **T9a**.
+    /// for.
     ///
     /// Called by both ways a daemon stops and by nothing else: `daemon.shutdown` before it walks the
     /// stop plan, and the accept loop before it cancels the root token on a signal. The two differ
@@ -169,9 +170,9 @@ impl Registry {
     /// flushing and leave the job to [`Supervised`](mixengine_platform::process::Supervised)'s
     /// destructor, which kills rather than asks.
     ///
-    /// Stopping in reverse dependency order is `daemon.shutdown` (T9a), which walks
-    /// [`Registry::stop`] *before* anything cancels the root token. A signal cancels everything at
-    /// once and there is no order left to impose.
+    /// Stopping in reverse dependency order is `daemon.shutdown`, which walks [`Registry::stop`]
+    /// *before* anything cancels the root token. A signal cancels everything at once and there is
+    /// no order left to impose.
     ///
     /// **The two things this takes besides the entries are what keep it from colliding with a walk
     /// that is still going.** A signal arriving mid-`daemon.shutdown` gets here while the handler is
@@ -239,7 +240,7 @@ mod tests {
     };
     use super::*;
 
-    /// **The budget bounds the sum, which is what nothing owned before T9a.**
+    /// **The budget bounds the sum, which is what nothing owned before there was one.**
     ///
     /// Two services each asking for a minute to stop in, and neither of them able to use it: the
     /// stop command runs and never returns, which is what a `mariadb-admin shutdown` against a

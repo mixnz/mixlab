@@ -3,10 +3,10 @@
 /**
  * What happens to one name, as four facts that fail independently.
  *
- * **Four facts and no verdict** (T46 design, D4). A hosts line with no server, a server with no
- * resolver, and a resolver wired to a TLD this name is not on are three different faults with three
- * different fixes; one boolean would leave every client working out which of them it had — which is
- * the derivation [`crate::DnsStatus::wildcards`] had to stop making in T45.
+ * **Four facts and no verdict** (D4). A hosts line with no server, a server with no resolver, and
+ * a resolver wired to a TLD this name is not on are three different faults with three different
+ * fixes; one boolean would leave every client working out which of them it had — which is the
+ * derivation [`crate::DnsStatus::wildcards`] had to stop making once resolvers could be wired.
  */
 export type DomainStatus = { 
 /**
@@ -16,9 +16,9 @@ domain: string,
 /**
  * The site that declares it, by its primary domain, or [`None`] for a name nothing declares.
  *
- * **Reported rather than refused** (T46 design, D5): somebody asking why `foo.test` does not
- * work when they never declared it is owed exactly that answer, and the other three facts still
- * hold one.
+ * **Reported rather than refused** (D5): somebody asking why `foo.test` does not work when
+ * they never declared it is owed exactly that answer, and the other three facts still hold
+ * one.
  */
 site?: string | null, 
 /**
@@ -32,15 +32,15 @@ wildcard: boolean,
 /**
  * What this daemon's own DNS server answers, asked over its socket.
  *
- * [`None`] is a server that is not listening or did not reply — a different fault from a server
- * that answers while nothing on the machine sends it a name, and the reason this is asked over
- * the socket rather than of the zone (T46 design, D7).
+ * [`None`] is a server that is not listening or did not reply — a different fault from a
+ * server that answers while nothing on the machine sends it a name, and the reason this is
+ * asked over the socket rather than of the zone (D7).
  */
 server_answers?: string | null, 
 /**
  * What the operating system actually resolves it to, through `getaddrinfo`.
  *
- * **Never `nslookup`**, which T45 measured to bypass the Name Resolution Policy Table on
+ * **Never `nslookup`**, which was measured to bypass the Name Resolution Policy Table on
  * Windows: it answers NXDOMAIN for a name `getaddrinfo` resolves at the same moment, so a
  * diagnostic built with it would report a correctly wired machine as broken. Empty is a name
  * that does not resolve.
@@ -50,7 +50,8 @@ resolves_to: Array<string>,
  * One sentence saying what is wrong, or [`None`] when nothing is.
  *
  * A sentence and not a code, on [`crate::DnsStatus::because`]'s precedent next door. It says
- * what is wrong and never what to do about it: repair is T47's, and a diagnostic that suggests
- * a fix it cannot perform is one that will drift from the thing that performs it.
+ * what is wrong and never what to do about it: repair is `mix doctor --repair`'s, and a
+ * diagnostic that suggests a fix it cannot perform is one that will drift from the thing that
+ * performs it.
  */
 because?: string | null, };

@@ -129,7 +129,7 @@ export default function DatabasePanel({ service }: { service: string }) {
         )}
 
         {/* Redis and MongoDB do not create databases this way: the daemon says so, and a form that
-            can only be refused is not drawn (T155). */}
+            can only be refused is not drawn. */}
         {createsDatabases(report) && (
           <>
             <h4 className={styles.groupTitle}>{t("mixengine.servicesDetail.database.createTitle")}</h4>

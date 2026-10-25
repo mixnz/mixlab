@@ -14,7 +14,7 @@ fn version(text: &str) -> PackageVersion {
     PackageVersion::parse(text).expect("a valid version")
 }
 
-/// **A restored default is still the default** — T206d, D3.
+/// **A restored default is still the default.**
 #[tokio::test]
 async fn restoring_a_runtime_keeps_its_default() {
     let (_home, store) = store().await;
@@ -359,9 +359,9 @@ fn a_row_this_build_cannot_read_names_the_column_rather_than_the_reader() {
     }
 }
 
-/// **A phar has nothing to start** — roadmap task **T27c**, its design's D3: the installer's
-/// check runs the artifact's executable, and Composer's is a file for a PHP that may not be
-/// installed yet. Every language still proves it starts.
+/// **A phar has nothing to start**: the installer's check runs the artifact's executable, and
+/// Composer's is a file for a PHP that may not be installed yet. Every language still proves it
+/// starts.
 #[test]
 fn only_composer_has_no_smoke_test() {
     for kind in RuntimeKind::ALL {
@@ -373,8 +373,7 @@ fn only_composer_has_no_smoke_test() {
     }
 }
 
-/// `go` has no `--version` flag, and `go version` prints the release without reading a module —
-/// roadmap task **T27d**, its design's D3.
+/// `go` has no `--version` flag, and `go version` prints the release without reading a module.
 #[test]
 fn go_is_smoke_tested_with_its_version_subcommand() {
     let smoke = smoke_test(RuntimeKind::Go).expect("go starts something");
@@ -384,7 +383,7 @@ fn go_is_smoke_tested_with_its_version_subcommand() {
 }
 
 /// A JDK is started with `--version`, and without the variables a JVM reads before its
-/// arguments — roadmap task **T27e**, its design's D3.
+/// arguments.
 #[test]
 fn java_is_smoke_tested_with_version_and_a_clean_environment() {
     let smoke = smoke_test(RuntimeKind::Java).expect("java starts something");

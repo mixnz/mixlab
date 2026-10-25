@@ -2,7 +2,7 @@
 import type { SiteRef } from "./SiteRef";
 
 /**
- * What `cert.status` was asked about — roadmap task **T53**.
+ * What `cert.status` was asked about.
  */
 export type CertStatusQuery = { 
 /**

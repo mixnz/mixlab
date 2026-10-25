@@ -1,9 +1,9 @@
-//! Who holds a file or a directory, read from the system's handle table — roadmap task **T182e**.
+//! Who holds a file or a directory, read from the system's handle table.
 //!
 //! **The one place Windows says who holds a directory.** The Restart Manager answers for files; a
-//! directory an editor watches, or a terminal stands in, refuses the rename of every directory above
-//! it just the same and is in no list but this one (the T182e design, D2). It is what Process
-//! Explorer and `handle.exe` read.
+//! directory an editor watches, or a terminal stands in, refuses the rename of every directory
+//! above it just the same and is in no list but this one. It is what Process Explorer and
+//! `handle.exe` read.
 //!
 //! **Naming a handle can hang.** A synchronous pipe with a read outstanding makes any query on it
 //! wait for that read, and a pipe is a `File` object like any other. So only `File` objects are
@@ -67,7 +67,7 @@ pub(crate) struct OpenHandle {
 /// Every handle to a file or a directory on a disk that this process may look at, within `budget`.
 ///
 /// A process this one may not duplicate from — another user's, SYSTEM's — is skipped: what it holds
-/// is met by the rename's retry instead (the T182e design, "What this does not do").
+/// is met by the rename's retry instead.
 pub(crate) fn open_on_disk(budget: Duration) -> Vec<OpenHandle> {
     if budget.is_zero() {
         return Vec::new();

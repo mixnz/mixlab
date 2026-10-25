@@ -1,5 +1,4 @@
-//! The built-in DNS server, and which of this home's two name mechanisms is running — roadmap task
-//! **T44**, which also closes **T46a**.
+//! The built-in DNS server, and which of this home's two name mechanisms is running.
 //!
 //! `site.create` must prompt for nothing. Writing a hosts entry per domain costs an elevation
 //! prompt per site, which is the repeated cost [ADR
@@ -11,23 +10,23 @@
 //! the task on them, and this one is the mode — which mechanism this home is actually running on,
 //! and why.
 //!
-//! # The mode has two terms, and both of them are now real
+//! # The mode has two terms
 //!
-//! The T44 design, D4. "Running on DNS" is not "the server is listening". It is "the server is
-//! listening **and** something is routing a managed TLD to it" — and T44 could only ever produce
-//! the first, so it hard-coded the second to "not wired" and every home stayed on its hosts file.
+//! "Running on DNS" is not "the server is listening". It is "the server is listening **and**
+//! something is routing a managed TLD to it". The first version of this server could only ever
+//! produce the first, so it hard-coded the second to "not wired" and every home stayed on its hosts
+//! file.
 //!
-//! **T45 is the producer of the second term**, through
+//! **The resolver is the producer of the second term**, through
 //! [`ResolverConfig`](mixengine_platform::ResolverConfig): the machine is asked, on every start,
-//! which of the managed TLDs it already sends here. So the branch T44 wrote and could only reach
-//! from a test is the branch this build first runs for real.
+//! which of the managed TLDs it already sends here.
 //!
 //! # And it is per TLD, not per home
 //!
-//! The T45 design, D6. Every mechanism measured scopes to **one TLD**, and `.local` is never wired
-//! at all — so [`Dns::wired`] is a list rather than a flag, and a home can answer `*.blog.test` by
-//! pattern while still needing a hosts line for `shop.local`. [`DnsMode`] survives as the one-word
-//! summary a person reads; it is no longer what the hosts block is computed from.
+//! Every mechanism measured scopes to **one TLD**, and `.local` is never wired at all — so
+//! [`Dns::wired`] is a list rather than a flag, and a home can answer `*.blog.test` by pattern
+//! while still needing a hosts line for `shop.local`. [`DnsMode`] survives as the one-word summary
+//! a person reads; it is no longer what the hosts block is computed from.
 
 mod answer;
 mod server;
@@ -44,11 +43,11 @@ use tokio_util::sync::CancellationToken;
 
 /// The port this server listens on when `config.toml` names none.
 ///
-/// **53 on Windows and 53535 everywhere else** — the T44 design, D2. The split is not about
-/// privilege but about what can be *wired*: Windows' NRPT rule names a namespace and a nameserver
-/// address with no way to state a port, so on Windows it has to be 53 — which Windows lets an
-/// unprivileged process bind, having no privileged-port concept at all. `/etc/resolver`,
-/// `resolvectl` and dnsmasq can all state a port, so on macOS and Linux the number is free.
+/// **53 on Windows and 53535 everywhere else.** The split is not about privilege but about what can
+/// be *wired*: Windows' NRPT rule names a namespace and a nameserver address with no way to state a
+/// port, so on Windows it has to be 53 — which Windows lets an unprivileged process bind, having no
+/// privileged-port concept at all. `/etc/resolver`, `resolvectl` and dnsmasq can all state a port,
+/// so on macOS and Linux the number is free.
 ///
 /// **And it is deliberately not 5353**, which is mDNS's: `mDNSResponder` on macOS and
 /// `avahi-daemon` on Linux hold it on every ordinary desktop, so choosing it would mean the
@@ -91,10 +90,10 @@ pub(crate) struct Dns {
 
     /// Which managed TLDs this machine routes here, as of the last probe.
     ///
-    /// **Behind a lock because it changes while the daemon runs** — the T45 design, D8. A grant
-    /// wires the machine, and a daemon that only learned that at its next start would go on writing
-    /// hosts entries while the user watched their permission do nothing. [`Dns::reprobe`] is what
-    /// replaces it, and the grant is what calls that.
+    /// **Behind a lock because it changes while the daemon runs.** A grant wires the machine, and a
+    /// daemon that only learned that at its next start would go on writing hosts entries while the
+    /// user watched their permission do nothing. [`Dns::reprobe`] is what replaces it, and the
+    /// grant is what calls that.
     wired: Mutex<Vec<String>>,
 
     /// Why programs on this machine never reach the resolver, as of the last probe — found
@@ -107,9 +106,9 @@ impl Dns {
     /// Bind and start answering, or work out what to say instead.
     ///
     /// **This never fails.** A bind that did not work is a mode and a sentence, not a refusal to
-    /// start — the T44 design, D6, which is T40b's D10 one capability along: refusing to start
-    /// leaves a user with no daemon at all, which is strictly worse than a daemon that says which
-    /// of its two name mechanisms it is running on.
+    /// start — the rule an elevated daemon follows too, one capability along: reported, not
+    /// refused. Refusing to start leaves a user with no daemon at all, which is strictly worse than
+    /// a daemon that says which of its two name mechanisms it is running on.
     pub(crate) async fn start(
         config: &config::Dns,
         host: &dyn Host,
@@ -153,10 +152,10 @@ impl Dns {
 
     /// Ask this machine again which managed TLDs it sends here.
     ///
-    /// **Called at start and after every grant** — the T45 design, D8. A probe that fails leaves the
-    /// answer empty and says so in the log: reading the wiring is documented as something every
-    /// caller may treat as "no answer", and a daemon that refused to serve because it could not read
-    /// one file would be strictly worse than one that stays on the hosts file and reports why.
+    /// **Called at start and after every grant.** A probe that fails leaves the answer empty and
+    /// says so in the log: reading the wiring is documented as something every caller may treat as
+    /// "no answer", and a daemon that refused to serve because it could not read one file would be
+    /// strictly worse than one that stays on the hosts file and reports why.
     pub(crate) fn reprobe(&self, host: &dyn Host) {
         let Some(port) = self.wirable_port() else {
             return;
@@ -253,8 +252,8 @@ impl Dns {
             },
             // Wildcards are the thing DNS has and a hosts file does not: one line per name and no
             // patterns, so `blog.test` works and `api.blog.test` does not. The API says so rather
-            // than leaving a client to infer it — the T44 design, D9 — and says it per TLD, because
-            // from T45 on that is the shape of the answer (D6).
+            // than leaving a client to infer it, and says it per TLD, because that is the shape of
+            // the answer: the resolver routes one TLD at a time.
             wildcards: self.wired(),
             because: self.because(),
         }
@@ -279,8 +278,8 @@ impl Dns {
 
 /// The two modes, without a socket, for the tests of everything that reads one.
 ///
-/// `require_hosts` branches on [`Dns::mode`] and both of its branches have to be exercised — the
-/// T44 design, D4 — and neither of them is about binding a port.
+/// `require_hosts` branches on [`Dns::mode`] and both of its branches have to be exercised, and
+/// neither of them is about binding a port.
 #[cfg(test)]
 impl Dns {
     /// A home resolving through its hosts file: nothing bound, nothing wired.
@@ -298,8 +297,8 @@ impl Dns {
         Self::listening_for_tests(&WIRED_TLDS)
     }
 
-    /// A listening server that routes exactly `wired` — the shape D6 made necessary, since a home
-    /// can now route some of its TLDs and not others.
+    /// A listening server that routes exactly `wired` — the shape routing per TLD made necessary,
+    /// since a home can route some of its TLDs and not others.
     pub(crate) fn listening_for_tests(wired: &[&str]) -> Self {
         Self {
             state: State::Listening("127.0.0.1:53535".parse().expect("an address")),
@@ -322,10 +321,9 @@ impl Dns {
 
 /// The best sentence this machine can give for a bind that did not work.
 ///
-/// **Asked only after the bind failed**, never before it — the T44 design, D6. A probe first would
-/// be a race, and [`mixengine_platform::PortOwner`] is documented as something every caller must be
-/// able to treat as "no diagnosis": a failure to explain must not become the failure being
-/// explained.
+/// **Asked only after the bind failed**, never before it. A probe first would be a race, and
+/// [`mixengine_platform::PortOwner`] is documented as something every caller must be able to treat
+/// as "no diagnosis": a failure to explain must not become the failure being explained.
 fn unavailable(host: &dyn Host, port: u16, error: &std::io::Error) -> String {
     match host.port_owner().listening_on(port).ok().flatten() {
         Some(PortHolder {
@@ -336,8 +334,8 @@ fn unavailable(host: &dyn Host, port: u16, error: &std::io::Error) -> String {
             format!("port {port} is held by another program on this machine")
         }
         // Nobody is listening on TCP and the bind failed anyway. That is a UDP-only holder — which
-        // `PortOwner` cannot see (D6) — or a Windows excluded port range, which T47 owns detecting.
-        // The operating system's own words are the best thing left to say.
+        // `PortOwner` cannot see — or a Windows excluded port range, which `mix doctor` owns
+        // detecting. The operating system's own words are the best thing left to say.
         None => format!("port {port} could not be bound: {error}"),
     }
 }
@@ -355,8 +353,9 @@ mod tests {
         Dns::listening_for_tests(wired)
     }
 
-    /// The row the whole of T44 lives on: the server can be up and this home is still on the hosts
-    /// file, because nothing sends it a name. Deleting this test is how somebody would break D4.
+    /// The row the whole mode lives on: the server can be up and this home is still on the hosts
+    /// file, because nothing sends it a name. Deleting this test is how somebody would make
+    /// "listening" mean "running on DNS" again.
     #[test]
     fn a_listening_server_nothing_is_wired_to_is_still_hosts_only() {
         let dns = listening(&[]);
@@ -374,8 +373,8 @@ mod tests {
         );
     }
 
-    /// The other side of the same row, and T45 is what first reaches it outside a test: with both
-    /// terms true this home is on DNS, and it names the TLDs whose subdomains resolve.
+    /// The other side of the same row, which the resolver reaches outside a test: with both terms
+    /// true this home is on DNS, and it names the TLDs whose subdomains resolve.
     #[test]
     fn a_wired_server_reports_which_tlds_have_wildcards() {
         let status = listening(&["test", "localhost"]).status();
@@ -388,9 +387,9 @@ mod tests {
         assert_eq!(status.because, None);
     }
 
-    /// The T45 design, D6. A home can route some of its TLDs and not others — `.local` never being
-    /// routable at all — so the mode is `dns` while `shop.local` still needs a hosts line, and the
-    /// field says exactly which names got wildcards.
+    /// A home can route some of its TLDs and not others — `.local` never being routable at all — so
+    /// the mode is `dns` while `shop.local` still needs a hosts line, and the field says exactly
+    /// which names got wildcards.
     #[tokio::test]
     async fn a_partly_wired_home_is_on_dns_and_says_which_names_it_covers() {
         let status = listening(&["test"]).status();
@@ -400,7 +399,7 @@ mod tests {
         assert!(!status.wildcards.iter().any(|tld| tld == "local"));
     }
 
-    /// D8. A grant that wires the machine has to change this daemon's answer, or the user grants
+    /// A grant that wires the machine has to change this daemon's answer, or the user grants
     /// permission and watches nothing happen until somebody restarts it.
     #[test]
     fn a_reprobe_after_a_grant_changes_the_mode() {

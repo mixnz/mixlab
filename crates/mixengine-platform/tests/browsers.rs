@@ -1,5 +1,4 @@
-//! The round trip against a real `certutil`, on a database made for the test — roadmap task
-//! **T49b**.
+//! The round trip against a real `certutil`, on a database made for the test.
 //!
 //! **`#[ignore]`d rather than skipped**, in the shape `crates/mixengine-cli/tests/caddy.rs` uses: a
 //! machine without `libnss3-tools` says the test did not run instead of quietly reporting a pass.
@@ -20,7 +19,7 @@ use mixengine_platform::BrowserTrust as _;
 /// Make an empty NSS database, the way a browser's first run would.
 ///
 /// **The one `certutil -N` in this repository, and it is here.** MixEngine itself never creates a
-/// database — the T49b design, D4 — so the only place one is made is a test that then deletes it.
+/// database, so the only place one is made is a test that then deletes it.
 fn database(directory: &Path) {
     let status = Command::new("certutil")
         .args([
@@ -37,8 +36,8 @@ fn database(directory: &Path) {
 
 /// A certificate shaped the way `mixengine_core::certs::ca` shapes one, and its identifier.
 ///
-/// The same fixture `crates/mixengine-elevate/tests/system.rs` uses, and not T48's own derivation:
-/// this suite has no daemon's key, and what is checked here is the *shape* of the name.
+/// The same fixture `crates/mixengine-elevate/tests/system.rs` uses, and not the generator's own
+/// derivation: this suite has no daemon's key, and what is checked here is the *shape* of the name.
 fn an_authority() -> (Vec<u8>, String) {
     use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair, KeyUsagePurpose};
 
@@ -110,8 +109,8 @@ fn an_authority_goes_into_a_database_and_comes_back_out() {
     assert!(nothing.written.is_empty(), "removed twice: {nothing:?}");
 }
 
-/// **A certificate under our nickname that is not ours is left alone** — the T49a design, D5's
-/// second check, which this task gets for free because the reader already exists.
+/// **A certificate under our nickname that is not ours is left alone** — the second check a removal
+/// gets, which comes for free here because the reader already exists.
 ///
 /// The removal is the direction that can do damage, and a name is not proof of provenance.
 #[test]

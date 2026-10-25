@@ -56,7 +56,7 @@ impl Sites {
             })
     }
 
-    /// The holder a row names — roadmap task **T81b**.
+    /// The holder a row names.
     ///
     /// `internal` when it is gone: both foreign keys cascade, so a missing owner is a bug.
     pub(super) async fn holder_of(&self, site: &sites::SiteRecord) -> Result<Holder, Error> {
@@ -93,8 +93,7 @@ impl Sites {
         }
     }
 
-    /// The project a site may be edited under, or the refusal for a site nobody edits by hand —
-    /// roadmap task **T81b**, the design's D6.
+    /// The project a site may be edited under, or the refusal for a site nobody edits by hand.
     ///
     /// **Here and not in `mix`**: `blueprint.apply` and `domain.add` reach [`Self::update`] without
     /// going through a CLI, and a refusal they could cross is no refusal.
@@ -112,9 +111,8 @@ impl Sites {
         }
     }
 
-    /// Everything `site.create` does after its row, for a site written by somebody else — roadmap
-    /// task **T81b**, the design's D7. The three calls, in the order and with the logging policy
-    /// `create` gives each.
+    /// Everything `site.create` does after its row, for a site written by somebody else. The three
+    /// calls, in the order and with the logging policy `create` gives each.
     ///
     /// # Errors
     ///
@@ -126,8 +124,7 @@ impl Sites {
         self.now_serves_what_it_declares().await
     }
 
-    /// What `site.delete` does after its row, for a site removed by somebody else — the T81b
-    /// design's D8.
+    /// What `site.delete` does after its row, for a site removed by somebody else.
     ///
     /// # Errors
     ///
@@ -158,10 +155,10 @@ impl Sites {
     /// by that id exists — which is what a single-instance package such as `caddy` is called — and
     /// `name@main` otherwise.
     ///
-    /// A `version` nothing installed satisfies is **not** refused (spec D8): refusing an import
-    /// because this machine has MariaDB 11.5 would break the clean-machine case the import path
-    /// exists for. It is written to `daemon.log` at `info` and no further — there is no field on
-    /// [`SiteDetail`] for it, and inventing one here would be an API this spec did not agree.
+    /// A `version` nothing installed satisfies is **not** refused: refusing an import because this
+    /// machine has MariaDB 11.5 would break the clean-machine case the import path exists for. It
+    /// is written to `daemon.log` at `info` and no further — there is no field on [`SiteDetail`]
+    /// for it, and inventing one here would be an API nobody agreed on.
     pub(super) async fn linked(
         &self,
         manifest: &manifest::Manifest,
@@ -188,7 +185,7 @@ impl Sites {
         Ok(linked)
     }
 
-    /// A site entry's own `services = [...]`, as ids this home has — roadmap task **T204**.
+    /// A site entry's own `services = [...]`, as ids this home has.
     pub(super) async fn resolved(&self, wanted: &[ServiceId]) -> Result<Vec<ServiceId>, Error> {
         let mut linked = Vec::with_capacity(wanted.len());
 
@@ -239,7 +236,7 @@ impl Sites {
             SiteKind::PhpFpm { pool } => {
                 // Asked again rather than remembered, because the point of showing both is that
                 // they can differ: the row was frozen at create and the resolver moves on. For an
-                // extension's site the question is its constraint alone — roadmap task **T81b**.
+                // extension's site the question is its constraint alone.
                 let resolved = resolve::runtime(&self.store, &holder.question())
                     .await
                     .ok()

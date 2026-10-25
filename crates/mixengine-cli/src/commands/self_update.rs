@@ -23,7 +23,7 @@ pub(crate) struct SelfUpdateAsk {
     pub(crate) finish: bool,
 }
 
-/// `mix self-update` — roadmap task **T88**.
+/// `mix self-update`: install the newest MixEngine release.
 ///
 /// **The daemon does the update and this waits for it.** `mix` may depend on `mixengine-platform`
 /// and `mixengine-proto` and on nothing else, and verifying a signature, unpacking an archive and
@@ -66,7 +66,7 @@ pub(crate) async fn self_update(
 
     let mut client = Client::connect(endpoint, autostart).await?;
 
-    // The second half of a `.pkg` update — T88f. Refused by the daemon, in a sentence, until
+    // The second half of a `.pkg` update. Refused by the daemon, in a sentence, until
     // Installer.app has put the new binaries on disk.
     if finish {
         let applied: UpdateApplied = ask(
@@ -106,7 +106,7 @@ pub(crate) async fn self_update(
     // `apt` installed are both perfectly healthy, and the reason has just been printed — or is about
     // to be, as the one document a `--json` caller gets.
     //
-    // A copy the `.pkg` installed reads `managed` and carries an installer, and is not refused (T88f).
+    // A copy the `.pkg` installed reads `managed` and carries an installer, and is not refused.
     let refused = !status.offered
         || (matches!(status.placement, UpdatePlacement::Managed { .. })
             && status.installer.is_none());
@@ -145,7 +145,7 @@ pub(crate) async fn self_update(
     }
 
     // The `.pkg` path: the daemon downloads, checks and opens it, and keeps running. What finishes
-    // the update is `--finish`, once the person has been through Installer.app (T88f, D8).
+    // the update is `--finish`, once the person has been through Installer.app.
     if status.installer.is_some() {
         let handed: UpdateHandedOver = ask(
             &mut client,
@@ -228,14 +228,14 @@ async fn relaunch(
 /// How long `mix self-update` waits for the daemon it just replaced to stop answering.
 const RELAUNCH_WAIT: std::time::Duration = std::time::Duration::from_secs(30);
 
-/// The lock `mix self-update` and MixLab's updater both take — T187, spec D7.
+/// The lock `mix self-update` and MixLab's updater both take.
 const UPDATE_LOCK: &str = "update.lock";
 
 /// Take the update lock beside the binaries, or say who has it.
 ///
-/// **Beside the binaries, not in the home**, since T187. A lock belongs to what is being changed,
-/// and what an update changes is the directory holding `mixengined`, which several homes can share
-/// — and which MixLab's own updater, knowing nothing of homes, swaps too.
+/// **Beside the binaries, not in the home.** A lock belongs to what is being changed, and what an
+/// update changes is the directory holding `mixengined`, which several homes can share — and which
+/// MixLab's own updater, knowing nothing of homes, swaps too.
 fn update_lock() -> Result<Option<mixengine_platform::lock::Lock>, Error> {
     let directory = std::env::current_exe()
         .ok()
@@ -279,7 +279,7 @@ fn update_lock_in(
 ///
 /// Three answers and not two, because *skip this version* and *remind me later* are different
 /// decisions and a yes/no that meant both would be a prompt nobody could answer correctly —
-/// `confirm::Choice`'s own reasoning, which T78 added for this shape of question.
+/// `confirm::Choice`'s own reasoning, written for a blueprint's version questions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Choice {
     /// Install it now.
@@ -358,8 +358,8 @@ mod tests {
     use super::*;
     use mixengine_proto::ErrorCode;
 
-    /// **T187, spec D7.** The lock is the file beside the binaries that MixLab's updater takes too,
-    /// and a second taker is refused with the holder named.
+    /// The lock is the file beside the binaries that MixLab's updater takes too, and a second taker
+    /// is refused with the holder named.
     #[test]
     fn the_update_lock_is_the_file_beside_the_binaries() {
         let directory = tempfile::tempdir().unwrap();

@@ -1,4 +1,4 @@
-//! A share ending on its own, against a real `mixengined` — roadmap task **T76**.
+//! A share ending on its own, against a real `mixengined`.
 //!
 //! What the unit tests beside `sites::revoke` prove is that a reading becomes the right decision.
 //! What is proved here is the part only a daemon can be wrong about: that the loop runs on its own
@@ -6,7 +6,7 @@
 //! row it leaves behind is empty.
 //!
 //! **`check_seconds = 1`**, so a deadline of one second is over in a few periods rather than in
-//! half a minute. That the key exists at all is why this suite can exist — the T76 design, D1.
+//! half a minute. That the key exists at all is why this suite can exist.
 //!
 //! The `Daemon` and `Client` here are `tests/renewal.rs`' — which are `tests/sites.rs`' before that
 //! — because a third spelling of a JSON-RPC client is a third thing to keep in step.
@@ -48,18 +48,18 @@ async fn a_site(client: &mut Client, repository: &Path) {
 /// An interface this machine can share on, by name.
 ///
 /// **Named rather than left to the daemon's default, and read rather than guessed.** `site.share`
-/// refuses to choose where more than one interface is up — the T74 design, D5 — and the machine
-/// that wrote this suite has four: Wi-Fi, a Tailscale adapter and two Hyper-V switches. A CI runner
-/// is the same kind of machine. So the name comes from the same enumeration the daemon will make,
-/// in the same process's view of the same host, and the test is about revocation rather than about
-/// how many adapters somebody happens to have.
+/// refuses to choose where more than one interface is up, and the machine that wrote this suite has
+/// four: Wi-Fi, a Tailscale adapter and two Hyper-V switches. A CI runner is the same kind of
+/// machine. So the name comes from the same enumeration the daemon will make, in the same process's
+/// view of the same host, and the test is about revocation rather than about how many adapters
+/// somebody happens to have.
 /// An interface this machine can share on, or [`None`] where it has none.
 ///
 /// **Named rather than left to the daemon's default, and read rather than guessed.** `site.share`
-/// refuses to choose where more than one interface is up — the T74 design, D5 — and the machine that
-/// wrote this suite has four: Wi-Fi, a Tailscale adapter and two Hyper-V switches. So the name comes
-/// from the same enumeration the daemon will make, in the same process's view of the same host, and
-/// these tests are about revocation rather than about how many adapters somebody happens to have.
+/// refuses to choose where more than one interface is up, and the machine that wrote this suite has
+/// four: Wi-Fi, a Tailscale adapter and two Hyper-V switches. So the name comes from the same
+/// enumeration the daemon will make, in the same process's view of the same host, and these tests
+/// are about revocation rather than about how many adapters somebody happens to have.
 ///
 /// **And [`None`] is a real answer, not a broken machine** — which is what CI taught this suite on
 /// its first run. The Linux leg runs the whole test job inside a network namespace holding nothing
@@ -105,8 +105,8 @@ async fn still_shared(client: &mut Client, domain: &str) -> bool {
 /// Poll until the share is gone, or give up.
 ///
 /// A deadline of its own rather than the suite's, so a loop that never runs — or a mutex that
-/// deadlocked, which is the failure the T76 design names as the one to watch — fails in seconds
-/// with a message instead of hanging until the harness gives up on the whole binary.
+/// deadlocked, which is the failure to watch for here — fails in seconds with a message instead of
+/// hanging until the harness gives up on the whole binary.
 async fn unshared_within(client: &mut Client, domain: &str, seconds: u64) -> bool {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(seconds);
 
@@ -121,9 +121,9 @@ async fn unshared_within(client: &mut Client, domain: &str, seconds: u64) -> boo
     false
 }
 
-/// **A share with a deadline ends without anybody ending it** — the whole of T76 in one assertion.
+/// **A share with a deadline ends without anybody ending it** — the whole feature in one assertion.
 ///
-/// An expiry is not debounced (the T76 design, D2), so one pass after the deadline is enough.
+/// An expiry is not debounced, so one pass after the deadline is enough.
 #[tokio::test]
 async fn a_share_with_a_deadline_ends_by_itself() {
     let Some(interface) = shareable_or_skip("a_share_with_a_deadline_ends_by_itself") else {
@@ -160,8 +160,9 @@ async fn a_share_with_a_deadline_ends_by_itself() {
         home.daemon_log()
     );
 
-    // **The road it took, not merely the row it left behind.** T74's ordering lives in `unshare`,
-    // and this line is what says the loop went through it rather than writing the row itself.
+    // **The road it took, not merely the row it left behind.** The ordering that keeps a machine no
+    // more open than its configuration lives in `unshare`, and this line is what says the loop went
+    // through it rather than writing the row itself.
     //
     // **Waited for rather than read.** The row is cleared inside `unshare`, and the line is written
     // after it returns — so a client watching `site.show` sees the share end *before* the log says
@@ -230,8 +231,7 @@ async fn a_deadline_that_passed_while_the_daemon_was_down_is_acted_on() {
     );
 }
 
-/// **A `--for` that has already run out is refused rather than honoured** — the T76 design, D6,
-/// end to end.
+/// **A `--for` that has already run out is refused rather than honoured**, end to end.
 ///
 /// The unit test beside `sites::sharing` proves the arithmetic; this proves that a client asking
 /// for it gets the refusal rather than a URL, and that the site is left exactly as it was.
@@ -303,7 +303,7 @@ async fn ports_queued_open(client: &mut Client) -> Vec<Value> {
         .collect()
 }
 
-/// **Deleting a shared site withdraws the share** — roadmap task **T199a**.
+/// **Deleting a shared site withdraws the share.**
 ///
 /// `site.delete` used to take the row and re-render the front end, and leave the two things a share
 /// put outside the front end: the firewall rule and the mDNS name. They stayed until the daemon next

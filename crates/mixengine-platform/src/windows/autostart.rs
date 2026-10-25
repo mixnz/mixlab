@@ -11,9 +11,9 @@
 //!
 //! **What that rule is really about is kept**: the task is described in a *file*, so no path ever
 //! reaches a command line. `/SC ONLOGON /TR "<command line>"` would put a path containing a space
-//! through two levels of quoting, which is the bug class this project refuses everywhere else — the
-//! T40 design, D9. Inside the document the program and its arguments are separate elements, and
-//! everything interpolated goes through [`escape`].
+//! through two levels of quoting, which is the bug class this project refuses everywhere else: no
+//! shell strings, anywhere. Inside the document the program and its arguments are separate
+//! elements, and everything interpolated goes through [`escape`].
 //!
 //! # The settings that are not defaults, and what each costs if left alone
 //!

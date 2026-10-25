@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// **The three directives are one unit, and any two of them are worse than none** — T70, D2.
+/// **The three directives are one unit, and any two of them are worse than none.**
 ///
 /// Measured against a real Caddy 2.10.0 before this was written, twenty requests each with the
 /// pool's address dead and the activator's live:
@@ -48,7 +48,7 @@ fn a_pool_that_can_be_woken_renders_the_activator_after_it_under_a_policy_that_p
     }
 }
 
-/// **A pool with no activator renders exactly what it rendered before T70.**
+/// **A pool with no activator renders exactly what it rendered before on-demand activation.**
 ///
 /// A home whose pool listens on TCP and whose row predates the `activation_port` column has no
 /// activator, and the site it serves must be the site it served yesterday — a `lb_policy` over
@@ -86,8 +86,8 @@ fn a_pool_with_no_activator_renders_the_one_line_it_always_did() {
 /// `Caddy.sites` and not `served::render`, because that is the path `sites()` actually takes —
 /// a mistake in how the rendering is assembled is caught here rather than only by the
 /// integration suite.
-/// **T167f: a PHP site answers a pool that is not answering with the starting page**, in both
-/// the plaintext and the TLS block, and never with the empty-site welcome page.
+/// **A PHP site answers a pool that is not answering with the starting page**, in both the
+/// plaintext and the TLS block, and never with the empty-site welcome page.
 #[test]
 fn a_php_site_answers_a_dead_pool_with_the_starting_page() {
     let rendered = render_site(&Served {
@@ -112,7 +112,7 @@ fn a_php_site_answers_a_dead_pool_with_the_starting_page() {
     );
 }
 
-/// Three routes and a fallback, as `served` hands them over — roadmap task **T135**.
+/// Three routes and a fallback, as `served` hands them over.
 fn a_site_with_routes() -> Served {
     use crate::generate::served::{Rewrite, ServedRoute, ServedRouteTarget};
 
@@ -146,8 +146,7 @@ fn a_site_with_routes() -> Served {
     }
 }
 
-/// **A route renders one handler, ahead of the fallback, in the order it was given** — roadmap
-/// task **T135**.
+/// **A route renders one handler, ahead of the fallback, in the order it was given.**
 ///
 /// The order is the specificity: `core::sites::by_specificity` sorted the list before it got
 /// here, and `handle` blocks are taken in the order they are written. What this asserts is that
@@ -182,7 +181,7 @@ fn routes_render_in_order_ahead_of_the_fallback() {
     );
 }
 
-/// **The rewrite is one directive** — roadmap task **T135**, that design's D4.
+/// **The rewrite is one directive.**
 ///
 /// `uri strip_prefix` + `rewrite` reads better and runs backwards: Caddy sorts directives into
 /// its own standard order inside a block and `rewrite` comes *before* `uri`, so the pair would
@@ -210,7 +209,7 @@ fn a_rewriting_route_uses_one_directive() {
 }
 
 /// **A site whose own upstream carries a path renders a rewrite rather than a configuration
-/// Caddy refuses** — roadmap task **T135**.
+/// Caddy refuses.**
 ///
 /// Measured against 2.11.4 before this was written: `reverse_proxy http://127.0.0.1:3003/xyz`
 /// is *"for now, URLs for proxy upstreams only support scheme, host, and port components"*, and
@@ -243,9 +242,9 @@ fn a_proxy_site_with_a_path_in_its_upstream_renders_a_rewrite() {
     );
 }
 
-/// A site with a certificate renders **two** blocks: one plaintext, one TLS — the T51 design,
-/// D2. One block naming both schemes is refused by Caddy itself, which is why this asserts the
-/// shape and not the directive alone.
+/// A site with a certificate renders **two** blocks: one plaintext, one TLS. One block naming both
+/// schemes is refused by Caddy itself, which is why this asserts the shape and not the directive
+/// alone.
 #[test]
 fn an_https_site_renders_a_plaintext_block_and_a_tls_block() {
     let rendered = render_site(&a_site_with_a_certificate());
@@ -256,10 +255,10 @@ fn an_https_site_renders_a_plaintext_block_and_a_tls_block() {
     assert_eq!(rendered.matches("\n\troot *").count(), 2, "{rendered}");
 }
 
-/// **The plaintext block redirects and serves nothing itself** — roadmap task **T98**. The TLS
-/// block is untouched: it still carries the one `root *` a site with a certificate has always
-/// had, which is the assertion that this is an addition to the plaintext block and not a second
-/// change smuggled into the one T51 shipped.
+/// **The plaintext block redirects and serves nothing itself.** The TLS block is untouched: it
+/// still carries the one `root *` a site with a certificate has always had, which is the assertion
+/// that this is an addition to the plaintext block and not a second change smuggled into the TLS
+/// block.
 #[test]
 fn a_site_with_redirect_on_sends_its_plaintext_block_straight_to_https() {
     let rendered = render_site(&Served {
@@ -278,7 +277,7 @@ fn a_site_with_redirect_on_sends_its_plaintext_block_straight_to_https() {
     );
 }
 
-/// **Off by default, and a site that never asked still renders exactly what T51 shipped** —
+/// **Off by default, and a site that never asked still renders exactly what it always did** —
 /// the regression this whole feature must not be.
 #[test]
 fn a_site_with_redirect_off_renders_the_same_plaintext_block_as_before() {
@@ -288,10 +287,10 @@ fn a_site_with_redirect_off_renders_the_same_plaintext_block_as_before() {
     assert_eq!(rendered.matches("\n\troot *").count(), 2, "{rendered}");
 }
 
-/// **A redirect needs a usable certificate, not only the flag** — the T51 design's D4 applied a
-/// second time. A site that asked for HTTPS but has nothing on disk to serve it with already
-/// renders plaintext alone; asking for a redirect too must not turn that into a 307 into a TLS
-/// listener nothing is bound to.
+/// **A redirect needs a usable certificate, not only the flag** — the rule that a site with no
+/// usable certificate renders no TLS, applied a second time. A site that asked for HTTPS but has
+/// nothing on disk to serve it with already renders plaintext alone; asking for a redirect too must
+/// not turn that into a 307 into a TLS listener nothing is bound to.
 #[test]
 fn a_site_with_redirect_on_but_no_certificate_renders_plaintext_exactly_as_before() {
     let mut site = a_site_with_a_certificate();
@@ -306,10 +305,9 @@ fn a_site_with_redirect_on_but_no_certificate_renders_plaintext_exactly_as_befor
 }
 
 /// **The CA route is reachable over plaintext on a redirecting shared site, and the redirect is
-/// what everything else gets** — roadmap task **T98**, the design's D3. A phone that has not
-/// yet trusted this home's authority can only reach `/__mixengine/ca.crt` before that trust
-/// exists; a redirect that caught it too would send the phone into a handshake TLS refuses, for
-/// the one document that would have fixed that.
+/// what everything else gets.** A phone that has not yet trusted this home's authority can only
+/// reach `/__mixengine/ca.crt` before that trust exists; a redirect that caught it too would send
+/// the phone into a handshake TLS refuses, for the one document that would have fixed that.
 #[test]
 fn a_redirecting_shared_site_still_serves_its_ca_route_over_plaintext() {
     let context = context("{}").with_authority(Some("-----BEGIN CERTIFICATE-----".to_owned()));
@@ -345,9 +343,9 @@ fn a_redirecting_shared_site_still_serves_its_ca_route_over_plaintext() {
     assert!(ca_route < redirect, "{rendered}");
 }
 
-/// **A site with no certificate renders one block and no `tls`** — the T51 design, D4. A `tls`
-/// at a path that is not there fails `caddy validate`, and validation judges the whole staged
-/// rendering, so this one site would cost every other site its new configuration.
+/// **A site with no certificate renders one block and no `tls`.** A `tls` at a path that is not
+/// there fails `caddy validate`, and validation judges the whole staged rendering, so this one site
+/// would cost every other site its new configuration.
 #[test]
 fn a_site_with_no_certificate_renders_no_tls_at_all() {
     let mut site = a_site_with_a_certificate();
@@ -360,7 +358,7 @@ fn a_site_with_no_certificate_renders_no_tls_at_all() {
     assert!(!rendered.contains("\n\ttls "), "{rendered}");
 }
 
-/// A site that never declared HTTPS renders exactly what it rendered before T51.
+/// A site that never declared HTTPS renders exactly what it rendered before TLS was wired in.
 #[test]
 fn a_plain_site_renders_one_block() {
     let mut site = a_site_with_a_certificate();
@@ -373,8 +371,8 @@ fn a_plain_site_renders_one_block() {
     assert!(!rendered.contains("\n\ttls "), "{rendered}");
 }
 
-/// **The fingerprint is what makes a reissue reload** — the T51 design, D5. T50 writes to the
-/// same path, so without it the rendering after a reissue is byte-identical, `install` finds no
+/// **The fingerprint is what makes a reissue reload.** [`crate::certs::leaf`] writes to the same
+/// path, so without it the rendering after a reissue is byte-identical, `install` finds no
 /// difference, and the server goes on serving the certificate it holds in memory.
 #[test]
 fn a_different_certificate_renders_a_different_file() {

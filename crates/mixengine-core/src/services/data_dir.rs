@@ -1,10 +1,10 @@
-//! Which service already holds a data directory — roadmap task **T36**.
+//! Which service already holds a data directory.
 //!
-//! A port two services share is a start that fails, diagnosed by naming whoever holds it (T38). A
-//! *data directory* two database servers share is two servers over one set of files: MariaDB and
-//! MySQL both refuse it through a lock file when they notice, and what happens when they do not is
-//! the user's databases. The cost lands on the data rather than on the start, so it is refused
-//! where the row is written rather than discovered where the files are opened.
+//! A port two services share is a start that fails, diagnosed by naming whoever holds it. A *data
+//! directory* two database servers share is two servers over one set of files: MariaDB and MySQL
+//! both refuse it through a lock file when they notice, and what happens when they do not is the
+//! user's databases. The cost lands on the data rather than on the start, so it is refused where
+//! the row is written rather than discovered where the files are opened.
 //!
 //! **Only an explicit `data_dir` can reach this.** The layout the generator derives is
 //! `data/<package>/<instance>` and two instances of one package cannot collide in it — so this is

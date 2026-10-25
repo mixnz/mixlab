@@ -2,7 +2,7 @@
 import type { ServiceId } from "./ServiceId";
 
 /**
- * What `service.adopt` takes — roadmap task **T182g**.
+ * What `service.adopt` takes.
  */
 export type ServiceAdopt = { 
 /**

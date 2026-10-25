@@ -1,6 +1,6 @@
 use super::*;
 
-/// **T81b, D10.** A web-app runs no process, and the refusal says what controls it instead.
+/// A web-app runs no process, and the refusal says what controls it instead.
 #[test]
 fn a_web_app_is_controlled_as_a_site() {
     let refusal = served_as_a_site(

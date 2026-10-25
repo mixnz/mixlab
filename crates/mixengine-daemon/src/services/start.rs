@@ -1,4 +1,4 @@
-//! Starting services — roadmap task **T207d** gave it a file.
+//! Starting services.
 //!
 //! The walk over a start plan, the one service at a time it is made of, the registration of a
 //! runner under the lock a shutdown drains, and how a walk waits for that runner to decide. The
@@ -17,7 +17,7 @@ use super::runner::{Readiness, Runner};
 use super::{Fault, Registry, Running, Start, Walk, databases, first_run, lock, record};
 
 impl Registry {
-    /// Bring `id` up if it is not already, and say nothing if it was — roadmap task **T77a**.
+    /// Bring `id` up if it is not already, and say nothing if it was.
     ///
     /// **Not a second start path**: it builds the same graph and the same plan `service.start`
     /// builds and hands them to the same walk, so a dependency comes up first and a first-run ritual
@@ -45,17 +45,16 @@ impl Registry {
             None => Ok(()),
 
             Some((failed, fault)) => {
-                // **The one start failure this daemon can do better than "read the log"** — roadmap
-                // task **T127a**. T127 built the repair and reached it from the provisioning probe,
-                // which is a *running* server; this is the same sentence for a database that never
-                // got there.
+                // **The one start failure this daemon can do better than "read the log".** The
+                // credential repair was first reached from the provisioning probe, which is a
+                // *running* server; this is the same sentence for a database that never got there.
                 let hint = match &fault.reason {
                     Some(StateReason::SuperuserRefused { .. }) => databases::repair_hint(&failed),
                     _ => format!("`mix service logs {failed}` has what it printed"),
                 };
 
-                // The runner's sentence first (T202a, D3): what it wrote beside the reason is what
-                // a person acts on, and the state machine's word is the fallback.
+                // The runner's sentence first: what it wrote beside the reason is what a person
+                // acts on, and the state machine's word is the fallback.
                 Err(mixengine_proto::Error::new(
                     mixengine_proto::ErrorCode::PreconditionFailed,
                     fault.said(&failed),
@@ -83,7 +82,7 @@ impl Registry {
             .await
     }
 
-    /// [`Registry::start`], naming why — roadmap task **T113**.
+    /// [`Registry::start`], naming why.
     ///
     /// The one caller that passes anything else is the boot walk, which starts what a home's
     /// `autostart` settings asked for: nobody requested those, and an event saying somebody did
@@ -150,11 +149,11 @@ impl Registry {
     /// while on something in its fourth crash it is not, and the tier below must not be started
     /// against it.
     ///
-    /// **A runner that is not up is asked rather than only read** — T19c, and the case a person is
-    /// most likely to type `mix service start` at. Reading a service crash-looping under
+    /// **A runner that is not up is asked rather than only read** — the case a person is most
+    /// likely to type `mix service start` at. Reading a service crash-looping under
     /// [`RestartPolicy::Always`](mixengine_proto::RestartPolicy::Always) can only ever report the
-    /// attempt that just failed: its runner never deregisters, nothing in this path could shorten the
-    /// backoff it is sitting in, and every start therefore re-walked the tier, emitted two more
+    /// attempt that just failed: its runner never deregisters, nothing in this path could shorten
+    /// the backoff it is sitting in, and every start therefore re-walked the tier, emitted two more
     /// events and spawned nothing. So the request goes *in*, and what this then waits for is the
     /// attempt that request causes rather than the one before it.
     ///
@@ -173,24 +172,22 @@ impl Registry {
     /// arguably be answered [`Start::Ready`]. A shutdown that has begun is going to stop that
     /// service too, and answering a client that it is up — moments before the daemon takes it
     /// down — would be true for less time than it takes to render.
-    /// `because` is why this start is happening, and reaches the move into `Starting` — roadmap
-    /// task **T113**.
+    /// `because` is why this start is happening, and reaches the move into `Starting`.
     async fn begin(&self, spec: &ServiceSpec, because: StateReason) -> Start {
         let id = spec.id().clone();
 
-        // **Before the ritual and before the lock, on every path into a start** — roadmap task
-        // **T70a**. The addresses this may be holding on the service's behalf are the ones the
-        // process is about to bind, and a release that happened after the spawn would be a database
-        // that fails to start reporting a taken address without being able to say what took it.
-        // `running` below is a `std` mutex and this awaits, which is the second reason it is here
-        // rather than lower.
+        // **Before the ritual and before the lock, on every path into a start.** The addresses this
+        // may be holding on the service's behalf are the ones the process is about to bind, and a
+        // release that happened after the spawn would be a database that fails to start reporting a
+        // taken address without being able to say what took it. `running` below is a `std` mutex
+        // and this awaits, which is the second reason it is here rather than lower.
         self.holder.release(&id).await;
 
-        // **Before the spawn, and outside the lock** — roadmap task T33. A ritual is minutes of
-        // work, and holding a `std` mutex across it would stop every other `service.*` call for the
-        // whole of a bootstrap. Nothing is registered yet, so a second start arriving mid-ritual
-        // finds nothing supervised and asks the same question again — which reads the markers, finds
-        // our own in-progress one, and clears and redoes rather than colliding.
+        // **Before the spawn, and outside the lock.** A ritual is minutes of work, and holding a
+        // `std` mutex across it would stop every other `service.*` call for the whole of a
+        // bootstrap. Nothing is registered yet, so a second start arriving mid-ritual finds nothing
+        // supervised and asks the same question again — which reads the markers, finds our own
+        // in-progress one, and clears and redoes rather than colliding.
         //
         // The refusal below persists nothing, exactly as the shutting-down one does not: no row
         // moved and no event was published, and the durable account is the job row, which holds the
@@ -272,14 +269,14 @@ impl Registry {
     /// or two `service.start` for one service would each find nothing running, each spawn, and leave
     /// a process holding the port that no stop can still name.
     ///
-    /// `adopted` is the difference between the two ways a runner begins: [`None`] spawns the process
-    /// itself, and [`Some`] takes over one that survived the daemon that started it (roadmap task
-    /// T18). Everything after the first life of the process is the same code either way, which is
-    /// the reason this is one function and not two.
+    /// `adopted` is the difference between the two ways a runner begins: [`None`] spawns the
+    /// process itself, and [`Some`] takes over one that survived the daemon that started it.
+    /// Everything after the first life of the process is the same code either way, which is the
+    /// reason this is one function and not two.
     ///
-    /// `because` is why this service's first life is beginning, and is the reason published with its
-    /// move into `Starting` — roadmap task **T113**. It is ignored on the `adopted` path, where
-    /// there is no first life to explain: the process was already running when this daemon started.
+    /// `because` is why this service's first life is beginning, and is the reason published with
+    /// its move into `Starting`. It is ignored on the `adopted` path, where there is no first life
+    /// to explain: the process was already running when this daemon started.
     pub(super) fn supervise(
         &self,
         spec: &ServiceSpec,
@@ -299,7 +296,7 @@ impl Registry {
         let (limits, limits_asked) = watch::channel(spec.limits());
 
         // Seeded with `None`: unless the sweeper says otherwise before it cancels, a stop is a stop
-        // somebody asked for, which is what every stop before T69 was.
+        // somebody asked for, which is what every stop before the idle sweep was.
         let (stopping_because, because_asked) = watch::channel(None);
 
         // Seeded with `None`: a service nothing has measured yet is a service under its ceiling as
@@ -319,7 +316,7 @@ impl Registry {
                 usize::from(spec.logs().ring_lines),
             ),
             host: Arc::clone(&self.host),
-            // **T127a.** [`None`] for everything that is not a database — the same map
+            // [`None`] for everything that is not a database — the same map
             // `database.create` reads, filled by the [`Registry::graph`] every start goes through.
             superuser: self
                 .provisioning_for(&id)
@@ -479,7 +476,7 @@ pub(super) async fn settled(readiness: &mut watch::Receiver<Readiness>) -> Start
     }
 }
 
-/// The same, for a runner that has just been **asked** to start — T19c.
+/// The same, for a runner that has just been **asked** to start.
 ///
 /// What such a runner is publishing at the moment it is asked is the attempt *before* the request:
 /// `Down` with the crash the backoff is being served for. Waiting on that would answer the caller

@@ -22,7 +22,7 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 script_path="$script_dir/$(basename -- "${BASH_SOURCE[0]}")"
 cd -- "$script_dir/../.."
 
-# What this run is for (T170e): `workspace` is the unit and integration suites plus the doc tests,
+# What this run is for: `workspace` is the unit and integration suites plus the doc tests,
 # for the `test` job; `services` is the `#[ignore]`d suites that need a real program, for the
 # `services` job. One script rather than two, so the namespace, the credential store and the list of
 # forwarded variables below stay in one place: that list has let a green leg run nothing three times.
@@ -101,14 +101,14 @@ missing() {
 
 # Second entry point: we are inside the namespace. One thing is still missing — a credential store.
 #
-# A stock runner has a session bus with nothing serving `org.freedesktop.secrets` on it, which since
-# T15b `crates/mixengine-platform/tests/secrets.rs` reads for what it is — a machine with no
-# credential store — and therefore **skips**. Supplying a real one is what gives Linux the coverage
-# Windows and macOS get for free from the Credential Manager and the Keychain.
+# A stock runner has a session bus with nothing serving `org.freedesktop.secrets` on it, which
+# `crates/mixengine-platform/tests/secrets.rs` reads for what it is — a machine with no credential
+# store — and therefore **skips**. Supplying a real one is what gives Linux the coverage Windows and
+# macOS get for free from the Credential Manager and the Keychain.
 #
-# **Which is why the absence of a store must fail this script rather than warn it.** Before T15b a
-# runner with no `gnome-keyring` produced eight loud failures; now it produces eight quiet skips, and
-# the only thing standing between that and a leg reporting green while proving nothing is the check
+# **Which is why the absence of a store must fail this script rather than warn it.** Once, a runner
+# with no `gnome-keyring` produced eight loud failures; now it produces eight quiet skips, and the
+# only thing standing between that and a leg reporting green while proving nothing is the check
 # below. The branch those skips take is proved by the workflow's own "no secret service" step, which
 # takes the store away on purpose and asserts it is gone.
 if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
@@ -125,7 +125,7 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
     # `crates/mixengine-platform/tests/secrets.rs` as `UnsupportedPlatform` and is **skipped** — a
     # leg reporting eight passing credential tests while holding no credential store at all. One
     # non-empty password creates `login`, the `default` alias resolves to it, and the same eight
-    # tests start storing something. T33's MariaDB suite cannot run at all without it: the root
+    # tests start storing something. The MariaDB suite cannot run at all without it: the root
     # password it generates has exactly one home.
     #
     # The value is a constant on purpose — it is the key to a keyring that exists for the length of
@@ -138,15 +138,15 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
   fi
 
   if [ "${MIXENGINE_TEST_KEYRING:-}" != "1" ]; then
-    echo "::error title=No credential store::dbus-run-session or gnome-keyring is missing, so the credential-store tests would skip rather than run — since T15b a session bus with no provider on it is read as a machine with no store, which is what it is. This leg exists to judge a real one."
+    echo "::error title=No credential store::dbus-run-session or gnome-keyring is missing, so the credential-store tests would skip rather than run — a session bus with no provider on it is read as a machine with no store, which is what it is. This leg exists to judge a real one."
     exit 1
   fi
 
-  # Started is not answering, and since T15b this loop is the whole guard rather than a convenience.
-  # A `gnome-keyring` that forked and then died leaves its name unowned, which the capability now
+  # Started is not answering, and this loop is the whole guard rather than a convenience. A
+  # `gnome-keyring` that forked and then died leaves its name unowned, which the capability now
   # reads as a machine with no secret service — so `secrets.rs` would **skip** and the leg would go
-  # green having judged nothing. Before T15b the same state produced four loud failures and this loop
-  # only saved a quarter of an hour of reading them.
+  # green having judged nothing. Once, the same state produced four loud failures and this loop only
+  # saved a quarter of an hour of reading them.
   if [ "${MIXENGINE_TEST_KEYRING:-}" = "1" ]; then
     waited=0
     until secret_service_is_answering; do
@@ -162,10 +162,10 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
   fi
 
   if [ "$mode" = "workspace" ]; then
-    # Under cargo-nextest, as on the other two systems (T170f): see the `Test` step in _test.yml and
+    # Under cargo-nextest, as on the other two systems: see the `Test` step in _test.yml and
     # `.config/nextest.toml`. It does not run doc tests, and `--all-targets` would exclude them
-    # anyway, so they get their own `cargo test` — inside the same namespace, otherwise a doc example
-    # could reach the network unnoticed.
+    # anyway, so they get their own `cargo test` — inside the same namespace, otherwise a doc
+    # example could reach the network unnoticed.
     if ! cargo nextest run --workspace --all-targets --all-features --locked --offline --profile ci; then
       aftermath
       exit 1
@@ -183,7 +183,7 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
   #
   # Every suite below runs with `--workspace --all-features`, never `-p`, like the `services` job's
   # build step: cargo unifies features over the packages it was asked for, and a narrower selection
-  # recompiles what that step already built (T170b).
+  # recompiles what that step already built.
   #
   # The first of the `#[ignore]`d suites this job runs: the Caddy recipe against a real Caddy, which
   # the workflow fetched before the network was taken away. Inside the namespace like everything
@@ -195,27 +195,28 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
     missing "No Caddy" "MIXENGINE_CADDY_PACKAGE is not set, so the Caddy recipe was not judged against a real server on this leg."
   fi
 
-  # And the other front end through the same arc (T37), which is the parity half of that task: one
-  # sequence of assertions in `tests/harness/frontend.rs`, driven by both `caddy.rs` and `nginx.rs`.
-  # Inside the namespace for the reason Caddy is — an nginx on loopback needs no route out.
+  # And the other front end through the same arc, which is the parity half of the front-end suites:
+  # one sequence of assertions in `tests/harness/frontend.rs`, driven by both `caddy.rs` and
+  # `nginx.rs`. Inside the namespace for the reason Caddy is — an nginx on loopback needs no route
+  # out.
   if [ -n "${MIXENGINE_NGINX_PACKAGE:-}" ]; then
     cargo test --workspace --all-features --test nginx --locked --offline -- --ignored
   else
     missing "No nginx" "MIXENGINE_NGINX_PACKAGE is not set, so the nginx recipe was not judged against a real server on this leg."
   fi
 
-  # And the php-fpm recipe against a real PHP (T32), on the same reasoning: the pool listens on a
-  # Unix socket in the home directory, and a FastCGI request to it needs no route out either.
+  # And the php-fpm recipe against a real PHP, on the same reasoning: the pool listens on a Unix
+  # socket in the home directory, and a FastCGI request to it needs no route out either.
   if [ -n "${MIXENGINE_PHP_RUNTIME:-}" ]; then
     cargo test --workspace --all-features --test php_fpm --locked --offline -- --ignored
   else
     missing "No PHP" "MIXENGINE_PHP_RUNTIME is not set, so the php-fpm recipe was not judged against a real PHP on this leg."
   fi
 
-  # And the ini set that PHP reads (T28), which needs the same PHP and no route out either: the
-  # terminal half runs a shim in the home directory and the pool half is a FastCGI request to a Unix
-  # socket in it. **This is the leg that measures `SIGUSR2`** — whether a reload picks up a newly
-  # enabled extension is a question only a system with signals can answer.
+  # And the ini set that PHP reads, which needs the same PHP and no route out either: the terminal
+  # half runs a shim in the home directory and the pool half is a FastCGI request to a Unix socket
+  # in it. **This is the leg that measures `SIGUSR2`** — whether a reload picks up a newly enabled
+  # extension is a question only a system with signals can answer.
   if [ -n "${MIXENGINE_PHP_RUNTIME:-}" ]; then
     cargo test --workspace --all-features --test php_extensions --locked --offline -- --ignored
   else
@@ -232,20 +233,20 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
     missing "No PHP" "MIXENGINE_PHP_RUNTIMES is not set, so the generated module names were not judged against the branch that can falsify them."
   fi
 
-  # And the MariaDB recipe against a real server (T33). Inside the namespace for the same reason,
-  # and inside *this script* for one the other two do not have: the first-run ritual puts the
-  # generated root password in the OS credential store and refuses a machine with none, and this is
-  # where a `gnome-keyring` is running on a session bus of its own.
+  # And the MariaDB recipe against a real server. Inside the namespace for the same reason, and
+  # inside *this script* for one the other two do not have: the first-run ritual puts the generated
+  # root password in the OS credential store and refuses a machine with none, and this is where a
+  # `gnome-keyring` is running on a session bus of its own.
   if [ -n "${MIXENGINE_MARIADB_PACKAGE:-}" ]; then
     cargo test --workspace --all-features --test mariadb --locked --offline -- --ignored --nocapture
   else
     missing "No MariaDB" "MIXENGINE_MARIADB_PACKAGE is not set, so the MariaDB recipe was not judged against a real server on this leg."
   fi
 
-  # And two of them at once, at two versions (T36). Here rather than beside the suite above for the
-  # same reason it is here: two first-run rituals store two generated root passwords, and this is
-  # the only place on this leg where there is a store to put them in. Both archives or neither —
-  # the whole claim is that the two are different versions, so one of them alone proves nothing this
+  # And two of them at once, at two versions. Here rather than beside the suite above for the same
+  # reason it is here: two first-run rituals store two generated root passwords, and this is the
+  # only place on this leg where there is a store to put them in. Both archives or neither — the
+  # whole claim is that the two are different versions, so one of them alone proves nothing this
   # suite is for.
   if [ -n "${MIXENGINE_MARIADB_PACKAGE:-}" ] && [ -n "${MIXENGINE_MARIADB_LEGACY_PACKAGE:-}" ]; then
     cargo test --workspace --all-features --test instances --locked --offline -- --ignored --nocapture
@@ -253,7 +254,7 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
     missing "No second MariaDB" "MIXENGINE_MARIADB_LEGACY_PACKAGE is not set, so two instances of one server were not run side by side on this leg."
   fi
 
-  # And the MySQL recipe against a real server (T34c). Inside this script rather than beside it for
+  # And the MySQL recipe against a real server. Inside this script rather than beside it for
   # MariaDB's reason: the ritual stores a generated root password in the OS credential store and
   # refuses a machine with none, and this is where a `gnome-keyring` runs on a session bus of its
   # own.
@@ -263,18 +264,18 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
     missing "No MySQL" "MIXENGINE_MYSQL_PACKAGE is not set, so the MySQL recipe was not judged against a real server on this leg."
   fi
 
-  # And the PostgreSQL recipe against a real server (T34). Inside the namespace for the reason the
-  # others are, and inside *this script* for the reason MariaDB is: the first-run ritual puts the
-  # generated superuser password in the OS credential store and refuses a machine with none, and
-  # this is where a `gnome-keyring` is running on a session bus of its own.
+  # And the PostgreSQL recipe against a real server. Inside the namespace for the reason the others
+  # are, and inside *this script* for the reason MariaDB is: the first-run ritual puts the generated
+  # superuser password in the OS credential store and refuses a machine with none, and this is where
+  # a `gnome-keyring` is running on a session bus of its own.
   if [ -n "${MIXENGINE_POSTGRES_PACKAGE:-}" ]; then
     cargo test --workspace --all-features --test postgres --locked --offline -- --ignored --nocapture
   else
     missing "No PostgreSQL" "MIXENGINE_POSTGRES_PACKAGE is not set, so the PostgreSQL recipe was not judged against a real server on this leg."
   fi
 
-  # And the two caches (T35), which need the namespace and nothing else in it: neither has a
-  # credential to store, and both are spoken to over loopback in their own protocols.
+  # And the two caches, which need the namespace and nothing else in it: neither has a credential to
+  # store, and both are spoken to over loopback in their own protocols.
   if [ -n "${MIXENGINE_REDIS_PACKAGE:-}" ]; then
     cargo test --workspace --all-features --test redis --locked --offline -- --ignored --nocapture
   else
@@ -287,7 +288,7 @@ if [ "${MIXENGINE_TEST_ISOLATED:-}" = "1" ]; then
     missing "No memcached" "MIXENGINE_MEMCACHED_PACKAGE is not set, so the Memcached recipe was not judged against a real server on this leg."
   fi
 
-  # And MongoDB (T156), which like the caches needs nothing but the namespace's loopback.
+  # And MongoDB, which like the caches needs nothing but the namespace's loopback.
   if [ -n "${MIXENGINE_MONGODB_PACKAGE:-}" ]; then
     cargo test --workspace --all-features --test mongodb --locked --offline -- --ignored --nocapture
   else
@@ -303,7 +304,7 @@ fi
 #
 # `--map-current-user` is tried first so the suite keeps running under the real uid. Under
 # `--map-root-user` the tests would see themselves as uid 0, which would quietly invalidate every
-# assertion about file permissions and about refusing to run as root (T7, T40).
+# assertion about file permissions and about refusing to run as root.
 for mapping in --map-current-user --map-root-user; do
   if unshare --user "$mapping" --net -- sh -c 'ip link set lo up' >/dev/null 2>&1; then
     echo "Network isolation: unprivileged user + network namespace ($mapping)."
@@ -324,13 +325,13 @@ if sudo -n unshare --net -- sh -c 'ip link set lo up && command -v runuser' >/de
   env_args=("PATH=$PATH" "HOME=$HOME" "MIXENGINE_TEST_ISOLATED=1")
   # These are forwarded only if they are set — on a stock runner most are not, and cargo derives its
   # paths from HOME. **A package variable left off this list is a leg that reports green having run
-  # nothing**: the suite it feeds is `#[ignore]`d, so the block below warns and moves on. T34 added
-  # the fourth entry after a run did exactly that; T35 added the fifth and sixth after a run did it
-  # again, judging neither cache on this leg while every job went green; T36 added the second
-  # MariaDB after a third run did it a third time. The warning is an annotation rather than a log
-  # line, which is why the same mistake keeps arriving unnoticed. T184 added
-  # MIXENGINE_CREDENTIAL_STORE: without it the Linux leg would keep its credentials in a file and the
-  # real store would go untested with every job green.
+  # nothing**: the suite it feeds is `#[ignore]`d, so the block below warns and moves on.
+  # PostgreSQL's entry was added after a run did exactly that; the two caches' after a run did it
+  # again, judging neither cache on this leg while every job went green; the second MariaDB's after
+  # a third run did it a third time. The warning is an annotation rather than a log line, which is
+  # why the same mistake keeps arriving unnoticed. MIXENGINE_CREDENTIAL_STORE is here because
+  # without it the Linux leg would keep its credentials in a file and the real store would go
+  # untested with every job green.
   # CARGO_HOME matters most: losing it would send cargo looking for the registry in the default
   # location, find nothing there, and fail instantly because there is no network to fall back on.
   # CARGO_NET_OFFLINE matters for the same reason, one level down: `cargo metadata`, which the

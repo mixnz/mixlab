@@ -1,4 +1,4 @@
-//! `keytool` against a real JDK — roadmap task **T27e**, ADR 0039.
+//! `keytool` against a real JDK — ADR 0039.
 //!
 //! **`#[ignore]`d, and pointed at a JDK by `MIXENGINE_TEST_JDK`** (its home, which is copied before
 //! anything is written): a script standing in for `keytool` would prove the arguments and not the

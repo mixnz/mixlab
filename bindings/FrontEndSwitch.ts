@@ -3,7 +3,7 @@ import type { FrontEndServer } from "./FrontEndServer";
 import type { PackageVersion } from "./PackageVersion";
 
 /**
- * What `service.set_front_end` takes — roadmap task **T97**.
+ * What `service.set_front_end` takes.
  *
  * **Which program, and not which row.** A caller does not name a `ServiceId`, because the id of the
  * service that is about to exist is the recipe's to decide and the one that is about to go is the

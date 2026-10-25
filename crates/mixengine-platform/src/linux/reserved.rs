@@ -1,4 +1,4 @@
-//! Linux: no such concept — roadmap task **T47a**.
+//! Linux: no such concept.
 
 use crate::{Error, PortRange, ReservedPorts, Result};
 

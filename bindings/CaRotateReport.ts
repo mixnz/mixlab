@@ -4,7 +4,7 @@ import type { CaStatus } from "./CaStatus";
 import type { SiteCertOutcome } from "./SiteCertOutcome";
 
 /**
- * What `cert.ca_rotate` did — roadmap task **T54**.
+ * What `cert.ca_rotate` did.
  */
 export type CaRotateReport = { 
 /**
@@ -29,8 +29,8 @@ status: CaStatus,
  * One entry per site whose certificate was reissued, exactly `cert.issue`'s.
  *
  * Empty when nothing was committed. A rotation reissues through the call `mix cert issue`
- * already runs, because T50 made a leaf signed by a superseded authority unreusable — so there
- * is no second reissue path to keep in step with the first.
+ * already runs, because a leaf signed by a superseded authority is never reused — so there is
+ * no second reissue path to keep in step with the first.
  */
 sites: Array<SiteCertOutcome>, } & ({ "outcome": "rotated", } | { "outcome": "not_committed", 
 /**

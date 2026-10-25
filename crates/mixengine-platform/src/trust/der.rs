@@ -1,9 +1,9 @@
 //! A tag-length-value reader, enough to refuse a certificate and no more.
 //!
-//! **Hand-written, and the alternative was measured** — the T49a design, D11. `x509-parser` is 29
-//! crates with 7 already present, so 22 net into `mixengine-elevate`, a binary that runs as root and
-//! whose dependency closure CI diffs against a checked-in list. What is needed here is not a parser
-//! that *understands* a certificate but a reader that walks to a handful of places and refuses
+//! **Hand-written, and the alternative was measured.** `x509-parser` is 29 crates with 7 already
+//! present, so 22 net into `mixengine-elevate`, a binary that runs as root and whose dependency
+//! closure CI diffs against a checked-in list. What is needed here is not a parser that
+//! *understands* a certificate but a reader that walks to a handful of places and refuses
 //! everything else, and that is small enough to be this file.
 //!
 //! **Nothing here may panic.** A panic in the helper leaves no response file, and the response file

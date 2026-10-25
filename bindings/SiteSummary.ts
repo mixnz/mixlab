@@ -31,7 +31,7 @@ doc_root: string,
  */
 https: boolean, 
 /**
- * Whether the plaintext address redirects to the HTTPS one — roadmap task **T98**.
+ * Whether the plaintext address redirects to the HTTPS one.
  */
 https_redirect: boolean, 
 /**
@@ -39,7 +39,7 @@ https_redirect: boolean,
  */
 state: SiteState, 
 /**
- * Every route, **in match order** — longest path first — roadmap task **T135**.
+ * Every route, **in match order** — longest path first.
  *
  * **On the summary and not only on the detail**, on [`sharing`](Self::sharing)'s argument: what
  * is behind a site is a question about every site at once, and a list that could not answer it
@@ -52,7 +52,7 @@ state: SiteState,
  */
 routes?: Array<SiteRoute>, 
 /**
- * Where the local network can reach it, when it can — roadmap task **T74**.
+ * Where the local network can reach it, when it can.
  *
  * **On the summary and not only on the detail**, because "what is exposed right now" is a
  * question about every site at once: a list that could not answer it would make a client ask

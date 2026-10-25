@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import type { SiteSummary } from "@mixengine/api";
 import * as api from "../../api";
 
-/** Whether this home has a site yet — what the Quick Start card is drawn on (T117). */
+/** Whether this home has a site yet — what the Quick Start card is drawn on. */
 export function useSites(active: boolean) {
   /** `site.list`, or `null` when not finished reading — the condition for drawing the Quick Start
-   *  card (T117). */
+   *  card. */
   const [sites, setSites] = useState<SiteSummary[] | null>(null);
 
   /**
-   * Whether this home has any site yet — the condition for drawing the Quick Start card (T117).
+   * Whether this home has any site yet — the condition for drawing the Quick Start card.
    *
    * Read separately from `reload()` rather than folded into its `Promise.all`: `reload()` runs
    * again on every return to the tab and every time the stream says something changed, while this

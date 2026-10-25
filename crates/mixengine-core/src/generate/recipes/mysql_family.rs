@@ -1,16 +1,16 @@
-//! Making a database and an account on MariaDB or MySQL — roadmap task **T77a**.
+//! Making a database and an account on MariaDB or MySQL.
 //!
 //! **One builder for two recipes**, because this is genuinely one syntax. The two servers differ in
-//! how they are *bootstrapped* — `--bootstrap` against `--init-file`, which is why T33 wrote them
-//! two rituals — and not in how a database is made. Two copies would be two places to fix a quoting
+//! how they are *bootstrapped* — `--bootstrap` against `--init-file`, which is why they have two
+//! rituals — and not in how a database is made. Two copies would be two places to fix a quoting
 //! rule, and `mysql.rs` carries the test that would notice them drifting apart.
 //!
 //! # Every host a local client arrives as
 //!
 //! The generated `my.cnf` says `skip-name-resolve`, so a client connecting over TCP to 127.0.0.1 is
-//! matched as `'blog'@'127.0.0.1'` and never as `'blog'@'localhost'` — T33's finding about the root
-//! account, and just as true of this one. The account is created for all three of `localhost`,
-//! `127.0.0.1` and `::1`, and granted on all three.
+//! matched as `'blog'@'127.0.0.1'` and never as `'blog'@'localhost'` — the MariaDB recipe's finding
+//! about the root account, and just as true of this one. The account is created for all three of
+//! `localhost`, `127.0.0.1` and `::1`, and granted on all three.
 //!
 //! # `CREATE` and then `ALTER`, and why the pair is safe
 //!
@@ -26,6 +26,8 @@
 //! quoted while nothing is escaped, which is safe because
 //! [`validated_identifier`](crate::generate::databases::validated_identifier) refused every
 //! character that could end a quoted one.
+//!
+//! The D-numbers below are those of `docs/specs/2026-09-01-t77a-database-and-account-design.md`.
 
 use std::path::PathBuf;
 
@@ -53,8 +55,7 @@ const PATIENCE: Millis = Millis(30_000);
 /// One value rather than four parameters: the recipes hold their own connection helpers — MariaDB's
 /// client is `mariadb` and MySQL's is `mysql`, and each builds its own argument list — and passing
 /// them apart made a function nobody could read the call site of.
-/// Where an instance listens, in the variables every MySQL-family client reads — roadmap task
-/// **T130**.
+/// Where an instance listens, in the variables every MySQL-family client reads.
 ///
 /// **Shared by the two recipes because it is one fact about one wire protocol**: `mysql`,
 /// `mariadb`, `mysqldump` and `mariadb-dump` are four programs built from two source trees that
@@ -88,7 +89,7 @@ pub(super) fn client_env(
 ///
 /// **First, or it means nothing**: both products honour it only as the first argument. The server
 /// is the one process that must read a file — its own `--defaults-file` — and it never goes through
-/// here. The clients a person runs from a terminal (T130) do not either: those are theirs, and their
+/// here. The clients a person runs from a terminal do not either: those are theirs, and their
 /// `~/.my.cnf` is theirs to have honoured.
 pub(super) const NO_DEFAULTS: &str = "--no-defaults";
 

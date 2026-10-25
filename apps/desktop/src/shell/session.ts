@@ -106,7 +106,7 @@ export function parseSession(raw: string | null, knownModuleIds: string[]): Stor
  *
  * `knownModuleIds` is the **visible** list and not the registry's: a tab of a module the profile
  * hides is dropped rather than mounted blind, which is the same treatment a tab of a module that no
- * longer exists already gets. One code path, one behaviour — T108.
+ * longer exists already gets. One code path, one behaviour.
  */
 export function readSession(knownModuleIds: string[]): StoredSession | null {
   return parseSession(localStorage.getItem(STORAGE_KEY), knownModuleIds);

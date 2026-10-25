@@ -4,7 +4,7 @@
 #     .github/scripts/fetch-package.sh [--absent-on OS-ARCH]... [--probe "<path> <args>"]... \
 #       <kind> <version> <VARIABLE> [directory]
 #
-# **Every fetch in CI goes through here since T172a.** `bench` was its first caller; the eleven
+# **Every fetch in CI goes through here.** `bench` was its first caller; the eleven
 # "Fetch a real X" steps of `services` and `system` were each about forty lines of bash inside YAML,
 # the same forty lines with a version, a variable and a smoke check changed, and they are now one
 # line each. What only one package needs stays beside its step: nginx is packed as a whole tree

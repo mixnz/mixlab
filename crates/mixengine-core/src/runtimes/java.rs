@@ -1,4 +1,4 @@
-//! What MixEngine knows about a JDK that the index does not say — roadmap task **T27e**.
+//! What MixEngine knows about a JDK that the index does not say.
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
@@ -9,16 +9,15 @@ use mixengine_platform::process::Ran;
 
 use crate::{Error, InstallError, Result};
 
-/// The password every JDK's `cacerts` ships with — a published default, not a secret (the design's
-/// D8).
+/// The password every JDK's `cacerts` ships with — a published default, not a secret.
 const STOREPASS: &str = "changeit";
 
 /// How long one `keytool` may take. A JVM start is a few hundred milliseconds; a minute is a hang.
 const PATIENCE: Duration = Duration::from_secs(60);
 
-/// The variables a JVM reads before its own arguments, removed from every JVM the daemon starts
-/// for itself — the design's D3. A malformed `_JAVA_OPTIONS` in the daemon's own environment would
-/// otherwise fail every JDK's install for a reason that has nothing to do with the JDK.
+/// The variables a JVM reads before its own arguments, removed from every JVM the daemon starts for
+/// itself. A malformed `_JAVA_OPTIONS` in the daemon's own environment would otherwise fail every
+/// JDK's install for a reason that has nothing to do with the JDK.
 pub const UNSET: &[&str] = &[
     "JAVA_TOOL_OPTIONS",
     "_JAVA_OPTIONS",
@@ -28,7 +27,7 @@ pub const UNSET: &[&str] = &[
 ];
 
 /// `JAVA_HOME` for the JDK whose `java` is `java` — two directories up, which is `Contents/Home` on
-/// macOS and the archive root elsewhere (the design's D5).
+/// macOS and the archive root elsewhere.
 ///
 /// [`None`] for a path with no directory two levels above it: an empty path is not a home, and
 /// naming one would point `JAVA_HOME` at whatever directory a program happened to start in.
@@ -40,8 +39,8 @@ pub fn home(java: &Path) -> Option<PathBuf> {
         .map(Path::to_path_buf)
 }
 
-/// The alias this home's authority is held under: its key-id, which is T49a's D5 applied to one
-/// more store — a removal names an authority and never a certificate.
+/// The alias this home's authority is held under: its key-id, which is the system trust store's
+/// rule applied to one more store — a removal names an authority and never a certificate.
 #[must_use]
 pub fn alias(key_id: &str) -> String {
     format!("mixengine-{key_id}")

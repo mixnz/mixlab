@@ -49,8 +49,8 @@ export const CLIPS = [
     moduleId: "mixengine",
     tabTitle: "MixEngine",
     // A machine with nothing built yet, so the Dashboard offers Quick start; the folder picker
-    // answers the project's folder; the site opens by itself once it works (T205, D7), and opening
-    // it draws a browser (`demo/browser/overlay.ts`).
+    // answers the project's folder; the site opens by itself once it works, and opening it draws
+    // a browser (`demo/browser/overlay.ts`).
     fixtures: { fresh: true, folder: "/Users/ada/Sites/blog", browser: true },
     // The website's camera: card, the Apply dialog, the browser — no more
     // (docs/specs/2026-10-10-demo-clip-camera-shots-design.md).
@@ -63,7 +63,7 @@ export const CLIPS = [
       { click: '[data-demo="qs-folder"]' },
       { click: '[data-demo="qs-create"]' },
       { click: '[data-demo="apply-preview"]' },
-      // A signed blueprint's command comes agreed already (T205a): no step ticks it.
+      // A signed blueprint's command comes agreed already: no step ticks it.
       { click: '[data-demo="apply-run"]' },
       { click: '[data-demo="apply-log"]' },
       // Close appears the moment the job is done: wait for it, then a beat to read "Done".

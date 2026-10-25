@@ -1,4 +1,4 @@
-//! MariaDB: the database MixEngine runs for a site — roadmap task **T33**.
+//! MariaDB: the database MixEngine runs for a site.
 //!
 //! **The first recipe with something to do before it can ever start.** Caddy and php-fpm are a
 //! rendered file and a command line; a database is a rendered file, a command line, *and* a data
@@ -8,8 +8,8 @@
 //!
 //! # What was measured rather than assumed
 //!
-//! Every platform difference below comes out of T33a, which ran a real server on all three systems
-//! rather than reading about one:
+//! Every platform difference below comes out of running a real server on all three systems rather
+//! than reading about one:
 //!
 //! - **`mariadb-install-db` is two different programs.** A shell script on Unix, a C++ program of
 //!   the same name on Windows, sharing almost no options —
@@ -27,7 +27,7 @@
 //! - **From 11.4 a server with no certificate configured generates one at every start** — a
 //!   4096-bit RSA key, four to thirteen seconds on a CI runner — and an 11.4 client with a password
 //!   on its command line refuses a server that has turned TLS off. So the recipe asks for a leaf of
-//!   this home's authority (T99) rather than for `skip-ssl`, which was tried and withdrawn.
+//!   this home's authority rather than for `skip-ssl`, which was tried and withdrawn.
 //!
 //! # What this recipe deliberately does not do
 //!
@@ -69,7 +69,7 @@ const SERVER: &str = "mariadbd";
 /// The client the readiness check, the health check and the shutdown all run.
 const ADMIN: &str = "mariadb-admin";
 
-/// The client that runs SQL — roadmap task **T77a**.
+/// The client that runs SQL.
 ///
 /// Not [`ADMIN`], which speaks the administrative sub-commands (`ping`, `shutdown`) and takes no
 /// statements: making a database is SQL, and this is what reads it.
@@ -79,7 +79,7 @@ const CLIENT: &str = "mariadb";
 /// program of the same name on Windows. See the module note.
 const INSTALL_DB: &str = "mariadb-install-db";
 
-/// The dump tool, fronted in `bin/` under this name and under `mysqldump` — roadmap task **T130**.
+/// The dump tool, fronted in `bin/` under this name and under `mysqldump`.
 const DUMP: &str = "mariadb-dump";
 
 /// The physical backup tool. Fronted under its own name only: MySQL's equivalent is a different
@@ -95,10 +95,10 @@ const CONFIG_FILE: &str = "my.cnf";
 
 /// How much memory InnoDB is given, allocated at startup and held with nobody connected.
 ///
-/// **64M against the server's own 128M** — roadmap task **T73**, and the comment above this line
-/// claimed to be dev-tuned for two phases while rendering upstream's number. A development database
-/// is small enough that its working set fits either way; what the difference buys is memory a
-/// laptop is not holding at every moment it is not being used.
+/// **64M against the server's own 128M.** The comment above this line once claimed to be dev-tuned
+/// for two phases while rendering upstream's number. A development database is small enough that
+/// its working set fits either way; what the difference buys is memory a laptop is not holding at
+/// every moment it is not being used.
 ///
 /// A user with a large dump raises it in one override, and `mix service list` shows what they set.
 /// The `bench` job's `tuned_footprint` suite is what keeps this honest in the other direction.
@@ -184,18 +184,18 @@ impl Recipe for Mariadb {
         Some(3306)
     }
 
-    /// `root`, the same name `ROOT` addresses the credential under — roadmap task **T82**.
+    /// `root`, the same name `ROOT` addresses the credential under.
     fn administrator(&self) -> Option<&'static str> {
         Some(ROOT)
     }
 
-    /// MySQL's protocol: a fact about the server, whichever client is on the other end — T83.
+    /// MySQL's protocol: a fact about the server, whichever client is on the other end.
     fn protocol(&self) -> Option<mixengine_proto::DatabaseProtocol> {
         Some(mixengine_proto::DatabaseProtocol::Mysql)
     }
 
     /// The five programs a person runs, and the three spellings they may already have in their
-    /// fingers — roadmap task **T130**.
+    /// fingers.
     ///
     /// **MariaDB is the only recipe with an alias**, because it is the only product here that
     /// renamed its own client: the Windows archive at 12.3 publishes `mariadb.exe` and no
@@ -323,7 +323,7 @@ impl Recipe for Mariadb {
         })
     }
 
-    /// Its port, and its socket where the system has one — T70a's D4.
+    /// Its port, and its socket where the system has one.
     ///
     /// **Two addresses and not one**, because which of them a client uses is that client's habit
     /// rather than a setting: a generated `.env` names the port, and the client typed with no host
@@ -339,20 +339,20 @@ impl Recipe for Mariadb {
         Ok(held)
     }
 
-    /// An hour — T70a, design D9, and the number `resource-isolation.md` already publishes.
+    /// An hour — the number `resource-isolation.md` already publishes.
     ///
     /// **Longer than php-fpm's half hour on purpose.** A pool starts in tens of milliseconds; a
     /// server replays its log first, so a developer coming back to a project after fifty minutes
     /// would pay for the stop rather than benefit from it. What the extra half hour costs is one
     /// idle server's memory, which is the thing being traded and is worth naming.
     ///
-    /// **Answerable only now.** Until T70a the daemon could stop this and nothing could start it
-    /// again, and a default that idled it would have been a default that broke a home which changed
-    /// nothing — which is why the number arrives in the last commit of that task rather than the
-    /// first.
+    /// **Answerable only once a connection can start this server.** Before that the daemon could
+    /// stop it and nothing could start it again, and a default that idled it would have been a
+    /// default that broke a home which changed nothing — which is why the number arrived with the
+    /// last of that work rather than the first.
     ///
-    /// **Only while the home saves resources** — roadmap task **T167b**, ADR 0041. Until then this
-    /// number was the default for every home; now a service nobody set is never idle-stopped.
+    /// **Only while the home saves resources** (ADR 0041). Before that this number was the default
+    /// for every home; now a service nobody set is never idle-stopped.
     fn idle_when_saving(&self) -> Option<mixengine_proto::Millis> {
         Some(mixengine_proto::Millis::from_secs(60 * 60))
     }
@@ -366,13 +366,12 @@ impl Recipe for Mariadb {
     /// the row does — and a probe should ask the question a client would.
     /// A database with an open session is in use, whether or not a query is running.
     ///
-    /// **Connections and not the query counter**, which is what the roadmap line for T69 asked for
+    /// **Connections and not the query counter**, which is what idle detection was first asked for
     /// and what cannot be had: `Queries` comes out of `SHOW GLOBAL STATUS`, which means speaking
     /// MySQL's protocol as an authenticated user, and this probe lives on a `ServiceSpec`, which
-    /// never carries a secret (ADR 0006).
-    /// The error a connection count makes is in the safe direction: a client connected and idle
-    /// reads as busy, so a database is kept running that could have been stopped, and one somebody
-    /// is holding open is never stopped.
+    /// never carries a secret (ADR 0006). The error a connection count makes is in the safe
+    /// direction: a client connected and idle reads as busy, so a database is kept running that
+    /// could have been stopped, and one somebody is holding open is never stopped.
     fn idle_probe(&self, context: &Context) -> Option<mixengine_proto::IdleProbe> {
         context
             .port()
@@ -386,7 +385,7 @@ impl Recipe for Mariadb {
         let addr = address(context)?;
 
         Ok(ServiceSpec::builder(context.service().clone(), &server)
-            // What a failed start is diagnosed against (T38): the port this server will bind, and
+            // What a failed start is diagnosed against: the port this server will bind, and
             // not the socket beside it — a path cannot be held by a program with no `services` row.
             .ports([addr.port()])
             // **One option, and it has to be the first one.** `--defaults-file` means *read this
@@ -421,7 +420,7 @@ impl Recipe for Mariadb {
             })
             .health(HealthCheck {
                 // The server's greeting, not `mariadb-admin ping`: the same answer without starting
-                // a process every ten seconds — roadmap task T190b, D4.
+                // a process every ten seconds.
                 probe: HealthProbe::MysqlGreeting { addr },
                 interval: HEALTH_INTERVAL,
                 timeout: HEALTH_TIMEOUT,
@@ -447,7 +446,7 @@ impl Recipe for Mariadb {
         // restart somebody asked for.
     }
 
-    /// `localhost` and the address this instance binds — roadmap task **T99**.
+    /// `localhost` and the address this instance binds.
     ///
     /// The one recipe here that asks: see the module note's last bullet for the measurement, and
     /// `certs::service::names` for why the list is what it is.
@@ -464,7 +463,7 @@ impl Recipe for Mariadb {
         })
     }
 
-    /// How a database and an account for it are made on this server — roadmap task **T77a**.
+    /// How a database and an account for it are made on this server.
     fn databases(&self) -> Option<crate::generate::databases::DatabaseAdmin> {
         Some(crate::generate::databases::DatabaseAdmin {
             root: ROOT,
@@ -506,7 +505,7 @@ fn steps(context: &Context) -> Result<Vec<Step>> {
     Ok(steps)
 }
 
-/// Set the root password in a data directory that already exists — roadmap task **T127**.
+/// Set the root password in a data directory that already exists.
 ///
 /// **[`bootstrap`] alone.** The ritual is `mariadb-install-db` and then that step; a repair is that
 /// step by itself, because the directory is there and full of somebody's databases. Its statements
@@ -539,8 +538,8 @@ fn reset_steps(context: &Context) -> Result<Vec<Step>> {
 /// [`bootstrap`] is safe; an escaper here would be a second thing to get right for a case that
 /// cannot arise, and what it would hide is a credential in the wrong half of a SQL statement.
 ///
-/// One function and not two copies since **T127**, so that the repair cannot end up with a weaker
-/// rule than the ritual it repairs.
+/// One function and not two copies, so that the repair cannot end up with a weaker rule than the
+/// ritual it repairs.
 ///
 /// # Errors
 ///
@@ -561,7 +560,7 @@ fn refuse_a_password_that_needs_escaping(context: &Context, password: &str) -> R
 
 /// `mariadb-install-db` as a system with a shell runs it.
 ///
-/// Three things stated that nothing would think to state, each measured in T33a:
+/// Three things stated that nothing would think to state, each measured against a real server:
 ///
 /// - **`--no-defaults`**, or the script and the server it starts read the machine's own
 ///   `/etc/mysql/my.cnf`. A user with their own MariaDB installed has one naming a datadir, a socket
@@ -581,7 +580,7 @@ fn refuse_a_password_that_needs_escaping(context: &Context, password: &str) -> R
 ///
 /// And a fourth, in the environment rather than on the line: `TMPDIR`, so the server this script
 /// starts keeps its temporary tables out of the `/tmp` every other server on the machine cleans at
-/// startup — [`super::scratch_dir`], and roadmap task **T33c**.
+/// startup — [`super::scratch_dir`].
 fn unix_install_db(context: &Context, view: &Path) -> Result<Step> {
     // Named from the map so a series that spells it `mysql_install_db` is found too — and taken
     // relative to the view rather than to the install, because the script resolves its own helpers
@@ -716,8 +715,7 @@ fn connection(addr: SocketAddr) -> Vec<String> {
 /// [`connection`], as the account that was just made rather than as root, against its own database.
 ///
 /// The last step of a provisioning is the only thing here that authenticates as anybody but the
-/// superuser, and it has to: proving the account works is the whole of what it is for — the T77a
-/// design, D13.
+/// superuser, and it has to: proving the account works is the whole of what it is for.
 fn as_account(addr: SocketAddr, user: &str, database: &str) -> Vec<String> {
     vec![
         super::mysql_family::NO_DEFAULTS.to_owned(),

@@ -22,10 +22,10 @@ use std::fmt;
 /// never change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 // A closed set of codes is the most useful thing the published contract can hand a client, so the
-// binding is a literal union rather than `string` — roadmap task T56. This crate's `Serialize` is
-// hand-written, so there is no `#[serde(rename_all)]` for `ts-rs` to read and this is a second
-// spelling of [`ErrorCode::as_str`]; `crates/mixengine-proto/tests/bindings.rs` asserts the two
-// agree, which is what keeps them one list.
+// binding is a literal union rather than `string`. This crate's `Serialize` is hand-written, so
+// there is no `#[serde(rename_all)]` for `ts-rs` to read and this is a second spelling of
+// [`ErrorCode::as_str`]; `crates/mixengine-proto/tests/bindings.rs` asserts the two agree, which is
+// what keeps them one list.
 #[cfg_attr(
     feature = "ts",
     derive(ts_rs::TS),
@@ -45,7 +45,7 @@ pub enum ErrorCode {
     /// The system is not in a state where this can be done yet, and the user can get it there.
     PreconditionFailed,
     /// A port MixEngine needs is held by another process. Its own code because the answer is never
-    /// "try again" but "here is who has it" (roadmap task T38).
+    /// "try again" but "here is who has it".
     PortInUse,
     /// The operation needs `mixengine-elevate`, and either nobody has been asked yet or the user
     /// declined. Not a bug and not a dead end: the GUI turns it into a pending-permissions surface.

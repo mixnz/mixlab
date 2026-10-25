@@ -7,26 +7,26 @@
 
 #[cfg(feature = "host")]
 pub(crate) mod access;
-// Under both features since T85: the daemon reads a `st_uid` and a mode before it runs a file as
-// root, and the writing half — `geteuid`, the root-owned `mkdir` — is still the helper's alone.
+// Under both features: the daemon reads a `st_uid` and a mode before it runs a file as root, and
+// the writing half — `geteuid`, the root-owned `mkdir` — is still the helper's alone.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod elevated;
 // The hosts file: one path and one replace for both systems — `linux/` and `macos/` name it.
-// Letting go of an unattended console, which on this family is nothing at all — T85b. Behind
-// `process` because that is the module whose public function it answers.
+// Letting go of an unattended console, which on this family is nothing at all. Behind `process`
+// because that is the module whose public function it answers.
 #[cfg(feature = "ipc")]
 pub(crate) mod activation;
 #[cfg(feature = "process")]
 pub(crate) mod console;
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub(crate) mod hosts;
-// One mode, for the helper both systems install to a path of their own — T85.
+// One mode, for the helper both systems install to a path of their own.
 #[cfg(feature = "elevated")]
 pub(crate) mod install;
 #[cfg(feature = "ipc")]
 pub(crate) mod ipc;
 pub(crate) mod lock;
-// The calling thread's return addresses, from the unwinder `std` links on both systems — T91a.
+// The calling thread's return addresses, from the unwinder `std` links on both systems.
 #[cfg(feature = "host")]
 pub(crate) mod unwind;
 // A marked block in a shell profile is POSIX in everything but *which* profiles: the mechanism is

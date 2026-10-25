@@ -1,7 +1,9 @@
 //! What this machine will actually enforce of a service's declared limits.
 //!
-//! Roadmap task **T68**. The read half: applying a limit is done to a child through
-//! `mixengine_platform::process` and is asserted in `tests/process.rs`.
+//! The read half: applying a limit is done to a child through `mixengine_platform::process` and is
+//! asserted in `tests/process.rs`.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-26-t68-resource-limits-design.md`.
 
 use mixengine_platform::{
     Enforcement, Host as _, LimitMechanism, LimitSupport, MemoryMeasure, WhenExceeded, mock,
@@ -56,8 +58,9 @@ fn the_real_host_answers_for_this_system() {
         assert_eq!(support.mechanism, LimitMechanism::None);
         assert_eq!(support.cpu, Enforcement::Unsupported);
 
-        // **Watched since T71a, and `None` because there is nothing to fix.** `Unsupported` was the
-        // honest answer while nothing read the number; something reads it now.
+        // **Watched by the memory watchdog, and `None` because there is nothing to fix.**
+        // `Unsupported` was the honest answer while nothing read the number; something reads it
+        // now.
         assert_eq!(support.memory, Enforcement::Advisory { why: None });
         assert_eq!(support.memory_measure, MemoryMeasure::Resident);
     } else if cfg!(windows) {
@@ -73,8 +76,8 @@ fn the_real_host_answers_for_this_system() {
         // wrong: the mechanism exists on this system whether or not this machine will lend it.
         assert_ne!(support.cpu, Enforcement::Unsupported);
 
-        // Memory is capped or watched, never merely unavailable — T71a reads the number wherever the
-        // kernel does not.
+        // Memory is capped or watched, never merely unavailable — the memory watchdog reads the
+        // number wherever the kernel does not.
         match &support.memory {
             Enforcement::Hard { .. } => {
                 assert_eq!(support.memory_measure, MemoryMeasure::ChargedPages);

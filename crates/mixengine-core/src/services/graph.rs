@@ -6,15 +6,15 @@
 //! the one case a spec *can* see, itself — but so are "what else has to start first" and "what
 //! breaks if I stop this".
 //!
-//! **This is `core` and not `proto` or `supervisor`.** `proto` owns the vocabulary a spec is written
-//! in ([ADR 0006](../../decisions/0006-servicespec-in-proto-and-secret-free.md)) and gains nothing
-//! from a topological sort; the supervisor deliberately has no registry, no loop and no clock, which
-//! is what lets T19 own the timing. What is left is domain logic over a set of declared services,
-//! which is this crate.
+//! **This is `core` and not `proto` or `supervisor`.** `proto` owns the vocabulary a spec is
+//! written in ([ADR 0006](../../decisions/0006-servicespec-in-proto-and-secret-free.md)) and gains
+//! nothing from a topological sort; the supervisor deliberately has no registry, no loop and no
+//! clock, which is what lets the daemon's runner own the timing. What is left is domain logic over
+//! a set of declared services, which is this crate.
 //!
 //! **A plan is tiers, not a list.** Two services that depend on nothing may start at the same time,
-//! and a flat order throws that away and has to recompute it later. T19's runner walks the tiers one
-//! service at a time to begin with; the day M3's ten-second budget wants concurrency, the
+//! and a flat order throws that away and has to recompute it later. The daemon's runner walks the
+//! tiers one service at a time to begin with; the day M3's ten-second budget wants concurrency, the
 //! information is already here and nothing has to be re-derived. [`Plan::flat`] is the sequential
 //! reading of the same value.
 //!
@@ -168,8 +168,8 @@ impl ServiceGraph {
 
     /// Every service, in an order where nothing is reached before what depends on it.
     ///
-    /// What `daemon.shutdown` walks (T9a). **Not [`ServiceGraph::start_order`] reversed** — for the
-    /// whole set the two do coincide, but they are computed from opposite edges and only
+    /// What `daemon.shutdown` walks. **Not [`ServiceGraph::start_order`] reversed** — for the whole
+    /// set the two do coincide, but they are computed from opposite edges and only
     /// [`ServiceGraph::stop_plan`] gives the right answer for a subset, so deriving one from the
     /// other here would be a coincidence waiting to be relied on.
     #[must_use]
@@ -238,9 +238,9 @@ impl ServiceGraph {
 
     /// Everything that transitively depends on `id`, `id` itself excluded.
     ///
-    /// **What a failure propagates along.** T19's runner asks this when a service fails to start:
-    /// every planned service in the answer is one that can now never come up, and goes straight to
-    /// [`mixengine_proto::ServiceState::Failed`] with
+    /// **What a failure propagates along.** The daemon's runner asks this when a service fails to
+    /// start: every planned service in the answer is one that can now never come up, and goes
+    /// straight to [`mixengine_proto::ServiceState::Failed`] with
     /// [`mixengine_proto::StateReason::DependencyFailed`] instead of being spawned against a
     /// dependency that is not there. Ordered, so the same failure reads the same way twice.
     ///
@@ -500,9 +500,9 @@ struct HasCycle;
 /// the time it is reached.
 ///
 /// **The tiers are kept rather than flattened** because they carry the one thing a flat list
-/// destroys: which services have no ordering constraint between them. T19 walks a plan sequentially
-/// through [`Plan::flat`]; the concurrency M3's ten-second budget will eventually want is then a
-/// change to the walker, not a recomputation of the plan.
+/// destroys: which services have no ordering constraint between them. The daemon walks a plan
+/// sequentially through [`Plan::flat`]; the concurrency M3's ten-second budget will eventually want
+/// is then a change to the walker, not a recomputation of the plan.
 ///
 /// Within a tier the order is by [`ServiceId`], so the same specs always produce the same plan — a
 /// boot order that varies run to run turns one broken dependency into a bug that only reproduces on

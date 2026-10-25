@@ -1,4 +1,4 @@
-//! Whether a release is offered to this machine, and if not, why — roadmap task **T88**.
+//! Whether a release is offered to this machine, and if not, why.
 //!
 //! **The decision is the daemon's and the sentence is the daemon's.** `docs/features/updates.md`
 //! and `CLAUDE.md` between them say a client renders what it is given and derives nothing, so the
@@ -160,8 +160,8 @@ mod tests {
         assert!(!decision.offered);
     }
 
-    /// T85a builds five legs, so a sixth machine asking is a real case: it is told which pair has
-    /// no build rather than being told there is no update.
+    /// A machine a release built nothing for is a real case: it is told which pair has no build
+    /// rather than being told there is no update.
     #[test]
     fn a_release_with_no_build_for_this_machine_says_so() {
         let decision = decide(

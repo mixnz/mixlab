@@ -2,7 +2,7 @@
 import type { ServiceId } from "./ServiceId";
 
 /**
- * The site a `web-app` would be given — roadmap task **T81b**.
+ * The site a `web-app` would be given.
  *
  * Shown in the plan so the name that will be taken and the PHP it will run on are read before
  * anything is fetched; **not part of the consent**, because it is derived from a manifest the
@@ -15,16 +15,15 @@ export type PlannedSite = {
 domain: string, 
 /**
  * The pool it would run on — **its own**, on the newest installed PHP inside
- * `[web-app.runtime].requires` (roadmap task **T82a**).
+ * `[web-app.runtime].requires`.
  *
- * T81b named the shared `php-fpm@<version>` here. A `web-app` now gets a second pool on that
- * same PHP, so an administrative interface onto this machine's databases is never in the
- * process serving somebody's project — and so the credential below has somewhere to be that is
- * nobody else's.
+ * Not the shared `php-fpm@<version>`: a `web-app` gets a second pool on that same PHP, so an
+ * administrative interface onto this machine's databases is never in the process serving
+ * somebody's project — and so the credential below has somewhere to be that is nobody else's.
  */
 pool: ServiceId, 
 /**
- * The account this application would be **signed in as** — roadmap task **T82a**.
+ * The account this application would be **signed in as**.
  *
  * Shown before anything is agreed to, beside the database: its own php-fpm pool would be given
  * that account's password, read from the OS keyring at the moment the pool starts and written
@@ -34,8 +33,7 @@ pool: ServiceId,
  */
 signs_in?: string | null, 
 /**
- * The database it would administer, for a `web-app` declaring `[web-app.database]` — roadmap
- * task **T82**.
+ * The database it would administer, for a `web-app` declaring `[web-app.database]`.
  *
  * **Shown before anything is agreed to**, because it is the second thing an install freezes:
  * which server this administrative interface opens onto is not a detail somebody should find

@@ -3,7 +3,7 @@
 use super::*;
 use crate::elevation::Route;
 
-/// T182b, D2. A batch holding a helper operation and others runs the helper's first, and keeps
+/// A batch holding a helper operation and others runs the helper's first, and keeps
 /// the rest in the order they were queued.
 #[test]
 fn the_helper_operation_goes_first_in_its_batch() {
@@ -34,8 +34,8 @@ async fn finished(jobs: &Arc<crate::jobs::Jobs>, job: JobId) -> mixengine_proto:
         .expect("the job ends")
 }
 
-/// Three rows where this build has one operation: `Probe` through the shipped path, and two
-/// more written directly — the shape T41 will produce, and enough to prove a batch is a batch.
+/// Three rows: `Probe` through the shipped path, and two more written directly — enough to prove a
+/// batch is a batch.
 async fn three_waiting(elevation: &Arc<Elevation>) {
     elevation.enqueue(&PrivilegedOp::Probe {}).await.unwrap();
 
@@ -69,7 +69,7 @@ async fn a_machine_with_nothing_waiting_is_not_degraded() {
     assert!(status.last.is_none(), "this daemon has granted nothing yet");
 }
 
-/// D8, from the side that publishes it: the event carries the whole queue, and an enqueue that
+/// From the side that publishes it: the event carries the whole queue, and an enqueue that
 /// changed nothing publishes nothing at all.
 #[tokio::test]
 async fn enqueueing_announces_the_batch_and_a_repeat_announces_nothing() {
@@ -124,7 +124,7 @@ async fn dropping_empties_the_queue_and_answers_with_what_is_left() {
     assert_eq!(elevation.summary().await.unwrap().pending, 0);
 }
 
-/// D6, and the reason `can_prompt` is not merely `probe()`: a machine with every mechanism in
+/// The reason `can_prompt` is not merely `probe()`: a machine with every mechanism in
 /// place and no helper beside the daemon cannot grant anything either, and the sentence a person
 /// needs is different in the two cases.
 #[tokio::test]
@@ -181,9 +181,9 @@ async fn three_operations_are_one_prompt_on_the_request_that_was_just_written() 
     assert!(!raised[0].request.exists());
 }
 
-/// The mock raises nothing and writes nothing, which makes "the helper ran and left no report"
-/// the default here rather than a case somebody had to think to write. T40a is explicit that
-/// `Completed` does not promise a file: a crash is not a per-OS event.
+/// The mock raises nothing and writes nothing, which makes "the helper ran and left no report" the
+/// default here rather than a case somebody had to think to write. `Completed` does not promise a
+/// file: a crash is not a per-OS event.
 #[tokio::test]
 async fn a_helper_that_left_no_report_fails_the_job_and_keeps_every_row() {
     let (_home, elevation, _events, _machine) =
@@ -201,7 +201,7 @@ async fn a_helper_that_left_no_report_fails_the_job_and_keeps_every_row() {
     );
 }
 
-/// T166: a helper that refused its request writes nothing beside it, and what it said on stderr
+/// A helper that refused its request writes nothing beside it, and what it said on stderr
 /// is the only account of why. It has to reach the job's error, where the person who has just
 /// typed a password reads it — not stop at a `debug` line.
 #[tokio::test]
@@ -314,7 +314,7 @@ async fn a_machine_that_cannot_prompt_keeps_the_reason_intact() {
     );
 }
 
-/// D4's runtime half, asserted on the slot rather than on a race: two concurrent grants are two
+/// One grant at a time, asserted on the slot rather than on a race: two concurrent grants are two
 /// prompts for one queue, and refusing is the only answer that cannot become a loop.
 #[tokio::test]
 async fn a_second_grant_while_one_is_in_flight_is_refused_and_names_the_first() {
@@ -361,7 +361,7 @@ async fn granting_an_empty_queue_raises_nothing() {
     assert!(machine.prompts_raised().is_empty());
 }
 
-/// D9 and D11's second row: no helper beside the daemon is a different sentence from no way to
+/// No helper beside the daemon is a different sentence from no way to
 /// prompt, and it is answered before anything is written.
 #[tokio::test]
 async fn granting_without_a_helper_beside_the_daemon_is_dependency_missing() {

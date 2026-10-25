@@ -157,7 +157,7 @@ impl Fixture {
     }
 }
 
-/// **An artifact that is not an archive is one file** — roadmap task **T82**, the design's D3.
+/// **An artifact that is not an archive is one file.**
 ///
 /// The whole transaction is the one an archive goes through — the download, the checksum, the
 /// staging directory beside the destination and the atomic rename — with the decompressor replaced
@@ -562,8 +562,8 @@ async fn installing_over_a_version_that_is_already_there_is_refused() {
     );
 }
 
-/// **T182f, D1.** The marker is in the directory the moment the directory exists: written into the
-/// staging directory, so the rename that makes the install visible carries it.
+/// The marker is in the directory the moment the directory exists: written into the staging
+/// directory, so the rename that makes the install visible carries it.
 #[tokio::test]
 async fn an_install_leaves_the_marker_it_was_given() {
     let fixture = Fixture::start().await;

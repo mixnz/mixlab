@@ -6,8 +6,8 @@ use mixengine_proto::{ServiceId, UpdateInstaller, UpdateRelease};
 use super::{Updates, host, read};
 
 impl Updates {
-    /// Complete this install from the payload it was updated from — roadmap task **T185a**,
-    /// ADR 0054. Answers the names it added.
+    /// Complete this install from the payload it was updated from — ADR 0054. Answers the names it
+    /// added.
     ///
     /// **Before [`Self::restore_after_update`]**, because the staging directory is named after the
     /// version the feed declared, which only the `APPLIED` record still knows; with no record it is
@@ -207,7 +207,7 @@ impl Updates {
     ///
     /// `size` is what this machine would download and not the largest file published: it is shown
     /// in a consent prompt, and a number from another architecture would be a number about somebody
-    /// else's download. For a copy the `.pkg` installed, that is the `.pkg` (T88f).
+    /// else's download. For a copy the `.pkg` installed, that is the `.pkg`.
     pub(super) fn release(&self, feed: &Feed) -> UpdateRelease {
         let size = host().ok().map_or(0, |(os, arch)| match &self.placement {
             updates::Placement::Installer { .. } => feed
@@ -225,8 +225,8 @@ impl Updates {
         }
     }
 
-    /// The installer this copy is updated with, present exactly when the `.pkg` installed it —
-    /// T88f, D3. The size is the one the feed names for this machine, or 0 before a feed is read.
+    /// The installer this copy is updated with, present exactly when the `.pkg` installed it. The
+    /// size is the one the feed names for this machine, or 0 before a feed is read.
     pub(super) fn installer_of(&self, feed: Option<&Feed>) -> Option<UpdateInstaller> {
         let updates::Placement::Installer { .. } = &self.placement else {
             return None;

@@ -64,7 +64,7 @@ fn unreadable() -> AppError {
 
 impl Saved {
     /// What this machine's sync store is kept under: the server **and the account**, so that an
-    /// address deleted and registered again under the same `MK` starts from nothing (T178c, C4).
+    /// address deleted and registered again under the same `MK` starts from nothing.
     pub fn store_scope(&self) -> String {
         match &self.account_id {
             Some(id) => format!("{} {id}", self.server),
@@ -162,8 +162,8 @@ mod tests {
         }
     }
 
-    /// C4: an account is told apart by its id, not by its address. An entry kept before the id
-    /// existed keeps the old scope until the next sign-in.
+    /// An account is told apart by its id, not by its address. An entry kept before the id existed
+    /// keeps the old scope until the next sign-in.
     #[test]
     fn the_store_scope_names_the_account_when_it_is_known() {
         let mut saved = saved();

@@ -12,8 +12,7 @@ use super::{
 };
 
 impl Generator {
-    /// Would this home's front end accept the configuration installing `pending` would give it? —
-    /// roadmap task **T81c**, the design's D5.
+    /// Would this home's front end accept the configuration installing `pending` would give it?
     ///
     /// Renders the whole home with `pending`'s `[[recipe.front_end]]` fragments in it and shows the
     /// front end's own binary the result, through
@@ -67,8 +66,7 @@ impl Generator {
         Ok(())
     }
 
-    /// Every service something can start by connecting to it, and the pair of addresses that takes
-    /// — roadmap task **T70**.
+    /// Every service something can start by connecting to it, and the pair of addresses that takes.
     ///
     /// The activator's address first and the service's own second, which is the order they are used
     /// in: the daemon holds the first and dials the second once the service is up. A service whose
@@ -104,7 +102,7 @@ impl Generator {
         Ok(activators)
     }
 
-    /// Every address in this home that a connection may start a *stopped* service at — **T70a**.
+    /// Every address in this home that a connection may start a *stopped* service at.
     ///
     /// **Through `declarations` for [`activators`](Self::activators)' reason**: the addresses have
     /// to be the ones a render computed, and a second query here would be a second chance to
@@ -144,22 +142,22 @@ impl Generator {
     pub(super) fn documents(prepared: &Prepared, served: &[Served]) -> Result<Vec<Document>> {
         let mut documents = recipe::render(prepared.recipe.as_ref(), &prepared.context)?;
 
-        // **Appended to the recipe's own set, not installed by a path of its own** — T43's D1. The
-        // checker judges a staging directory, so a site file written anywhere else would be
-        // invisible to `caddy validate` and present at run time.
+        // **Appended to the recipe's own set, not installed by a path of its own.** The checker
+        // judges a staging directory, so a site file written anywhere else would be invisible to
+        // `caddy validate` and present at run time.
         if matches!(prepared.recipe.role(), Role::FrontEnd(_)) {
             documents.extend(prepared.recipe.sites(&prepared.context, served)?);
 
-            // **And what this home's extensions added** — roadmap task **T81c**. Under the same
-            // condition and appended to the same set, for T43's D1 exactly: a fragment installed by
-            // a path of its own would be invisible to the checker and present at run time.
+            // **And what this home's extensions added.** Under the same condition and appended to
+            // the same set, for the same reason: a fragment installed by a path of its own would be
+            // invisible to the checker and present at run time.
             documents.extend(prepared.recipe.fragments(&prepared.context)?);
         }
 
         Ok(documents)
     }
 
-    /// Every installed extension's `[[recipe.front_end]]`, rendered — roadmap task **T81c**.
+    /// Every installed extension's `[[recipe.front_end]]`, rendered.
     ///
     /// **Here rather than in a recipe**, because the placeholders in a fragment are the
     /// *extension's*: `{install_dir}` means the directory that extension was installed into, and

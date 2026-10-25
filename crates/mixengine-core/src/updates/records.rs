@@ -1,4 +1,4 @@
-//! What this home remembers about updates — roadmap task **T88**, the design's D10.
+//! What this home remembers about updates.
 //!
 //! Four rows in `settings`, which has been `(key TEXT PRIMARY KEY, value_json TEXT NOT NULL) STRICT`
 //! since `0001_initial.sql` and has never had a row in it. This is its first user, and it needs no
@@ -38,11 +38,11 @@ pub const APPLIED: &str = "updates.applied";
 /// What was running when an update stopped it, in the order it was stopped.
 pub const RESTORE: &str = "updates.restore";
 
-/// A `.pkg` handed to Installer.app and not yet finished — roadmap task **T88f**, the design's D5
-/// and D6. While it is here, `update.status` asks the binary on disk what version it is.
+/// A `.pkg` handed to Installer.app and not yet finished. While it is here, `update.status` asks
+/// the binary on disk what version it is.
 pub const HANDED_OVER: &str = "updates.handed_over";
 
-/// The names an install added to itself from its own payload — roadmap task **T185a**, ADR 0054.
+/// The names an install added to itself from its own payload — ADR 0054.
 /// A JSON list; read by the uninstall, which removes them and then clears this.
 pub const COMPLETED: &str = "updates.completed";
 
@@ -82,7 +82,7 @@ pub struct Applied {
     pub at: mixengine_proto::Timestamp,
 }
 
-/// What [`HANDED_OVER`] holds — roadmap task **T88f**.
+/// What [`HANDED_OVER`] holds.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct HandedOver {
     /// The version handed to the installer.
@@ -275,7 +275,7 @@ mod tests {
     }
 
     /// A handover is written by `update.hand_over` and read back by `update.status`, then cleared by
-    /// `update.finish` — roadmap task **T88f**.
+    /// `update.finish`.
     #[tokio::test]
     async fn a_handover_is_written_read_and_cleared() {
         let (_temp, store) = home().await;

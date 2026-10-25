@@ -7,7 +7,7 @@ use directories::BaseDirs;
 use crate::{Error, HomeDirs, Result};
 
 /// Beside the released one rather than somewhere else, so a developer wondering where their sites
-/// went finds the answer in the folder they were already looking at — T95, D3.
+/// went finds the answer in the folder they were already looking at.
 const NAME: &str = if crate::RELEASE {
     "MixEngine"
 } else {

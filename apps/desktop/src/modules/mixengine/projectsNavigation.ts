@@ -1,5 +1,5 @@
 /**
- * Which project the Projects screen opens on, when another screen sends someone there — T205.
+ * Which project the Projects screen opens on, when another screen sends someone there.
  *
  * `sitesNavigation.ts`'s shape, the other way round: the Sites screen's *What to run* and an apply
  * that has just finished both want the person to land on one project with its row already open,

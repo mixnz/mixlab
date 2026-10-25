@@ -8,8 +8,8 @@
  * `docs/standards/rust.md` has none, because until now nothing needed one. A number is
  * unambiguous, sorts, needs no parser, and is `new Date(ms)` in the GUI.
  *
- * Milliseconds rather than seconds because log lines (roadmap task T14) arrive faster than one a
- * second and would otherwise all carry the same timestamp; signed rather than unsigned because a
- * machine whose clock is set before 1970 should produce a strange number instead of a panic.
+ * Milliseconds rather than seconds because log lines arrive faster than one a second and would
+ * otherwise all carry the same timestamp; signed rather than unsigned because a machine whose
+ * clock is set before 1970 should produce a strange number instead of a panic.
  */
 export type Timestamp = number;

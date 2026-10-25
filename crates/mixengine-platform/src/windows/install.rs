@@ -26,8 +26,7 @@ pub(crate) fn helper_path() -> Result<PathBuf> {
 /// holds the two together.
 const PROGRAMS: &str = r"Programs\MixEngine";
 
-/// Where the NSIS installer and the portable archive put MixEngine's programs — roadmap task
-/// **T107**.
+/// Where the NSIS installer and the portable archive put MixEngine's programs.
 ///
 /// One directory, and per user: `RequestExecutionLevel user` means an update needs no UAC, which is
 /// the reason the whole install lives under this profile rather than under Program Files.
@@ -40,7 +39,7 @@ pub(crate) fn program_dirs() -> Vec<PathBuf> {
         .unwrap_or_default()
 }
 
-/// Nowhere beyond the directory the programs are in — roadmap task **T107**.
+/// Nowhere beyond the directory the programs are in.
 ///
 /// This system's installer places the window beside the other four, so the step in front of this
 /// one has already looked. Present rather than absent so the three systems keep one signature.
@@ -50,7 +49,7 @@ pub(crate) fn window_dirs(_directory: Option<&std::path::Path>) -> Vec<PathBuf> 
     Vec::new()
 }
 
-/// Beside the program, and nowhere else — roadmap task **T88d**.
+/// Beside the program, and nowhere else.
 ///
 /// `RequestExecutionLevel user` means neither the NSIS installer nor the portable zip can write
 /// `%ProgramFiles%` at install time, so both keep their copy where the rest of the install is —
@@ -63,7 +62,7 @@ pub(crate) fn helper_sources(program: &std::path::Path, bundle: &str) -> Vec<Pat
     vec![crate::install::beside(program)]
 }
 
-/// Nobody — roadmap task **T88e**. The installer is per-user and never writes to Program Files;
+/// Nobody. The installer is per-user and never writes to Program Files;
 /// the helper there is always one `HelperInstall {}` placed.
 pub(crate) fn packaged_by(_path: &std::path::Path) -> Option<String> {
     None
@@ -75,14 +74,14 @@ pub(crate) fn packaged_by(_path: &std::path::Path) -> Option<String> {
 /// `%LOCALAPPDATA%\Programs\MixEngine` — `RequestExecutionLevel user` means neither can write
 /// `%ProgramFiles%` directly, so a bootstrap copy has to sit where the rest of the install already
 /// is. That copy survives `mix uninstall`, which leaves the program directory alone, so a plain
-/// `mix elevation grant` re-installs it — as it now does on macOS and Linux too, since **T88d** gave
-/// those two systems a source of their own.
+/// `mix elevation grant` re-installs it — as it does on macOS and Linux too, whose packages ship a
+/// source of their own.
 pub(crate) fn missing_helper_advice() -> &'static str {
     "a release keeps mixengine-elevate beside mixengined in %LOCALAPPDATA%\\Programs\\MixEngine — \
      reinstall MixEngine, or re-extract the zip release, to put it back"
 }
 
-/// Nothing to do — roadmap task **T88**.
+/// Nothing to do.
 ///
 /// There is no execute bit on this system: a file is a program because of its contents and its
 /// extension, and the swap that just wrote it kept the name it had. Named rather than silently
@@ -113,7 +112,7 @@ pub(crate) fn own_as_root(path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
-/// Hand the helper and its directory to Windows' own removal queue — roadmap task **T87**.
+/// Hand the helper and its directory to Windows' own removal queue.
 ///
 /// **A measured constraint and not a preference.** A file whose image is mapped cannot be unlinked
 /// on this system, and `mixengine-elevate.exe` is the running program when it applies
@@ -130,7 +129,7 @@ pub(crate) fn own_as_root(path: &std::path::Path) -> Result<()> {
 /// disposition does work, and it is the technique malware uses to remove its own dropper. Putting it
 /// inside the one binary in this product that runs as root — whose stated design constraint is being
 /// auditable in a sitting — buys one file's worth of tidiness for a paragraph no reviewer should
-/// have to accept. See the T87 design, D8.
+/// have to accept.
 #[cfg(feature = "elevated")]
 pub(crate) fn remove_helper() -> Result<crate::install::HelperRemoval> {
     let helper = helper_path()?;
@@ -191,7 +190,7 @@ fn schedule(path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
-/// What a desktop application is called on disk here — roadmap task **T106**.
+/// What a desktop application is called on disk here.
 ///
 /// `std::env::consts::EXE_SUFFIX` and nothing else: Windows has no application bundle, so the window
 /// is one more file beside the other four and the NSIS installer places it as such.
@@ -212,12 +211,12 @@ pub(crate) fn application_executable(
     placed.to_path_buf()
 }
 
-/// No inode on this system, and no `.pkg` to have replaced a file — roadmap task **T88f**.
+/// No inode on this system, and no `.pkg` to have replaced a file.
 pub(crate) fn file_identity(_path: &std::path::Path) -> Option<(u64, u64)> {
     None
 }
 
-/// Only the macOS `.pkg` places the program this way — roadmap task **T182a**.
+/// Only the macOS `.pkg` places the program this way.
 pub(crate) fn package_paths() -> Option<crate::install::PackagePaths> {
     None
 }
@@ -252,7 +251,7 @@ mod application_tests {
         );
     }
 
-    /// T88d. Unchanged behaviour, stated as a fact so the list cannot quietly gain an entry: this
+    /// Unchanged behaviour, stated as a fact so the list cannot quietly gain an entry: this
     /// system's installer and its portable zip both keep the source where the programs are.
     #[test]
     fn windows_offers_the_copy_beside_the_program_and_nothing_else() {

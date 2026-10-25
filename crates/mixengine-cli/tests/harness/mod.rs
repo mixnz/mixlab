@@ -62,7 +62,7 @@ impl Home {
     }
 
     /// Whatever the daemon for this home has written to its own log.
-    /// The configuration this front end rendered for one site — roadmap task **T124a**.
+    /// The configuration this front end rendered for one site.
     ///
     /// For a failure message: what goes wrong in a serving test is usually a rendering, and a bare
     /// status line does not say which. The extension is the front end's own, which is why it is
@@ -183,7 +183,7 @@ impl Home {
         self.spawn_daemon(&[])
     }
 
-    /// The same, started with arguments of the caller's own — roadmap task **T147**.
+    /// The same, started with arguments of the caller's own.
     ///
     /// The four relocation flags are the caller this exists for: what they claim is about a
     /// *start*, so a test about a relocated home has to be one that started a daemon with them.
@@ -192,7 +192,7 @@ impl Home {
     }
 
     /// A daemon started with `variables` removed from its environment — a test that is about what
-    /// the home remembers must not inherit what CI sets for the whole run (T194).
+    /// the home remembers must not inherit what CI sets for the whole run.
     pub(crate) fn start_daemon_without(&self, variables: &[&str]) -> Daemon {
         let mut command = Daemon::command(daemon_binary(), &self.0);
         for variable in variables {
@@ -210,7 +210,7 @@ impl Home {
     }
 
     /// [`start_daemon_reading_index`](Self::start_daemon_reading_index), from a daemon binary of the
-    /// caller's own — roadmap task **T165**. See [`daemon_installed_in`].
+    /// caller's own. See [`daemon_installed_in`].
     pub(crate) fn start_daemon_from_reading_index(
         &self,
         binary: &Path,
@@ -334,9 +334,8 @@ pub(crate) fn daemon_binary() -> PathBuf {
     daemon
 }
 
-/// Copy this build's `mixengined`, and the `mixengine-shim` and `mixengine-trampoline` (T185) it
-/// reaches for beside itself, into `directory` — roadmap task **T165** — and hand back the copied
-/// daemon.
+/// Copy this build's `mixengined`, and the `mixengine-shim` and `mixengine-trampoline` it reaches
+/// for beside itself, into `directory`, and hand back the copied daemon.
 ///
 /// **For a test about what a daemon finds beside itself.** MixLab's window is looked for next to the
 /// running program and nowhere else, so the only way to give a daemon a window of the test's own is

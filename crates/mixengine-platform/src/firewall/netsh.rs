@@ -41,13 +41,13 @@ pub(crate) fn add(label: &str, ports: &[u16]) -> Vec<String> {
         format!("localport={list}"),
         // The private profile only. A shared site is for the network the machine is already trusted
         // on; a rule that also applied to `public` would follow the laptop to a café, which is
-        // exactly what T76's auto-revoke exists to prevent and would be pointless to leave open
-        // here in the meantime.
+        // exactly what revoking a share on a network change exists to prevent and would be
+        // pointless to leave open here in the meantime.
         "profile=private".to_owned(),
     ]
 }
 
-/// The arguments that list every inbound rule, in full — roadmap task **T76**.
+/// The arguments that list every inbound rule, in full.
 ///
 /// Read-only and unprivileged, unlike everything else in this module: what it is for is finding the
 /// rule *Windows* wrote for `mixengined.exe` when it asked about mDNS, which MixEngine never made
@@ -65,7 +65,7 @@ pub(crate) fn show() -> Vec<String> {
     ]
 }
 
-/// How many rule blocks in `listing` name `program` — roadmap task **T76**.
+/// How many rule blocks in `listing` name `program`.
 ///
 /// **The path is searched for, and nothing else is parsed. That is the decision, not a shortcut.**
 /// `netsh` writes its field labels in the system's language: the line that reads `Program:` on an
@@ -91,9 +91,9 @@ pub(crate) fn counted(listing: &str, program: &str) -> usize {
 mod tests {
     use super::*;
 
-    /// **The program path is searched for, and nothing else is parsed** — roadmap task **T76**, and
-    /// the reason is measured rather than assumed: `netsh` localises its field labels, so a parser
-    /// keyed off `Program:` reports nothing on a Windows that is not in English.
+    /// **The program path is searched for, and nothing else is parsed**, and the reason is measured
+    /// rather than assumed: `netsh` localises its field labels, so a parser keyed off `Program:`
+    /// reports nothing on a Windows that is not in English.
     #[test]
     fn a_rule_is_counted_when_its_block_names_the_program() {
         let listing = "\

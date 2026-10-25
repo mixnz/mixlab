@@ -1,10 +1,10 @@
 //! The three site tables: what is served out of a project's directory, and at what name.
 //!
-//! Roadmap task **T39a**. [`crate::projects`]' shape one table down, with the difference that makes
-//! this module worth having: a site is *three* rows in three tables, and they are only ever right
-//! together. `0001_initial.sql` says so at `site_domains_one_primary_per_site` — "at least one is
-//! not expressible here … and it stays an invariant the site module upholds inside the transaction
-//! that creates a site". This is that module and that transaction.
+//! [`crate::projects`]' shape one table down, with the difference that makes this module worth
+//! having: a site is *three* rows in three tables, and they are only ever right together.
+//! `0001_initial.sql` says so at `site_domains_one_primary_per_site` — "at least one is not
+//! expressible here … and it stays an invariant the site module upholds inside the transaction that
+//! creates a site". This is that module and that transaction.
 //!
 //! # One place reads these tables
 //!
@@ -18,7 +18,7 @@
 //! `is_primary` never leaves this module. Above it a site has a `Vec<String>` whose first element is
 //! the primary, so "no primary" and "two primaries" are not states anything can spell. A replacement
 //! deletes every row before it inserts any, which is what lets a domain move from one site to
-//! another in two calls rather than being blocked by the unique index halfway through (spec D6).
+//! another in two calls rather than being blocked by the unique index halfway through.
 
 use std::path::{Component, Path, PathBuf};
 
@@ -40,7 +40,7 @@ use rows::{
 use sharing::read_sharing;
 pub use sharing::{name_taken, set_sharing, shared_name, shared_url, web_port};
 
-/// Who a site belongs to, which is also what gives its `doc_root` a root — roadmap task **T81b**.
+/// Who a site belongs to, which is also what gives its `doc_root` a root.
 ///
 /// **One of two, and never neither**: `0001_initial.sql` holds that with a CHECK, and this
 /// type is what makes it unrepresentable above the row. A project's site is rooted at
@@ -55,7 +55,7 @@ pub enum SiteOwner {
 }
 
 impl SiteOwner {
-    /// The extension that owns this site, when one does — roadmap task **T82a**.
+    /// The extension that owns this site, when one does.
     #[must_use]
     pub fn extension(&self) -> Option<&ExtensionId> {
         match self {
@@ -97,7 +97,7 @@ impl SiteOwner {
 /// One site, whole: the row, its ordered domains and its links.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SiteRecord {
-    /// The rowid, which stays inside this crate: the wire handle is a domain (spec D5).
+    /// The rowid, which stays inside this crate: the wire handle is a domain.
     pub id: i64,
 
     /// Who it belongs to, and therefore what `doc_root` is relative to.
@@ -112,7 +112,7 @@ pub struct SiteRecord {
     /// Whether HTTPS is declared.
     pub https_enabled: bool,
 
-    /// Whether the plaintext address redirects to the HTTPS one — roadmap task **T98**.
+    /// Whether the plaintext address redirects to the HTTPS one.
     ///
     /// **Never `true` while [`https_enabled`](Self::https_enabled) is `false`** —
     /// `sites.https_redirect`'s own `CHECK` refuses the row, so this field being `true` is
@@ -128,18 +128,18 @@ pub struct SiteRecord {
     /// The services it declares, in id order.
     pub services: Vec<ServiceId>,
 
-    /// The routes it declares, in the order they were written down — roadmap task **T135**.
+    /// The routes it declares, in the order they were written down.
     ///
     /// **Declaration order and not match order.** Which route wins an overlap is decided by
     /// [`by_specificity`] where a rendering or an answer needs it; the row keeps what somebody
     /// typed, because that is the only thing a `position` column can honestly hold.
     pub routes: Vec<SiteRoute>,
 
-    /// Where the local network reaches it, when it does — roadmap task **T74**.
+    /// Where the local network reaches it, when it does.
     pub sharing: Option<Sharing>,
 }
 
-/// A site's LAN sharing, as the row holds it — roadmap task **T74**.
+/// A site's LAN sharing, as the row holds it.
 ///
 /// **One value or none, never three columns a reader has to agree about.** The schema enforces that
 /// with a trigger (`0001_initial.sql`); this type is what makes it unrepresentable in the code
@@ -155,12 +155,12 @@ pub struct Sharing {
     /// When sharing began.
     pub since: mixengine_proto::Timestamp,
 
-    /// When this share ends by itself, or [`None`] for one that does not — roadmap task **T76**.
+    /// When this share ends by itself, or [`None`] for one that does not.
     ///
-    /// **Measured from [`since`](Self::since) and stored as the instant it lands on** — the T76
-    /// design, D6. A length without the start it was measured from is not a deadline, and `--for`
-    /// is a property of the share rather than of the command that set it: sharing an already-shared
-    /// site again neither restarts the clock nor removes the alarm.
+    /// **Measured from [`since`](Self::since) and stored as the instant it lands on.** A length
+    /// without the start it was measured from is not a deadline, and `--for` is a property of the
+    /// share rather than of the command that set it: sharing an already-shared site again neither
+    /// restarts the clock nor removes the alarm.
     ///
     /// The one of the four that is optional on its own. `0001_initial.sql` holds the
     /// other half — a site that is not shared carries no deadline either.
@@ -181,15 +181,14 @@ pub struct NewSite {
     pub kind: SiteKind,
     /// Whether HTTPS is declared.
     pub https_enabled: bool,
-    /// Whether the plaintext address redirects to the HTTPS one — roadmap task **T98**. Refused by
-    /// [`create`] when `true` beside `https_enabled: false`, on the same invariant the schema holds.
+    /// Whether the plaintext address redirects to the HTTPS one. Refused by [`create`] when `true`
+    /// beside `https_enabled: false`, on the same invariant the schema holds.
     pub https_redirect: bool,
     /// Ordered; the head becomes the primary. Must not be empty.
     pub domains: Vec<String>,
     /// The services it declares.
     pub services: Vec<ServiceId>,
-    /// The routes it declares — roadmap task **T135**. May be empty, which is every site made
-    /// before this task existed.
+    /// The routes it declares. May be empty, which is every site made before routes existed.
     pub routes: Vec<SiteRoute>,
 }
 
@@ -202,7 +201,7 @@ pub struct Change {
     pub kind: Option<SiteKind>,
     /// Whether HTTPS is declared.
     pub https_enabled: Option<bool>,
-    /// Whether the plaintext address redirects to the HTTPS one — roadmap task **T98**.
+    /// Whether the plaintext address redirects to the HTTPS one.
     ///
     /// **Not quite "leave it" on its own.** [`update`] turns this off without being asked when
     /// `https_enabled` is turning off and this is [`None`] and the site's redirect is currently on —
@@ -215,15 +214,15 @@ pub struct Change {
     pub domains: Option<Vec<String>>,
     /// The links, **replacing** them.
     pub services: Option<Vec<ServiceId>>,
-    /// The routes, **replacing** them — roadmap task **T135**.
+    /// The routes, **replacing** them.
     pub routes: Option<Vec<SiteRoute>>,
 }
 
 /// A doc root as the row holds it: relative to the project's root, `""` for the root itself.
 ///
-/// **Both sides are normalised** before they are compared, which is the rule T39/D5 paid for: a
-/// project registered at `/tmp/blog` and a doc root typed as `/private/tmp/blog/public` are one
-/// directory on macOS, and a test using a temporary directory meets that on the first run.
+/// **Both sides are normalised** before they are compared, which is the rule the project model paid
+/// for: a project registered at `/tmp/blog` and a doc root typed as `/private/tmp/blog/public` are
+/// one directory on macOS, and a test using a temporary directory meets that on the first run.
 ///
 /// # Errors
 ///
@@ -283,10 +282,10 @@ fn without_dot_segments(path: &Path) -> PathBuf {
 /// [`ProjectError::HttpsRedirectNeedsHttps`] for `https_redirect: true` beside `https_enabled:
 /// false`, and [`Error::Database`] when the write cannot be made.
 pub async fn create(store: &Store, new: &NewSite) -> Result<SiteRecord> {
-    // Checked before anything opens a transaction: this is a fact about the two fields `new` already
-    // carries, not about a row that could change underneath a concurrent writer — roadmap task
-    // **T98**. `sites.https_redirect`'s `CHECK` would refuse the `INSERT` below just as
-    // surely, in the words it was written in rather than the ones a caller asked in.
+    // Checked before anything opens a transaction: this is a fact about the two fields `new`
+    // already carries, not about a row that could change underneath a concurrent writer.
+    // `sites.https_redirect`'s `CHECK` would refuse the `INSERT` below just as surely, in the words
+    // it was written in rather than the ones a caller asked in.
     if new.https_redirect && !new.https_enabled {
         return Err(Error::Project(ProjectError::HttpsRedirectNeedsHttps));
     }
@@ -300,9 +299,8 @@ pub async fn create(store: &Store, new: &NewSite) -> Result<SiteRecord> {
         .await
         .map_err(|source| store.failure("write", source))?;
 
-    // **A pool an extension owns serves that extension and nothing else** — roadmap task **T82a**,
-    // that design's D5. Inside the transaction, so an extension installed between the read and the
-    // insert cannot open a window.
+    // **A pool an extension owns serves that extension and nothing else.** Inside the transaction,
+    // so an extension installed between the read and the insert cannot open a window.
     pool_is_free_for(store, &mut *tx, new.owner.extension(), &new.kind).await?;
 
     // Before the write and inside the transaction, on the line above's reasoning — and before
@@ -464,7 +462,7 @@ pub async fn records(store: &Store, project: Option<i64>) -> Result<Vec<SiteReco
     Ok(sites)
 }
 
-/// Every service the sites of one project declare, in id order — roadmap task **T125**.
+/// Every service the sites of one project declare, in id order.
 ///
 /// **The links, plus the pool a php-fpm site names.** `site_service_links` holds what a site was
 /// created *with* — for `blueprint.apply` that is `context.ensured`, the database and the cache it
@@ -519,7 +517,7 @@ pub async fn by_domain(store: &Store, domain: &str) -> Result<Option<SiteRecord>
         .find(|site| site.id == id))
 }
 
-/// The site an extension is served on, or [`None`] for one that has none — roadmap task **T81b**.
+/// The site an extension is served on, or [`None`] for one that has none.
 ///
 /// At most one, which `sites_one_per_extension` enforces; read back through [`records`] for
 /// [`by_domain`]'s reason.
@@ -545,7 +543,7 @@ pub async fn of_extension(store: &Store, id: &ExtensionId) -> Result<Option<Site
         .find(|record| record.id == site))
 }
 
-/// Every extension whose site is frozen on this pool — roadmap task **T81b**, the design's D9.
+/// Every extension whose site is frozen on this pool.
 ///
 /// **Extensions only.** A project's site on the same pool is protected by its pin through
 /// `projects::pins_broken_by`; this is the other half of `runtime.uninstall`'s refusal, and it
@@ -600,12 +598,12 @@ pub async fn update(store: &Store, id: i64, change: &Change) -> Result<SiteRecor
     // Asked inside the transaction so an update against a site that has just gone is a `not_found`
     // rather than a set of `UPDATE`s that quietly touch no rows.
     //
-    // **The owner is read with it** — roadmap task **T82a** — because the refusal below is about who
-    // this site belongs to, and a second read outside the transaction would be a second answer.
+    // **The owner is read with it**, because the refusal below is about who this site belongs to,
+    // and a second read outside the transaction would be a second answer.
     //
-    // **`https_enabled` is read with it too** — roadmap task **T98** — because whether
-    // `change.https_redirect` is refusable depends on what HTTPS is *left* as by this same call, and
-    // a site this `update` is not touching at all still has to answer that question.
+    // **`https_enabled` is read with it too**, because whether `change.https_redirect` is refusable
+    // depends on what HTTPS is *left* as by this same call, and a site this `update` is not
+    // touching at all still has to answer that question.
     let existing = sqlx::query!(
         r#"SELECT extension_id AS "extension: String", https_enabled FROM sites WHERE id = ?"#,
         id
@@ -631,7 +629,7 @@ pub async fn update(store: &Store, id: i64, change: &Change) -> Result<SiteRecor
         })
         .transpose()?;
 
-    // **Resolved together, because the two columns are not independent** — the T98 design, D2.
+    // **Resolved together, because the two columns are not independent.**
     //
     // `https_redirect: Some(true)` is refused against whatever HTTPS this same call leaves the site
     // with, whether that comes from `change.https_enabled` turning it off or from the site already
@@ -654,15 +652,15 @@ pub async fn update(store: &Store, id: i64, change: &Change) -> Result<SiteRecor
         None => None,
     };
 
-    // **A pool an extension owns serves that extension and nothing else** — the design's D5. Here
-    // as well as in [`create`], because `blueprint.apply` and `site.update` both arrive through this
-    // door and neither goes through a CLI.
+    // **A pool an extension owns serves that extension and nothing else.** Here as well as in
+    // [`create`], because `blueprint.apply` and `site.update` both arrive through this door and
+    // neither goes through a CLI.
     if let Some(kind) = &change.kind {
         pool_is_free_for(store, &mut *tx, owner.as_ref(), kind).await?;
     }
 
-    // The same door, so the same check — T122. A kind or a link list left alone names nothing new
-    // and is not asked about; what is already on the row was answered for when it was written.
+    // The same door, so the same check. A kind or a link list left alone names nothing new and is
+    // not asked about; what is already on the row was answered for when it was written.
     declared_services_exist(
         store,
         &mut *tx,
@@ -694,13 +692,13 @@ pub async fn update(store: &Store, id: i64, change: &Change) -> Result<SiteRecor
         .map_err(|source| store.failure("write", source))?;
     }
 
-    // **Written together when HTTPS is turning off, and that is not an optimisation** — roadmap
-    // task **T98**. The schema's `CHECK` is immediate, not deferred: two statements in the obvious
-    // order would set `https_enabled = 0` first, against a row whose `https_redirect` is still `1`
-    // from before this call, and the database would refuse that write outright — the second
-    // statement, the one that would have carried the redirect down with it, is never reached.
-    // Turning HTTPS *on* has no such ordering hazard (`https_enabled = 1` alone always satisfies
-    // the `CHECK`, whatever `https_redirect` still says), so only this one direction needs it.
+    // **Written together when HTTPS is turning off, and that is not an optimisation.** The schema's
+    // `CHECK` is immediate, not deferred: two statements in the obvious order would set
+    // `https_enabled = 0` first, against a row whose `https_redirect` is still `1` from before this
+    // call, and the database would refuse that write outright — the second statement, the one that
+    // would have carried the redirect down with it, is never reached. Turning HTTPS *on* has no
+    // such ordering hazard (`https_enabled = 1` alone always satisfies the `CHECK`, whatever
+    // `https_redirect` still says), so only this one direction needs it.
     match (change.https_enabled, https_redirect) {
         (Some(false), Some(redirect)) => {
             sqlx::query!(
@@ -796,7 +794,7 @@ pub async fn delete(store: &Store, id: i64) -> Result<()> {
 
 /// The primary domains of every site that names this service — as its pool, or as a link.
 ///
-/// **Both, in one answer**, because the refusal that reads it (`service.delete`, spec D4) does not
+/// **Both, in one answer**, because the refusal that reads it (`service.delete`) does not
 /// care which way a site named the service: either way, deleting it changes what the next
 /// `site.start` would do.
 ///

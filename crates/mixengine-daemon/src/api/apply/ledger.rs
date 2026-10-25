@@ -1,4 +1,4 @@
-//! What an apply made, and what a failure does about it — roadmap task **T78**, the design's D4.
+//! What an apply made, and what a failure does about it.
 //!
 //! # Intent, not success
 //!

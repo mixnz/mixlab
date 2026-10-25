@@ -13,7 +13,8 @@ export type PendingOp = {
 id: PendingOpId, 
 /**
  * The operation itself, decoded. A row this build cannot decode is deleted rather than carried
- * — see the T40b design, D2 — so this is never a value nobody can act on.
+ * — see `docs/specs/2026-08-23-t40b-elevation-queue-design.md`, D2 — so this is never a
+ * value nobody can act on.
  */
 op: PrivilegedOp, 
 /**

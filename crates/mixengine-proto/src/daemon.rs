@@ -50,15 +50,15 @@ pub struct DaemonStatus {
     /// What is waiting for permission, and whether this machine could ask for it, or [`None`] from a
     /// daemon built before this member existed.
     ///
-    /// **In the call every client already makes**, so `mix status` can say "3 operations are waiting
-    /// for permission" without a second round trip and without a client deciding what *degraded*
-    /// means — the T40b design, D6. The list itself is `elevation.status`, because that is a screen
-    /// and this is a status line.
+    /// **In the call every client already makes**, so `mix status` can say "3 operations are
+    /// waiting for permission" without a second round trip and without a client deciding what
+    /// *degraded* means (`docs/specs/2026-08-23-t40b-elevation-queue-design.md`, D6). The list
+    /// itself is `elevation.status`, because that is a screen and this is a status line.
     ///
     /// **Optional because it arrived after protocol 1 was frozen** —
-    /// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md), roadmap
-    /// task **T88c**. It was required until then, which meant a `mix` from a new build could not
-    /// *decode* the answer of an older daemon that had not been restarted yet.
+    /// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md). It was
+    /// required until then, which meant a `mix` from a new build could not *decode* the answer of
+    /// an older daemon that had not been restarted yet.
     ///
     /// **[`None`] means the daemon predates the member and nothing else.** It is never "the queue
     /// could not be read": this call is fallible for exactly that case, so an unreadable queue is an
@@ -68,22 +68,22 @@ pub struct DaemonStatus {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub elevation: Option<crate::ElevationSummary>,
 
-    /// Which of the two name mechanisms this home is running on, and why — roadmap task **T44** — or
-    /// [`None`] from a daemon built before this member existed.
+    /// Which of the two name mechanisms this home is running on, and why — or [`None`] from a
+    /// daemon built before this member existed.
     ///
     /// **In the call every client already makes**, on [`DaemonStatus::elevation`]'s reasoning: "is
     /// `blog.test` going to resolve, and will a wildcard under it" is a status line, not a screen,
     /// and a client that had to ask a second method for it would render the first line of `mix
     /// status` a round trip late.
     ///
-    /// **Optional on [`DaemonStatus::elevation`]'s reasoning too**, and for the same skew — **T88c**
-    /// changed both at once, because fixing one while the other was required bought nothing. [`None`]
-    /// means the daemon predates the member; a daemon that has it always answers [`Some`], since this
-    /// is read from state it owns and cannot fail.
+    /// **Optional on [`DaemonStatus::elevation`]'s reasoning too**, and for the same skew — both
+    /// were made optional at once, because fixing one while the other was required bought nothing.
+    /// [`None`] means the daemon predates the member; a daemon that has it always answers [`Some`],
+    /// since this is read from state it owns and cannot fail.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dns: Option<DnsStatus>,
 
-    /// A release this daemon has been offered, or [`None`] — roadmap task **T88**.
+    /// A release this daemon has been offered, or [`None`].
     ///
     /// **In the call every client already makes**, on [`DaemonStatus::elevation`]'s reasoning: *"is
     /// there a newer MixEngine"* is a status line and not a screen, and the screen is
@@ -93,15 +93,15 @@ pub struct DaemonStatus {
     /// workaround.** [`None`] is the honest value for a daemon that has not checked yet, for one
     /// whose check found nothing, and for one built before this member existed — three states a
     /// client renders identically, which is *nothing at all*. This is the only member here whose
-    /// [`None`] carries more than the wire fact, and **T88c** — which made
-    /// [`DaemonStatus::elevation`] and [`DaemonStatus::dns`] optional as well, under
-    /// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md) — left it
+    /// [`None`] carries more than the wire fact. Making [`DaemonStatus::elevation`] and
+    /// [`DaemonStatus::dns`] optional as well, under
+    /// [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md), left it
     /// exactly as it was.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub update: Option<crate::UpdateOffer>,
 
-    /// Which credential store this home keeps its passwords in — roadmap task **T194** — or
-    /// [`None`] from a daemon built before this member existed.
+    /// Which credential store this home keeps its passwords in, or [`None`] from a daemon built
+    /// before this member existed.
     ///
     /// **In the call every client already makes**, on [`DaemonStatus::elevation`]'s reasoning: where
     /// the passwords are is a status line, and the switch that changes it is
@@ -110,7 +110,7 @@ pub struct DaemonStatus {
     pub credentials: Option<CredentialsStatus>,
 }
 
-/// Which credential store a home keeps its passwords in — roadmap task **T194**,
+/// Which credential store a home keeps its passwords in —
 /// [ADR 0059](../../../docs/decisions/0059-a-linux-release-may-keep-a-homes-credentials-in-a-file.md).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -122,7 +122,7 @@ pub enum CredentialStore {
     Home,
 }
 
-/// The store a daemon runs on, and whether it would accept a switch — roadmap task **T194**.
+/// The store a daemon runs on, and whether it would accept a switch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct CredentialsStatus {
@@ -135,7 +135,7 @@ pub struct CredentialsStatus {
     pub choosable: bool,
 }
 
-/// What `daemon.set_credential_store` takes — roadmap task **T194**.
+/// What `daemon.set_credential_store` takes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct CredentialStoreSet {
@@ -143,7 +143,7 @@ pub struct CredentialStoreSet {
     pub store: CredentialStore,
 }
 
-/// What `daemon.set_credential_store` answers — roadmap task **T194**.
+/// What `daemon.set_credential_store` answers.
 ///
 /// **Two stores, because a switch applies at the next start**: the running daemon keeps the host it
 /// was built with, and a client says so when the two differ.
@@ -156,8 +156,7 @@ pub struct CredentialStoreChange {
     pub running: CredentialStore,
 }
 
-/// What this daemon's own DNS server is doing, and what it costs when it is not — roadmap task
-/// **T44**, which also closes T46a.
+/// What this daemon's own DNS server is doing, and what it costs when it is not.
 ///
 /// A home resolves its names one of two ways: through the built-in DNS server, which answers a
 /// whole managed TLD by pattern, or through the hosts file, which has one line per name. The
@@ -173,8 +172,8 @@ pub struct DnsStatus {
     ///
     /// **Not the same question as [`DnsStatus::mode`]**, and that is the field's whole reason for
     /// existing: a server can be listening perfectly while nothing on the machine sends it a name,
-    /// which is every machine until the resolver wiring of T45. A string for
-    /// [`DaemonStatus`]' reason — it is for reading, and nothing parses it back.
+    /// which is every machine until its resolver is wired. A string for [`DaemonStatus`]' reason —
+    /// it is for reading, and nothing parses it back.
     pub listening: Option<String>,
 
     /// The TLDs whose subdomains resolve — every name under one of these, at any depth.
@@ -184,12 +183,12 @@ pub struct DnsStatus {
     /// rather than inferred from `mode`, because what a client renders is the loss and not the
     /// mechanism.
     ///
-    /// **A list rather than a `bool`, from T45 on.** While nothing could be wired, "does this home
-    /// have wildcards?" had one answer for the whole home. It no longer does: every mechanism there
-    /// is scopes to one TLD, and `.local` is deliberately never wired — so a home can perfectly well
-    /// answer `*.blog.test` by pattern and still need a hosts line for `shop.local`. A boolean would
-    /// have to say `true` and leave a client to work out which half of its sites it applies to,
-    /// which is the derivation this field exists to prevent.
+    /// **A list rather than a `bool`.** Before resolvers could be wired, "does this home have
+    /// wildcards?" had one answer for the whole home. It no longer does: every mechanism there is
+    /// scopes to one TLD, and `.local` is deliberately never wired — so a home can perfectly well
+    /// answer `*.blog.test` by pattern and still need a hosts line for `shop.local`. A boolean
+    /// would have to say `true` and leave a client to work out which half of its sites it applies
+    /// to, which is the derivation this field exists to prevent.
     pub wildcards: Vec<String>,
 
     /// Why this home is not on DNS, phrased for a person, or [`None`] when it is.
@@ -249,21 +248,21 @@ pub struct DaemonVersion {
 pub struct DaemonShutdown {
     /// Stopping every supervised service, in reverse dependency order.
     ///
-    /// [`ServiceWalk::failed`] here is what T18 made possible and nothing else: a process that
-    /// outlived a previous daemon, was adopted by this one, and would not die. **The daemon stops
-    /// anyway** — refusing to shut down because something will not is a machine with no way out of
-    /// the situation — and the next daemon meets that survivor as the crash recovery it already
-    /// performs on every boot. Whoever asked is told, which is the point.
+    /// [`ServiceWalk::failed`] here is what crash recovery made possible and nothing else: a
+    /// process that outlived a previous daemon, was adopted by this one, and would not die. **The
+    /// daemon stops anyway** — refusing to shut down because something will not is a machine with
+    /// no way out of the situation — and the next daemon meets that survivor as the crash recovery
+    /// it already performs on every boot. Whoever asked is told, which is the point.
     pub services: ServiceWalk,
 
     /// Why there was no order to stop them in, on the shutdown where there was none.
     ///
-    /// **The reporting half of T9a's "it is reported, the ordered walk is skipped".** A daemon that
+    /// **The reporting half of "it is reported, the ordered walk is skipped".** A daemon that
     /// cannot say what it declares — an `extension.toml` somebody is in the middle of editing —
     /// still stops, because refusing over a half-typed file would leave them a daemon they can only
     /// kill. What stops the services then is the root token, all at once, the way a signal would
-    /// have: each still stops the way its own spec asks, and what is lost is the *order* — a site is
-    /// no longer guaranteed to go before the database it is serving requests against.
+    /// have: each still stops the way its own spec asks, and what is lost is the *order* — a site
+    /// is no longer guaranteed to go before the database it is serving requests against.
     ///
     /// Without this field that walk goes out empty and [`complete`](ServiceWalk::complete), which on
     /// the wire is **indistinguishable from a home that declares no services at all** — so a client
@@ -272,10 +271,10 @@ pub struct DaemonShutdown {
     /// never sent, which is the business-logic-in-a-client bug `CLAUDE.md` forbids, arriving from
     /// the side a client cannot fix.
     ///
-    /// The wire [`Error`] and not a vocabulary of its own, because this is the same failure the same
-    /// declarations hand `service.list` — the same code, the same message, the same hint about where
-    /// services are written down — and a second spelling of it would be a second thing to keep in
-    /// step with whatever T30's generator can fail with.
+    /// The wire [`Error`] and not a vocabulary of its own, because this is the same failure the
+    /// same declarations hand `service.list` — the same code, the same message, the same hint about
+    /// where services are written down — and a second spelling of it would be a second thing to
+    /// keep in step with whatever the config generator can fail with.
     ///
     /// [`None`] is every ordinary shutdown, and it is absent from the wire rather than `null`: a
     /// daemon built before this field answers byte for byte what one that walked the plan in order
@@ -364,7 +363,7 @@ mod tests {
         assert_eq!(encoded["uptime"], 812);
         assert_eq!(encoded["started_at"], 1_723_000_000_500_i64);
         // Three operations waiting *is* degraded — there is no flag, and a client that renders one
-        // reads this number. See the T40b design, D6.
+        // reads this number. See docs/specs/2026-08-23-t40b-elevation-queue-design.md, D6.
         assert_eq!(encoded["elevation"]["pending"], 3);
         assert_eq!(encoded["elevation"]["elevated"], false);
         // The mechanism is a closed vocabulary on the wire, and the loss it costs is a field of its
@@ -378,7 +377,7 @@ mod tests {
         );
     }
 
-    /// A status with nothing to say about updates says nothing at all — roadmap task **T88**.
+    /// A status with nothing to say about updates says nothing at all.
     ///
     /// Absent rather than `null`, so a daemon that has not checked answers byte for byte what one
     /// built before this field existed answers, and a client renders neither.
@@ -392,10 +391,9 @@ mod tests {
     /// The other half of the same property: a daemon built before [`DaemonStatus::update`] existed
     /// is still readable by a `mix` that knows about it.
     ///
-    /// **Every member added since protocol 1 was frozen now behaves this way** — **T88c** brought
-    /// `elevation` and `dns` into line, and
-    /// [`a_status_from_before_elevation_and_dns_existed_still_reads`] is the floor that keeps the
-    /// next one there.
+    /// **Every member added since protocol 1 was frozen now behaves this way**, `elevation` and
+    /// `dns` included, and [`a_status_from_before_elevation_and_dns_existed_still_reads`] is the
+    /// floor that keeps the next one there.
     #[test]
     fn a_status_from_a_daemon_that_predates_the_field_still_reads() {
         let mut encoded = serde_json::to_value(status()).unwrap();
@@ -405,13 +403,13 @@ mod tests {
         assert_eq!(decoded.update, None);
     }
 
-    /// **The floor of protocol 1**, as the JSON a daemon from before T40b actually sent — roadmap
-    /// task **T88c**.
+    /// **The floor of protocol 1**, as the JSON a daemon from before the elevation queue actually
+    /// sent.
     ///
     /// Every member below is one protocol 1 was frozen with. Everything added since —
-    /// [`DaemonStatus::elevation`] (T40b), [`DaemonStatus::dns`] (T44), [`DaemonStatus::update`]
-    /// (T88) — is absent, which is what such a daemon puts on the wire, and this build reads it as
-    /// [`None`] rather than refusing the answer.
+    /// [`DaemonStatus::elevation`], [`DaemonStatus::dns`], [`DaemonStatus::update`] — is absent,
+    /// which is what such a daemon puts on the wire, and this build reads it as [`None`] rather
+    /// than refusing the answer.
     ///
     /// **This is the guard on ADR 0019 and it is the whole reason the rule holds.** A member added
     /// as required turns this red here, in the crate the rule lives in, rather than in a CLI suite
@@ -534,7 +532,7 @@ mod tests {
         );
     }
 
-    /// T194, Review Focus 5: an older daemon's answer, with no `credentials`, still decodes.
+    /// An older daemon's answer, with no `credentials`, still decodes.
     #[test]
     fn a_status_without_credentials_decodes_as_none() {
         let mut value = serde_json::to_value(status()).unwrap();
@@ -545,7 +543,7 @@ mod tests {
         assert_eq!(decoded.credentials, None);
     }
 
-    /// T194: the store travels as a word a client can match on.
+    /// The store travels as a word a client can match on.
     #[test]
     fn the_credential_store_is_spelled_as_a_word() {
         let with = DaemonStatus {

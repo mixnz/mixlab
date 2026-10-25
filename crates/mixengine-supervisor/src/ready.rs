@@ -17,11 +17,11 @@
 //!
 //! # What a check that cannot be made answers
 //!
-//! [`Error::UnsupportedCheck`] rather than a `todo!()`, per the rule in `CLAUDE.md`, and after
-//! roadmap task T15a there is exactly one shape of it left in this module: a `ReadyCheck` variant
-//! added to `mixengine-proto` since this was last read. An `https://` URL is the other, and the
-//! crate's `http` module is where that is explained — the checks a spec has any business writing
-//! here are on the loopback interface, where there is nothing to encrypt.
+//! [`Error::UnsupportedCheck`] rather than a `todo!()`, per the rule in `CLAUDE.md`, and there is
+//! exactly one shape of it left in this module: a `ReadyCheck` variant added to `mixengine-proto`
+//! since this was last read. An `https://` URL is the other, and the crate's `http` module is where
+//! that is explained — the checks a spec has any business writing here are on the loopback
+//! interface, where there is nothing to encrypt.
 
 use std::net::SocketAddr;
 use std::path::Path;

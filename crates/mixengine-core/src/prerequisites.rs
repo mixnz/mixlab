@@ -1,5 +1,4 @@
-//! The Microsoft Visual C++ Redistributable, fetched from the one address MixEngine lets name it —
-//! roadmap task **T150**, T148 design D6.
+//! The Microsoft Visual C++ Redistributable, fetched from the one address MixEngine lets name it.
 //!
 //! **Written into the build, and nowhere else.** Not the index and not configuration: nothing a
 //! third party can edit chooses the file that is about to ask Windows for administrator rights.

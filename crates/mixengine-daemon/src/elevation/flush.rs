@@ -126,9 +126,9 @@ impl Elevation {
         // the whole reason it is not a line at the bottom.
         let _slot = Released(self);
 
-        // **The helper's own operation first** — the T182b design, D2. The batch is run by the
-        // helper installed when it starts, so anything after a replacement would still be answered
-        // by the old one. A stable sort keeps every other operation in the order it was queued.
+        // **The helper's own operation first.** The batch is run by the helper installed when it
+        // starts, so anything after a replacement would still be answered by the old one. A stable
+        // sort keeps every other operation in the order it was queued.
         put_the_helper_first(&mut waiting);
 
         if handle.is_cancelled() {
@@ -139,14 +139,14 @@ impl Elevation {
         }
 
         // A fresh single-use directory per grant: `response.json`'s existence is the anti-replay
-        // check, so a directory that has been answered is finished (T40/D10).
+        // check, so a directory that has been answered is finished.
         let directory = self.elevate.join(
             mixengine_platform::generate_secret(16)
                 .map_err(|error| mixengine_core::Error::Platform(error).to_wire())?,
         );
 
         // The lower of what this daemon speaks and what the installed helper answered its handshake
-        // with — roadmap task T88a, and `speaks` is where that is decided.
+        // with, and `speaks` is where that is decided.
         let request = mixengine_core::elevation::write_request(
             &directory,
             &self.home,
@@ -175,11 +175,11 @@ impl Elevation {
 
         let answer = self.judge(handle, &request, raised, &waiting).await;
 
-        // **D8.** The machine may have just been wired, and a daemon that only learned that at its
-        // next start would go on writing hosts entries while the user watched their grant do
-        // nothing. Unconditional rather than "only if a resolver operation was in the batch": the
-        // helper is the authority on what it applied, and a re-read costs one file or one registry
-        // key.
+        // **Read again after every grant.** The machine may have just been wired, and a daemon that
+        // only learned that at its next start would go on writing hosts entries while the user
+        // watched their grant do nothing. Unconditional rather than "only if a resolver operation
+        // was in the batch": the helper is the authority on what it applied, and a re-read costs
+        // one file or one registry key.
         self.dns.reprobe(self.host.as_ref());
 
         // And the block a hosts-only home accumulated is now redundant, so it is cleared by the
@@ -187,8 +187,8 @@ impl Elevation {
         // logged and not returned: the grant itself succeeded, and reporting it as failed because
         // the follow-up could not be queued would be a worse answer than the truth.
         //
-        // **Not after an uninstall's grant** (T182b, D6): that prompt takes MixEngine off the
-        // machine, and asking again for the block a site still wants would put back what it removed.
+        // **Not after an uninstall's grant**: that prompt takes MixEngine off the machine, and
+        // asking again for the block a site still wants would put back what it removed.
         if afterwards == Afterwards::Reconcile
             && let Err(error) = self.require_hosts().await
         {
@@ -249,15 +249,15 @@ impl Elevation {
             }
 
             // The helper **ran**. Whether it left a report is the next question, and "no report" is
-            // a real state: T40a is explicit that `Completed` does not promise a file.
+            // a real state: `Completed` does not promise a file.
             ElevationOutcome::Completed => {
                 handle.progress(70, "reading what the helper did").await;
 
                 let report = match mixengine_core::elevation::read_report(request) {
                     Ok(report) => report,
                     // What the helper said is the only account of why it left nothing — a refusal
-                    // writes no file beside a request it does not trust (T166, D6). `warn`, because
-                    // until now it reached nothing above `debug`.
+                    // writes no file beside a request it does not trust. `warn`, because until now
+                    // it reached nothing above `debug`.
                     Err(mixengine_core::Error::Elevation(
                         ElevationError::ElevateReportMissing { path, .. },
                     )) => {
@@ -289,7 +289,7 @@ impl Elevation {
                     .map_err(|error| error.to_wire())?;
 
                 // What this home now holds, so the producer can tell a plan already applied from a
-                // new one — roadmap task T180.
+                // new one.
                 self.remember_the_firewall(waiting, &results).await;
 
                 for (id, reason) in &settled.refused {
@@ -324,17 +324,17 @@ impl Elevation {
 
                 // **Every client that drew the list is told it shrank**, not only the one whose
                 // "Allow" started this grant: the daemon raises a prompt of its own after an update
-                // changed the helper (T182b, D2), while the window already shows the same row.
+                // changed the helper, while the window already shows the same row.
                 if (settled.applied > 0 || !settled.refused.is_empty())
                     && let Err(error) = self.announce_what_is_left().await
                 {
                     tracing::warn!(%error, "could not announce what is left in the queue");
                 }
 
-                // **The sentences, named by the operation they are about** — roadmap task
-                // **T147**. Composed here rather than by a client: what an operation is called and
-                // what it said are both the daemon's to know, and a client joining the two would be
-                // a second place the wording lives.
+                // **The sentences, named by the operation they are about.** Composed here rather
+                // than by a client: what an operation is called and what it said are both the
+                // daemon's to know, and a client joining the two would be a second place the
+                // wording lives.
                 problems = settled
                     .refused
                     .iter()

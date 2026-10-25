@@ -120,7 +120,7 @@ function commit(list: Environment[]): void {
 }
 
 /** Writes whatever is still waiting, now, and rejects when the write fails — what sync waits on,
- *  since it agrees only on what the disk holds (T178a, L5). */
+ *  since it agrees only on what the disk holds. */
 export function saveEnvironmentsNow(): Promise<void> {
   if (timer !== null) {
     window.clearTimeout(timer);
@@ -171,7 +171,7 @@ export function environmentsReady(): Promise<void> {
   return shared.ready();
 }
 
-/** The list as it stands, for sync to read (T177d). */
+/** The list as it stands, for sync to read. */
 export function currentEnvironments(): Environment[] {
   return shared.get();
 }

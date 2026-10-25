@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// `daemon.doctor_repair` on a fresh home — roadmap task **T47b**.
+/// `daemon.doctor_repair` on a fresh home.
 ///
 /// **What is asserted is the shape and the silence, not a cure.** A home a moment old has nothing
 /// this build repairs *except* whatever the machine running the suite brings with it — a reserved
@@ -48,7 +48,7 @@ async fn a_repair_answers_a_record_of_what_it_did() {
     );
 }
 
-/// `daemon.bundle` on a fresh home — roadmap task **T93**.
+/// `daemon.bundle` on a fresh home.
 ///
 /// **What is asserted is the archive, never the machine.** A home a moment old on a CI runner has
 /// whatever that runner brings with it, so nothing here reads the doctor report inside the bundle —
@@ -90,7 +90,7 @@ async fn a_bundle_holds_the_members_this_build_declares() {
 
     // **A home a moment old has never crashed**, so the one thing this can assert about the member
     // without reading the machine is that it is an array and that it is empty — which is the answer
-    // "nothing has gone wrong here" rather than a member nobody wrote. Roadmap task **T91**.
+    // "nothing has gone wrong here" rather than a member nobody wrote.
     let mut crashes = String::new();
     std::io::Read::read_to_string(
         &mut archive
@@ -125,7 +125,7 @@ async fn a_bundle_holds_the_members_this_build_declares() {
     }
 }
 
-/// `daemon.doctor` on a fresh home — roadmap task **T47a**.
+/// `daemon.doctor` on a fresh home.
 ///
 /// **The assertion is that every check appears**, whatever it answered. A doctor that dropped the
 /// checks it had nothing to say about would read as a clean bill of health on the system where it
@@ -178,8 +178,7 @@ async fn the_doctor_reports_every_check_and_none_of_them_is_missing() {
     );
 }
 
-/// The two checks that reach outside the daemon, and the shape each takes here — roadmap task
-/// **T47a**.
+/// The two checks that reach outside the daemon, and the shape each takes here.
 #[tokio::test]
 async fn the_doctor_reads_the_domains_and_says_what_it_could_not_examine() {
     let daemon = Daemon::start().await;
@@ -232,11 +231,11 @@ async fn the_doctor_reads_the_domains_and_says_what_it_could_not_examine() {
 
 /// A started daemon has a certificate authority, before anything has asked for one.
 ///
-/// **The ordering claim of the T48 design's D4, proved where it is made.** A unit test calling
-/// `ensure` proves the function works; only a daemon started over an empty home proves that
-/// something calls it at start — which is what lets T49 put the trust-store install in the same
-/// single first-run elevation batch as the resolver and the port grant. Asked over the socket and
-/// then checked on disk, because the two are different claims: the second is where T49 and T50 will
+/// **The authority is made at start, proved where that is claimed.** A unit test calling `ensure`
+/// proves the function works; only a daemon started over an empty home proves that something calls
+/// it at start — which is what puts the trust-store install in the same single first-run elevation
+/// batch as the resolver and the port grant. Asked over the socket and then checked on disk,
+/// because the two are different claims: the second is where the trust store and the leaf issuer
 /// look.
 #[tokio::test]
 async fn a_started_daemon_has_an_authority_before_anything_asks_for_one() {
@@ -278,7 +277,8 @@ async fn a_started_daemon_has_an_authority_before_anything_asks_for_one() {
         "the status carried a private key: {answer}"
     );
 
-    // On disk, where T49 installs from and T50 signs with. The RPC answering does not prove this.
+    // On disk, where the trust store installs from and the leaf issuer signs with. The RPC
+    // answering does not prove this.
     let root = mixengine_platform::paths::in_full(daemon.home.path());
     let paths = Paths::new(root, &PathOverrides::default());
 
@@ -311,9 +311,8 @@ domain_pattern = "{project}.test"
 command = "printf hello > made.txt"
 "#;
 
-/// **Import is the only thing that can produce a blueprint this machine did not write** — roadmap
-/// task **T78a**, its design's D3. Nothing vouched for this one, so it lands untrusted and the
-/// listing says so.
+/// **Import is the only thing that can produce a blueprint this machine did not write.** Nothing
+/// vouched for this one, so it lands untrusted and the listing says so.
 #[tokio::test]
 async fn an_imported_blueprint_without_a_signature_is_untrusted() {
     let daemon = Daemon::start().await;
@@ -334,8 +333,8 @@ async fn an_imported_blueprint_without_a_signature_is_untrusted() {
     assert_eq!(answer["result"]["trusted"], false, "{answer}");
     assert_eq!(answer["result"]["slug"], "borrowed", "{answer}");
 
-    // **Which kind of untrusted** — roadmap task **T79b**. Nothing came with this one, and that is
-    // not the same event as a signature that did not verify.
+    // **Which kind of untrusted.** Nothing came with this one, and that is not the same event as a
+    // signature that did not verify.
     assert_eq!(answer["result"]["signature"], "missing", "{answer}");
 
     let listed = daemon
@@ -348,9 +347,9 @@ async fn an_imported_blueprint_without_a_signature_is_untrusted() {
     );
 }
 
-/// **A signature that did not verify is not the same event as no signature at all** — roadmap task
-/// **T79b**. Both land untrusted, and only this one is what the gallery key exists to catch: a
-/// manifest edited after somebody signed it.
+/// **A signature that did not verify is not the same event as no signature at all.** Both land
+/// untrusted, and only this one is what the gallery key exists to catch: a manifest edited after
+/// somebody signed it.
 ///
 /// The listing is asserted as well as the answer, because that is the half that proves the reason
 /// is a **column**. A test reading only what `import` returned would stay green with the migration
@@ -421,10 +420,10 @@ async fn a_file_that_is_not_a_manifest_is_refused() {
     );
 }
 
-/// **A gallery file imported by hand is filed under its filename** — roadmap task **T79a**, its
-/// design's D10. `[blueprint] name` is display text: the six say `Laravel`, `Next.js`, `Static
-/// site`, and `validated_slug` takes none of them. Before D10 this import failed with
-/// `InvalidBlueprintName`, so the signed publication had nothing to land on.
+/// **A gallery file imported by hand is filed under its filename.** `[blueprint] name` is display
+/// text: the six say `Laravel`, `Next.js`, `Static site`, and `validated_slug` takes none of them.
+/// Before an import was filed by its filename, it failed with `InvalidBlueprintName`, so the signed
+/// publication had nothing to land on.
 ///
 /// Every entry rather than one, because the two names that break every rule — a dot and a space —
 /// are only reached by walking the whole gallery. `overwrite` because a seeded home already holds

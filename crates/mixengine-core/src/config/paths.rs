@@ -1,5 +1,5 @@
 //! `[paths]`: where the directories that grow without bound are relocated to, and how a relocation
-//! is written and checked — roadmap task **T143**.
+//! is written and checked.
 
 use std::io::Write as _;
 use std::path::{Component, Path, PathBuf, Prefix};
@@ -34,7 +34,7 @@ pub struct PathOverrides {
 impl PathOverrides {
     /// The four keys and what each is set to, in the order the template lists them.
     ///
-    /// **One list, walked by everything that has to treat the four alike** — roadmap task **T143**.
+    /// **One list, walked by everything that has to treat the four alike.**
     /// The alternative is four copies of the same `match`, and the fifth key somebody adds later
     /// reaching three of them.
     #[must_use]
@@ -48,7 +48,7 @@ impl PathOverrides {
     }
 }
 
-/// What a caller asked to relocate — roadmap task **T143**.
+/// What a caller asked to relocate.
 ///
 /// [`PathOverrides`]'s shape without its serde, because the two are different statements: that one
 /// is *what the file says*, and this is *what somebody just asked for*. A key left [`None`] here is
@@ -110,7 +110,7 @@ impl RequestedPaths {
     }
 }
 
-/// Set the named keys in `[paths]`, leaving every comment where it was — roadmap task **T143**.
+/// Set the named keys in `[paths]`, leaving every comment where it was.
 ///
 /// **A `toml_edit` document and not a re-serialised [`Config`]**, for the reason
 /// [`crate::manifest::write`] gives about a project manifest and which holds twice over here: this
@@ -195,7 +195,7 @@ pub fn set_paths(path: &Path, requested: &RequestedPaths) -> Result<Vec<&'static
     // would be written and the file would come back without them.
     table.set_implicit(false);
 
-    // Written in this system's spelling (T191); `toml_edit` escapes the backslashes a person
+    // Written in this system's spelling; `toml_edit` escapes the backslashes a person
     // writing the file by hand has to think about.
     for (key, asked) in requested.entries() {
         if let Some(asked) = asked {
@@ -281,12 +281,12 @@ where
         check_relocation(candidate).map_err(serde::de::Error::custom)?;
     }
 
-    // Respelled once it has passed (T191): the template advises `/` for TOML's sake, and a path
+    // Respelled once it has passed: the template advises `/` for TOML's sake, and a path
     // built under `D:/bulk` would otherwise read `D:/bulk\mariadb` everywhere it is shown.
     Ok(path.map(|path| crate::paths::native(&path)))
 }
 
-/// The rule [`relocation`] enforces, as a function anything may call — roadmap task **T143**.
+/// The rule [`relocation`] enforces, as a function anything may call.
 ///
 /// **Lifted out of the deserializer rather than copied beside it.** [`set_paths`] writes the same
 /// four keys the file declares, and two lists of refused values are two lists that disagree the

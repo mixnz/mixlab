@@ -2,8 +2,8 @@
 
 use super::*;
 
-/// **D6.** Replacing the list is how a domain is removed, and the deletes run before the
-/// inserts so a domain can move from one site to another in two calls.
+/// Replacing the list is how a domain is removed, and the deletes run before the inserts so a
+/// domain can move from one site to another in two calls.
 #[tokio::test]
 async fn a_domain_moves_between_sites_because_the_deletes_come_first() {
     let (_temp, store, project) = home().await;
@@ -157,10 +157,10 @@ async fn a_kinds_payload_survives_the_row_it_is_stored_in() {
     }
 }
 
-/// The name a phone resolves — roadmap task **T75**.
+/// The name a phone resolves.
 ///
 /// **One label before `.local`.** Measured on Windows: `blog-mixengine.local` resolves and
-/// `blog.mixengine.local` does not, same responder, same interface. The T75 design, D1.
+/// `blog.mixengine.local` does not, same responder, same interface.
 #[test]
 fn the_shared_name_is_one_label_under_local() {
     assert_eq!(
@@ -240,7 +240,7 @@ fn an_unshared_namesake_does_not_take_the_name() {
 }
 
 /// **A site never collides with itself**, which is what makes re-sharing and `site.update`
-/// idempotent rather than a refusal — the T75 design, D2.
+/// idempotent rather than a refusal.
 #[test]
 fn a_site_does_not_take_its_own_name() {
     let records = vec![a_namesake(1, "blog.test", true)];
@@ -248,8 +248,8 @@ fn a_site_does_not_take_its_own_name() {
     assert_eq!(name_taken(&records, 1, "blog-mixengine.local"), None);
 }
 
-/// **T81b, D1 and D3.** A site owned by an extension has no project, is reachable by its
-/// extension, is invisible to a project's listing, and goes when its extension goes.
+/// A site owned by an extension has no project, is reachable by its extension, is invisible to a
+/// project's listing, and goes when its extension goes.
 #[tokio::test]
 async fn an_extension_owns_a_site_the_way_a_project_does() {
     let (_temp, store, project) = home().await;
@@ -308,8 +308,8 @@ async fn an_extension_owns_a_site_the_way_a_project_does() {
     );
 }
 
-/// **T81b, D9.** The extensions whose site is frozen on a pool, for `runtime.uninstall`'s
-/// refusal — and a project's site on the same pool is not one of them.
+/// The extensions whose site is frozen on a pool, for `runtime.uninstall`'s refusal — and a
+/// project's site on the same pool is not one of them.
 #[tokio::test]
 async fn frozen_on_names_the_extensions_a_pool_serves() {
     let (_temp, store, project) = home().await;

@@ -1,7 +1,7 @@
 import type { DeclaredSite } from "@mixengine/api";
 
 /** A `DeclaredSite` as a row of the project panel. Whether Add is offered is read off the state
- *  the daemon computed, never worked out here (T204). */
+ *  the daemon computed, never worked out here. */
 export interface DeclaredSiteRow {
   domain: string;
   aliases: string[];

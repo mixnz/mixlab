@@ -1,4 +1,4 @@
-//! The service a runtime install creates for itself — roadmap task **T32**.
+//! The service a runtime install creates for itself.
 //!
 //! Nobody calls `service.create` for a pool. `docs/features/runtime-versions.md` decided this
 //! before there was a pool to create: PHP's post-install hook makes the `php-fpm@<version>` record,
@@ -6,8 +6,8 @@
 //! at boot as well as after an install** — which is what gives a PHP installed before this task a
 //! pool without a data migration, and what repairs a home whose row was deleted by hand.
 //!
-//! **The port a pool needs is no longer this module's arithmetic** — roadmap task **T34c**. It used
-//! to keep an allocator of its own that walked the `services` table from 9000 and deliberately
+//! **The port a pool needs is no longer this module's arithmetic.** It used to keep an allocator
+//! of its own that walked the `services` table from 9000 and deliberately
 //! asked the machine nothing, on the reasoning that a port free at install time may be taken by the
 //! time the pool starts. That is still true and is no longer the whole story: what the two
 //! databases forced is that a number this home writes down while an XAMPP is listening on it is a
@@ -63,11 +63,10 @@ pub async fn ensure(
         // rather than one per version, because a boot on a home with six PHPs should not be six
         // round trips to answer "nothing to do".
         //
-        // **The *shared* pool, which is the one whose instance is the version** — roadmap task
-        // **T82a**, its design's D6. `NOT EXISTS (… WHERE s.runtime_install_id = r.id)` was enough
-        // while a runtime had at most one service; a `web-app` extension's pool now satisfies it
-        // while being no use at all to a project site, and would stop this repair from ever making
-        // the shared one again.
+        // **The *shared* pool, which is the one whose instance is the version.**
+        // `NOT EXISTS (… WHERE s.runtime_install_id = r.id)` was enough while a runtime had at most
+        // one service; a `web-app` extension's pool now satisfies it while being no use at all to a
+        // project site, and would stop this repair from ever making the shared one again.
         let missing = sqlx::query_scalar!(
             "SELECT r.version
              FROM runtime_installs r
@@ -142,13 +141,12 @@ pub async fn ensure(
 
 /// Every service that runs out of one installed runtime, in id order.
 ///
-/// **Plural since roadmap task T82a, and the reason is that a runtime now has more than one pool.**
-/// A `web-app` extension owns `php-fpm@<extension-id>` on the same `runtime_installs` row as the
-/// shared `php-fpm@<version>` (that task's D1), so a lookup answering one of them answers an
-/// arbitrary one — and both callers want all of them. `runtime.uninstall` refuses over a pool that
-/// is running and deletes the stopped ones; the php-extension toggle reloads whatever reads the ini
-/// set it just rewrote, which is every pool of that version because `PHP_INI_SCAN_DIR` is per
-/// runtime.
+/// **Plural, because a runtime can have more than one pool.** A `web-app` extension owns
+/// `php-fpm@<extension-id>` on the same `runtime_installs` row as the shared `php-fpm@<version>`,
+/// so a lookup answering one of them answers an arbitrary one — and both callers want all of them.
+/// `runtime.uninstall` refuses over a pool that is running and deletes the stopped ones; the
+/// php-extension toggle reloads whatever reads the ini set it just rewrote, which is every pool of
+/// that version because `PHP_INI_SCAN_DIR` is per runtime.
 ///
 /// **One function and not two.** A singular `of` beside this, answering "the shared one", would be a
 /// near-identical lookup for a caller to reach for by mistake — and what a mistake costs here is a
@@ -222,8 +220,8 @@ mod tests {
     /// Every installed PHP ends up with a pool, and asking twice creates nothing.
     ///
     /// **Idempotence is the whole design**, not a nicety: this runs at every boot as well as after
-    /// every install, which is what gives a PHP installed before T32 a pool without a data migration
-    /// and repairs a home whose row somebody deleted by hand.
+    /// every install, which is what gives a PHP installed before pools existed one without a data
+    /// migration and repairs a home whose row somebody deleted by hand.
     #[tokio::test]
     async fn every_installed_php_gets_one_pool_and_only_one() {
         let (_home, store) = store().await;
@@ -249,9 +247,9 @@ mod tests {
 
     /// A pool on a system that listens on TCP is given a port when it is created, and keeps it.
     ///
-    /// The number itself is [`ports::allocate`](super::ports::allocate)'s since T34c; what this
-    /// asserts is the half that belongs here — that a pool asks for one at all on the systems where
-    /// it listens on TCP, and asks for none where it listens on a socket.
+    /// The number itself is [`ports::allocate`](super::ports::allocate)'s; what this asserts is the
+    /// half that belongs here — that a pool asks for one at all on the systems where it listens on
+    /// TCP, and asks for none where it listens on a socket.
     ///
     /// Allocated here rather than derived from the version, because two PHPs whose versions differ
     /// in a digit nobody looks at would otherwise collide — and written into the row rather than
@@ -286,8 +284,7 @@ mod tests {
         }
     }
 
-    /// **Every pool a runtime is running, found by the pair `runtime.uninstall` has in hand** —
-    /// roadmap task **T82a**, its design's D6.
+    /// **Every pool a runtime is running, found by the pair `runtime.uninstall` has in hand.**
     ///
     /// A runtime used to have at most one, and the lookup answered one. A `web-app` extension owns a
     /// second on the same install, and a caller shown one of two would delete the shared pool, leave
@@ -328,8 +325,7 @@ mod tests {
         );
     }
 
-    /// **A runtime holding only an extension's pool still gets the shared one** — roadmap task
-    /// **T82a**, D6.
+    /// **A runtime holding only an extension's pool still gets the shared one.**
     ///
     /// The predicate used to be "any service on this runtime", which an extension's pool satisfies
     /// while being no use at all to a project site: a home whose shared pool somebody deleted would

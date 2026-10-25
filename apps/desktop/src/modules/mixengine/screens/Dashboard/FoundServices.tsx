@@ -9,7 +9,7 @@ import styles from "./FoundServices.module.css";
 import FoundServicesDialog from "./FoundServicesDialog";
 
 /**
- * Service data an earlier install left under `data/` — roadmap task T182g.
+ * Service data an earlier install left under `data/`.
  *
  * Drawn only while `service.found` answers rows, and gone once nothing is left, like `PathNudge`:
  * no dismiss button and no stored flag. **Nothing starts on its own**: an adopted service comes back

@@ -65,8 +65,6 @@ pub(crate) enum JobCommand {
     /// Only a job that runs another program prints anything. Today that is an apply running a
     /// blueprint's `[scaffold]` command; other jobs report progress and a result, and show nothing
     /// here. The lines stay in memory while the daemon keeps the job, so read them while it runs.
-    //
-    // Roadmap task T78a.
     Logs {
         /// The job, as `mix job list` numbers them.
         #[arg(value_name = "JOB")]
@@ -122,8 +120,8 @@ pub(crate) async fn job(
             false,
         ),
 
-        // **The one job command that is not a call** — roadmap task **T78a**: output travels on its
-        // own stream, never on the event stream and never as a method's answer (ADR 0009).
+        // **The one job command that is not a call**: output travels on its own stream, never on
+        // the event stream and never as a method's answer (ADR 0009).
         JobCommand::Logs { job, follow, lines } => {
             return logs(&mut client, &format!("logs/job/{job}"), lines, follow, json).await;
         }

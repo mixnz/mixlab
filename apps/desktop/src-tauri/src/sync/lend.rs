@@ -44,7 +44,7 @@ pub struct Incoming {
 }
 
 /// What a pull brought, opened and weighed: what the module applies, what to agree on once it has,
-/// and — on the page that ends a resync — the records to forget (T178b, M2).
+/// and — on the page that ends a resync — the records to forget.
 #[derive(Debug, Default)]
 pub struct Opened {
     pub changes: Incoming,
@@ -237,8 +237,8 @@ pub async fn outgoing(
     Ok((changes, agreements))
 }
 
-/// After a push: agree on exactly what the server wrote (T178c, C2). A conflict lost, an entry
-/// refused and a change never sent are not agreed, and keep their stamps.
+/// After a push: agree on exactly what the server wrote. A conflict lost, an entry refused and a
+/// change never sent are not agreed, and keep their stamps.
 pub async fn settle_pushed(
     store: &Store,
     keys: &Keys,
@@ -277,12 +277,11 @@ pub async fn settle(
 
 /// After a module has written what a pull or a lost conflict brought: record each record's version,
 /// then agree on what it says — **except what the module says it skipped**, whose version is still
-/// the server's but whose content this machine does not hold (T178a, L4). **Only after the
-/// write** — see the module comment; the engine leaves a lost conflict unrecorded for exactly this
-/// call.
+/// the server's but whose content this machine does not hold. **Only after the write** — see the
+/// module comment; the engine leaves a lost conflict unrecorded for exactly this call.
 ///
 /// A skipped record is owed to this machine under `version`, the app that skipped it, so the next
-/// release asks for it again (T178d).
+/// release asks for it again.
 pub async fn land(
     store: &Store,
     keys: &Keys,
@@ -309,13 +308,12 @@ pub async fn land(
 /// Pulled records, opened and weighed against what this machine has not landed (D4).
 ///
 /// **A record whose content is already agreed is not news** and never reaches the module: this
-/// machine's own push coming back, above all. A record another machine changed meets this
-/// machine's stamp, if it has one, and D4 decides which survives; the loser here is left alone,
-/// and its version remembered on landing, so the next push replaces it without a `409`. A
-/// tombstone removes the local id this machine agreed on, unless a later change here beats it.
-/// On the page that ends a resync, every agreed live item the resync never met is removed —
-/// unless a change stamped here beats a deletion that old — and named in `unmet` for the store to
-/// forget (T178b, M2).
+/// machine's own push coming back, above all. A record another machine changed meets this machine's
+/// stamp, if it has one, and D4 decides which survives; the loser here is left alone, and its
+/// version remembered on landing, so the next push replaces it without a `409`. A tombstone removes
+/// the local id this machine agreed on, unless a later change here beats it. On the page that ends
+/// a resync, every agreed live item the resync never met is removed — unless a change stamped here
+/// beats a deletion that old — and named in `unmet` for the store to forget.
 /// **An opened record whose own id does not hash to its address is refused**: the AAD binds the
 /// address, and this binds the id inside it, so a record cannot claim to be another item.
 pub async fn incoming(
@@ -755,7 +753,7 @@ mod tests {
     async fn a_pulled_copy_of_what_is_agreed_is_not_handed_to_the_module() {
         let (store, keys) = (Store::in_memory("s").await.unwrap(), keys());
         let mine = agreed_here(&store, &keys, json!("same"), 1).await;
-        // Edited since, not yet pushed: the echo of the earlier push must not write over it (L3).
+        // Edited since, not yet pushed: the echo of the earlier push must not write over it.
         notice(&store, &keys, "c", &[item("1", json!("edited"))], 20)
             .await
             .unwrap();
@@ -925,7 +923,7 @@ mod tests {
         assert!(opened.unmet.is_empty());
     }
 
-    /// C2: a change the server refused is not agreed, and keeps its stamp for the next push.
+    /// A change the server refused is not agreed, and keeps its stamp for the next push.
     #[tokio::test]
     async fn a_refused_change_is_not_agreed() {
         let (store, keys) = (Store::in_memory("s").await.unwrap(), keys());

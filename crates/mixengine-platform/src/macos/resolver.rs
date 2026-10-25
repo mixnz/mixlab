@@ -6,15 +6,16 @@
 //! for resolved the moment the file existed. Every other name on the machine is untouched, and the
 //! wiring reads back to an ordinary user because the file is world-readable.
 //!
-//! **A file that is not ours is never replaced** — the T45 design, D5. `/etc/resolver/test` may
-//! already belong to somebody's VPN or corporate configuration, and replacing it silently is the
-//! failure T41's marker block exists to prevent. The refusal is the same shape: say which file, and
-//! stop.
+//! **A file that is not ours is never replaced.** `/etc/resolver/test` may already belong to
+//! somebody's VPN or corporate configuration, and replacing it silently is the failure the hosts
+//! file's marker block exists to prevent. The refusal is the same shape: say which file, and stop.
 //!
 //! One thing the measurement turned up that is worth knowing before reading a log: macOS also asks
 //! this server for `_dns.resolver.arpa` type 64 (SVCB), which is Discovery of Designated Resolvers.
-//! That name is outside every managed TLD, so T44's server answers `REFUSED`, no encrypted
-//! transport is discovered, and nothing else happens.
+//! That name is outside every managed TLD, so MixEngine's DNS server answers `REFUSED`, no
+//! encrypted transport is discovered, and nothing else happens.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-23-t45-resolver-wiring-design.md`.
 
 #[cfg(feature = "host")]
 use std::path::Path;
@@ -76,8 +77,8 @@ fn wired_under(root: &Path, tlds: &[&str], port: u16) -> Vec<String> {
 
 /// Write one marked file per TLD in the plan, and remove the marked ones it does not name.
 ///
-/// **Whole state** — the T45 design, D4 — so a plan that drops a TLD takes its file away, and a
-/// plan identical to what is on disk is [`Change::Unchanged`](crate::resolver::Change::Unchanged).
+/// **Whole state**, so a plan that drops a TLD takes its file away, and a plan identical to what is
+/// on disk is [`Change::Unchanged`](crate::resolver::Change::Unchanged).
 ///
 /// # Errors
 ///

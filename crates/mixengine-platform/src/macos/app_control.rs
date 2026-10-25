@@ -1,8 +1,9 @@
-//! macOS: no such mechanism — roadmap task **T94**.
+//! macOS: no such mechanism.
 //!
 //! Gatekeeper is not this question in another accent. It gates a *quarantined download* once, and
-//! T86a's **M5** measured that nothing MixEngine's package installs carries `com.apple.quarantine`
-//! afterwards — so there is no policy here that judges every image load, and nothing to report.
+//! it was measured on a Mac that nothing MixEngine's package installs carries
+//! `com.apple.quarantine` afterwards — so there is no policy here that judges every image load, and
+//! nothing to report.
 
 use crate::{AppControl, AppControlState, Error, Result};
 

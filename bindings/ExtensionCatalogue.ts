@@ -10,7 +10,7 @@ export type ExtensionCatalogue = {
  */
 extensions: Array<ExtensionOffer>, 
 /**
- * How many entries it could not — roadmap task **T81**, the design's D4.
+ * How many entries it could not.
  *
  * **Said rather than swallowed.** An extension missing from a listing is one somebody goes
  * looking for in the wrong place, and "your MixEngine is older than this entry" is an answer

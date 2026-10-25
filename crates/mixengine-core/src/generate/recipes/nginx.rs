@@ -1,4 +1,4 @@
-//! Nginx: the alternative front end — roadmap task **T37**.
+//! Nginx: the alternative front end.
 //!
 //! The second of the two programs `docs/features/services.md` will let a site be reached through,
 //! and the one that makes "exactly one active front end" a rule somebody can break — which is why
@@ -11,8 +11,9 @@
 //!   version of that, it is a different question: the master process holds the listening socket, so
 //!   a connection is accepted in exactly the same way when every worker has died. A request that
 //!   comes back is one a worker reading this configuration served.
-//! - **`nginx -t` judges the rendering before it is installed**, over the staging directory T30
-//!   builds, exactly as `caddy validate` does. What makes the two of them work differently is where
+//! - **`nginx -t` judges the rendering before it is installed**, over the staging directory the
+//!   generator builds, exactly as `caddy validate` does. What makes the two of them work
+//!   differently is where
 //!   an `include` resolves: Caddy's `import` is relative to the file, nginx's is relative to the
 //!   **prefix** — so `-p` is passed in both places, pointing at the staging directory while the
 //!   configuration is being judged and at `etc/<service-id>/` once it is installed.
@@ -24,20 +25,19 @@
 //!
 //! # Judged against the real server
 //!
-//! `crates/mixengine-cli/tests/nginx.rs` runs the whole of that against a real nginx, and it runs it
-//! through the same harness [`caddy`](super::caddy)'s suite does — which is the parity half of T37.
-//! Two findings are in the template beside the lines they explain: forward-slashed quoted paths, and
-//! five temp directories that are children of one that exists.
+//! `crates/mixengine-cli/tests/nginx.rs` runs the whole of that against a real nginx, and it runs
+//! it through the same harness [`caddy`](super::caddy)'s suite does — which is what holds the two
+//! front ends to parity. Two findings are in the template beside the lines they explain:
+//! forward-slashed quoted paths, and five temp directories that are children of one that exists.
 //!
-//! # What this recipe deliberately does not do
+//! # Where a site's listeners are
 //!
-//! **It renders no site, and listens on nothing a site would be reached on.** `include sites/*.conf`
-//! matches nothing until Phase 4 (T39, T43), and the row's own port is written into no `listen` at
-//! all: binding 80 needs the port grant T42 has not built on macOS and Linux, and a front end
-//! holding a port it serves nothing on is worse than one that has not taken it yet. Caddy says the
-//! same thing by writing `http_port` into a global block and binding neither.
+//! **`nginx.conf` itself listens on nothing a site would be reached on.** Every `listen` a site
+//! needs is in that site's own file under `sites/`, rendered by [`Recipe::sites`], so a home with
+//! no site holds no port it would serve nothing on. Caddy says the same thing by writing
+//! `http_port` into a global block and binding neither until a site asks.
 //!
-//! **It terminates no TLS.** Phase 5 owns the certificate, and a `listen ... ssl` with no
+//! **A site terminates TLS only with a certificate on disk.** A `listen ... ssl` with no
 //! certificate is a configuration nginx refuses outright rather than one it starts without.
 //!
 //! [`Role`]: crate::generate::recipe::Role
@@ -71,7 +71,7 @@ const CONFIG_FILE: &str = "nginx.conf";
 const MIME_TYPES: &str = "mime.types";
 
 /// The other file out of the archive a generated configuration includes: what a `fastcgi_pass` to
-/// PHP-FPM needs, and the reason MixEngine renders an nginx configuration at all — D6.
+/// PHP-FPM needs, and the reason MixEngine renders an nginx configuration at all.
 ///
 /// `mixengine-packages`' `tools/nginx.py` publishes it under `CONF_FILES` in as many words.
 const FASTCGI_PARAMS: &str = "fastcgi_params";
@@ -83,18 +83,18 @@ const SITE: &str = include_str!("nginx/site.conf");
 /// `nginx.conf`'s `include sites/*.conf;` as well.
 const SITES: &str = "sites";
 
-/// The directory an installed extension's `[[recipe.front_end]]` goes in — roadmap task **T81c**.
+/// The directory an installed extension's `[[recipe.front_end]]` goes in.
 ///
 /// Swept for [`SITES`]' reason: an uninstalled extension's fragment has to leave with it. The name
 /// is in `nginx.conf`'s `include extensions/*.conf;` as well.
 const EXTENSIONS: &str = "extensions";
 
 /// Where this home's public certificate authority is rendered, relative to this service's
-/// configuration — roadmap task **T75**.
+/// configuration.
 ///
 /// **A directory holding exactly one file.** `certs/ca/` holds the signing key beside the
 /// certificate, so it is never a directory a front end is pointed at; a copy of the public half is
-/// what a phone downloads. The T75 design, D9.
+/// what a phone downloads.
 const AUTHORITY: &str = "public/ca.crt";
 
 /// The directory of [`AUTHORITY`], which is what a front end is pointed at.
@@ -104,7 +104,7 @@ const AUTHORITY: &str = "public/ca.crt";
 /// place this layout is decided.
 const AUTHORITY_DIR: &str = "public";
 
-/// Where the page a site with nothing behind it answers with is rendered — roadmap task **T124**.
+/// Where the page a site with nothing behind it answers with is rendered.
 ///
 /// **A directory of its own, and never [`AUTHORITY_DIR`].** That one holds this home's authority and
 /// is asserted to hold exactly one file, because the front end is pointed at the *directory* and so
@@ -121,7 +121,7 @@ const WELCOME_DIR: &str = "welcome";
 /// to fall through to — this is that default, written down, and it is the same 80 Caddy would use.
 const DEFAULT_HTTP_PORT: u16 = 80;
 
-/// The port a site with a certificate is served on over TLS — roadmap task **T51**.
+/// The port a site with a certificate is served on over TLS.
 ///
 /// **A setting and not a constant**, which was not the first design: nginx has no global listen, so
 /// a constant looked like enough. It is not. This is the first port a front end binds that no test
@@ -259,12 +259,12 @@ impl Recipe for Nginx {
         }]
     }
 
-    /// Exactly `sites/`, and only because this recipe is a front end — D4.
+    /// Exactly `sites/`, and only because this recipe is a front end.
     fn swept(&self) -> &'static [&'static str] {
         &[SITES, EXTENSIONS, WELCOME_DIR]
     }
 
-    /// One file per site, named after its primary domain — D12.
+    /// One file per site, named after its primary domain.
     ///
     /// Rendered into the set `nginx.conf`'s own `include sites/*.conf;` picks up, which resolves
     /// against the prefix — the staging directory while `nginx -t` is judging it, and `etc/nginx/`
@@ -329,18 +329,18 @@ impl Recipe for Nginx {
                         listening(&shared.address.to_string(), context.bound(https_port))
                     }),
                     mdns: site.shared.as_ref().and_then(|shared| shared.name.clone()),
-                    // **Only for a shared site, which is where "served only while sharing is on"
-                    // is actually enforced** - roadmap task T75. The rendered copy's directory,
-                    // absolute, and [`None`] on a home that has no authority to serve.
+                    // **Only for a shared site, which is where "served only while sharing is on" is
+                    // actually enforced.** The rendered copy's directory, absolute, and [`None`] on
+                    // a home that has no authority to serve.
                     authority: site
                         .shared
                         .as_ref()
                         .and(context.authority())
                         .map(|_| forward_slashed(&context.config(AUTHORITY_DIR))),
 
-                    // **Every site gets one** — roadmap task T124. Unlike `authority` above this is
-                    // never conditional on the site: what a page is *for* is a site nobody has put
-                    // anything into yet, which is every site at the moment it is made.
+                    // **Every site gets one.** Unlike `authority` above this is never conditional
+                    // on the site: what a page is *for* is a site nobody has put anything into yet,
+                    // which is every site at the moment it is made.
                     welcome: context
                         .welcome()
                         .then(|| forward_slashed(&context.config(WELCOME_DIR))),
@@ -360,14 +360,14 @@ impl Recipe for Nginx {
             })
             .collect::<Result<Vec<Document>>>()?;
 
-        // **Every site's welcome page, after every site's configuration** — roadmap task T124.
+        // **Every site's welcome page, after every site's configuration.**
         // Appended in a second pass rather than returned two at a time from the map above, so that
         // `documents[n]` goes on meaning the nth site: the authority below already depends on that
         // and says so, and interleaving would have made it depend on the stride instead.
         //
-        // **Nothing at all on a home that turned it off** (D6), which is the same answer the
-        // rendering gives: a page with no route is a file nothing reads, and a route with no page
-        // would be a 404 on top of the 404 this feature exists to replace.
+        // **Nothing at all on a home that turned it off**, which is the same answer the rendering
+        // gives: a page with no route is a file nothing reads, and a route with no page would be a
+        // 404 on top of the 404 this feature exists to replace.
         if context.welcome() {
             documents.reserve(served.len());
 
@@ -385,7 +385,7 @@ impl Recipe for Nginx {
                 ));
 
                 // And, for a site whose pool MixEngine starts, the page its 502 is answered with
-                // while that pool is not answering — roadmap task T167f.
+                // while that pool is not answering.
                 if let Some(starting) = crate::generate::welcome::render_starting(
                     context.service(),
                     site.primary(),
@@ -402,10 +402,10 @@ impl Recipe for Nginx {
             }
         }
 
-        // **This home's authority, appended last** — roadmap task T75. Last so that a caller
-        // naming `documents[0]` still means the first site, and unconditional so that the file's
-        // presence never has to track sharing state: what is conditional is the *route*, which the
-        // template renders only for a shared site.
+        // **This home's authority, appended last.** Last so that a caller naming `documents[0]`
+        // still means the first site, and unconditional so that the file's presence never has to
+        // track sharing state: what is conditional is the *route*, which the template renders only
+        // for a shared site.
         if let Some(authority) = context.authority() {
             documents.push(Document::new(AUTHORITY, authority));
         }
@@ -413,8 +413,7 @@ impl Recipe for Nginx {
         Ok(documents)
     }
 
-    /// One file per extension, in the set `include extensions/*.conf;` picks up — roadmap task
-    /// **T81c**.
+    /// One file per extension, in the set `include extensions/*.conf;` picks up.
     ///
     /// The fragment arrives rendered, with its paths already forward-slashed: which separator an
     /// `nginx.conf` takes is a property of this file format and is decided where the substitution
@@ -507,8 +506,8 @@ impl Recipe for Nginx {
             // — a document root somebody wrote by hand — resolves against it, and so does the
             // `include` that will bring that site in.
             .cwd(context.etc())
-            // What a failed start is diagnosed against (T38), and it is the status endpoint alone:
-            // nothing here listens on the port sites are served on until T43 renders one.
+            // What a failed start is diagnosed against, and it is the status endpoint alone:
+            // nothing here listens on the port sites are served on; each site's own file does.
             .ports([status_port])
             .ready(ReadyCheck::Http {
                 url: health.clone(),
@@ -582,17 +581,18 @@ struct SiteRendering<'a> {
     /// key has to be there whichever branch is taken.
     upstream: String,
 
-    /// The activator to fall back to, or [`None`] for a pool nothing can wake — T70.
+    /// The activator to fall back to, or [`None`] for a pool nothing can wake.
     ///
     /// Present whichever branch is taken, for `upstream`'s reason. [`None`] renders a
-    /// `fastcgi_pass` straight at the pool, which is what this file rendered before T70.
+    /// `fastcgi_pass` straight at the pool, which is what this file rendered before on-demand
+    /// activation.
     activator: Option<String>,
 
-    /// What `/` becomes on the way out, for a proxy site whose upstream carried a path — roadmap
-    /// task **T135**. [`None`] renders exactly what this file rendered before T135.
+    /// What `/` becomes on the way out, for a proxy site whose upstream carried a path. [`None`]
+    /// renders exactly what this file always rendered.
     rewrite: Option<crate::generate::served::Rewrite>,
 
-    /// What answers before the kind does, longest prefix first — roadmap task **T135**.
+    /// What answers before the kind does, longest prefix first.
     routes: Vec<RouteRendering>,
 
     /// What the `upstream` group holding the two is called, when there is one.
@@ -604,19 +604,18 @@ struct SiteRendering<'a> {
     /// behaviour makes a missing key an error whichever branch the template takes.
     listen_tls: &'a str,
 
-    /// [`None`] renders no TLS at all — the T51 design, D4.
+    /// [`None`] renders no TLS at all.
     certificate: Option<Certificate>,
 
     /// Whether this site renders two `server` blocks — one redirecting, one serving — rather than
-    /// the one T51 shipped — roadmap task **T98**.
+    /// one.
     ///
     /// **Read beside `certificate`, never alone.** A site can carry this as `true` with no usable
     /// certificate, and redirecting to a TLS listener nothing is bound to would be worse than the
     /// plaintext page such a site has always been able to serve.
     https_redirect: bool,
 
-    /// What a shared site's second listener binds, or [`None`] for a site that is not shared —
-    /// roadmap task **T74**.
+    /// What a shared site's second listener binds, or [`None`] for a site that is not shared.
     ///
     /// A second `listen` line rather than a changed one: loopback keeps working, which is what the
     /// browser on this machine is using while a phone looks at the same site.
@@ -625,32 +624,31 @@ struct SiteRendering<'a> {
     /// The same for TLS. Present whichever branch is taken, for `upstream`'s reason.
     lan_tls: Option<String>,
 
-    /// The mDNS name a shared site also answers to, or [`None`] — roadmap task **T75**.
+    /// The mDNS name a shared site also answers to, or [`None`].
     ///
     /// It joins `server_name` rather than adding a listener: a name is matched after nginx has
     /// picked a listener group, so this is the half that decides which site replies.
     mdns: Option<String>,
 
-    /// The directory this home's public authority was rendered into, or [`None`] — roadmap task
-    /// **T75**.
+    /// The directory this home's public authority was rendered into, or [`None`].
     ///
     /// **[`None`] for a site that is not shared**, which is how "served only while sharing is on"
     /// becomes a property of the rendering rather than a promise made about it. It is also [`None`]
     /// on a home with no authority to serve.
     authority: Option<String>,
 
-    /// The directory this site's welcome page was rendered into — roadmap task **T124**.
+    /// The directory this site's welcome page was rendered into.
     ///
-    /// **[`None`] on a home that turned the page off** — the T124 design, D6. The key is always
-    /// present, for [`upstream`](Self::upstream)'s reason: `Strict` makes a missing key an error
-    /// rather than a falsy value, and `None` serialises to `null`, which `{% if %}` reads as false.
+    /// **[`None`] on a home that turned the page off.** The key is always present, for
+    /// [`upstream`](Self::upstream)'s reason: `Strict` makes a missing key an error rather than a
+    /// falsy value, and `None` serialises to `null`, which `{% if %}` reads as false.
     ///
     /// Forward-slashed like every other path this template writes: nginx reads a backslash in a
     /// quoted string as an escape, so a Windows path spelled natively ends the string early.
     welcome: Option<String>,
 }
 
-/// A certificate as the template writes it — roadmap task **T51**.
+/// A certificate as the template writes it.
 ///
 /// **Strings and not `Path`s**, because a template writes text: `Path`'s `Serialize` is lossy on a
 /// path that is not UTF-8, and this module already forward-slashes and stringifies every path it
@@ -678,7 +676,7 @@ impl From<&crate::generate::served::SiteCertificate> for Certificate {
 /// groups servers by listen *address* first and consults `server_name` only inside a group, so a
 /// site left on the wildcard `*:8080` is unreachable beside anything that took `127.0.0.1:8080`
 /// — the name is never looked at. Writing the address the row carries is also what makes LAN
-/// sharing (T74) a change to one column rather than to this template.
+/// sharing a change to one column rather than to this template.
 ///
 /// [`SocketAddr`] does the spelling, so an IPv6 `bind_addr` arrives bracketed the way nginx needs.
 /// A `bind_addr` that is not an address at all renders as the bare port — nginx's "any" — rather
@@ -702,8 +700,7 @@ fn forward_slashed(path: &std::path::Path) -> String {
 
 /// Which branch of the template this kind takes.
 ///
-/// Three and not four: a `node-app` renders as a reverse proxy to loopback and that is all it is —
-/// D7.
+/// Three and not four: a `node-app` renders as a reverse proxy to loopback and that is all it is.
 const fn kind(kind: &ServedKind) -> &'static str {
     match kind {
         ServedKind::PhpFpm { .. } => "php-fpm",
@@ -725,11 +722,10 @@ fn upstream(kind: &ServedKind) -> String {
     }
 }
 
-/// What `/` becomes on the way out for a site whose own upstream carried a path — roadmap task
-/// **T135**.
+/// What `/` becomes on the way out for a site whose own upstream carried a path.
 ///
 /// [`None`] for every other kind, and for the ordinary proxy site whose upstream is an address and
-/// nothing more — which is what this file rendered before T135. nginx would have read the path as a
+/// nothing more — which is what this file always rendered. nginx would have read the path as a
 /// prefix replacement of its own and Caddy would have refused it, so the two front ends disagreed
 /// about what that URL meant; `served::split_upstream` is where they stopped.
 fn site_rewrite(kind: &ServedKind) -> Option<&crate::generate::served::Rewrite> {
@@ -770,7 +766,7 @@ struct RouteRendering {
     /// Where a php-fpm route's pool listens, in nginx's spelling.
     upstream: String,
 
-    /// Where the activator waits for that pool — roadmap task **T70**, the site's own rule.
+    /// Where the activator waits for that pool, on the site's own rule.
     activator: Option<String>,
 
     /// What the `upstream` group holding the two is called, when there is one.
@@ -823,10 +819,10 @@ impl RouteRendering {
     }
 }
 
-/// The activator's address for this kind, as nginx spells one — roadmap task **T70**.
+/// The activator's address for this kind, as nginx spells one.
 ///
 /// [`None`] for everything nothing can start by connecting to it, which renders the site exactly as
-/// it rendered before T70.
+/// it rendered before on-demand activation.
 fn activator(kind: &ServedKind) -> Option<String> {
     match kind {
         ServedKind::PhpFpm { activator, .. } => activator.as_ref().map(address),
@@ -848,7 +844,7 @@ fn address(upstream: &Upstream) -> String {
     }
 }
 
-/// What to call the `upstream` group holding a site's pool and its activator — roadmap task **T70**.
+/// What to call the `upstream` group holding a site's pool and its activator.
 ///
 /// **Named after the site and never after the pool.** Two sites sharing one pool are the ordinary
 /// case, and nginx refuses a configuration that declares one upstream name twice — which takes the

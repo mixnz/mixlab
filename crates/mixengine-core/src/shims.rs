@@ -20,20 +20,19 @@
 //!
 //! Every tool that is neither inside a language's archive nor published as an artifact of its own.
 //! **`composer` used to be the example** — a `.phar` fetched separately, so a row would have been a
-//! shim that resolved a PHP correctly and then failed to find a file no artifact contained. T27c
-//! made it an artifact of its own kind, and its row is the one with a [`Command::via`]: the kind
-//! names the file, `via` names the program that runs it.
+//! shim that resolved a PHP correctly and then failed to find a file no artifact contained. It is
+//! now an artifact of its own kind, and its row is the one with a [`Command::via`]: the kind names
+//! the file, `via` names the program that runs it.
 //!
-//! **Only PHP has artifacts today** (T20a), so the other three rows are unexercised until T27
-//! publishes theirs. They are written now because the table is what a shim dispatches on: a row
-//! missing when the artifact lands is a `node` in `bin/` that says it is nobody's, and the failure a
-//! wrong row produces is one sentence naming what the runtime *does* publish, which is the same
-//! sentence a missing row would need anyway.
+//! **A row is written before its artifact is published**, because the table is what a shim
+//! dispatches on: a row missing when the artifact lands is a `node` in `bin/` that says it is
+//! nobody's, and the failure a wrong row produces is one sentence naming what the runtime *does*
+//! publish, which is the same sentence a missing row would need anyway.
 //!
-//! # Filling `bin/` — roadmap task T26
+//! # Filling `bin/`
 //!
 //! [`refresh`] is the other half of the table's reason for being here: one copy of the shim binary
-//! per row, under the row's name. It is what turns T25's binary into commands a person can type.
+//! per row, under the row's name. It is what turns the shim binary into commands a person can type.
 //!
 //! **`bin/` is entirely MixEngine's**, which is what lets a refresh remove what it does not
 //! recognise. `docs/architecture/overview.md` describes the directory as "version-resolving
@@ -42,12 +41,12 @@
 //! Somebody who wants a script of their own on the PATH has every other directory on the machine to
 //! put it in.
 //!
-//! **It depends on what is installed** — roadmap task T185b, ADR 0057. It used not to: `bin/`
-//! held `node` on a machine with no Node.js, on the argument that a shim saying which command to
-//! type beats `node: command not found`. What that bought was a `which node` that said yes and a
-//! `node` that then refused — and, `bin/` being first on the PATH, a Node the person had installed
-//! themselves hidden behind it. A [`COMMANDS`] row is now written only while its kind has a version
-//! installed, and the daemon refreshes after every install and uninstall.
+//! **It depends on what is installed** — ADR 0057. It used not to: `bin/` held `node` on a machine
+//! with no Node.js, on the argument that a shim saying which command to type beats
+//! `node: command not found`. What that bought was a `which node` that said yes and a `node` that
+//! then refused — and, `bin/` being first on the PATH, a Node the person had installed themselves
+//! hidden behind it. A [`COMMANDS`] row is now written only while its kind has a version installed, and the
+//! daemon refreshes after every install and uninstall.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -71,9 +70,9 @@ pub struct Command {
 
     /// The kind whose program runs this one, when it is a file rather than a program.
     ///
-    /// **`composer` and nothing else** — roadmap task **T27c**, its design's D4. A `.phar` is
-    /// handed to a PHP: the command's own kind names the file, this kind names the program, and the
-    /// shim resolves both for the directory it was run in. `None` is a program of its own.
+    /// **`composer` and nothing else.** A `.phar` is handed to a PHP: the command's own kind names
+    /// the file, this kind names the program, and the shim resolves both for the directory it was
+    /// run in. `None` is a program of its own.
     pub via: Option<RuntimeKind>,
 }
 
@@ -81,8 +80,8 @@ pub struct Command {
 ///
 /// The set per language is the tools that ship *inside* that language's archive and that a person
 /// runs directly. `php-fpm` is absent although PHP ships one: it is a service the daemon supervises
-/// with a generated pool config (T28), not a command anybody types in a project directory, and a
-/// shim in front of it would be a second way to start one nothing was supervising.
+/// with a generated pool config, not a command anybody types in a project directory, and a shim in
+/// front of it would be a second way to start one nothing was supervising.
 pub const COMMANDS: &[Command] = &[
     // PHP. `pecl` and `pear` are scripts the Unix builds ship and the Windows ones do not, which is
     // not a special case here: an artifact that publishes neither answers the lookup with the list
@@ -206,7 +205,7 @@ pub const COMMANDS: &[Command] = &[
         executable: "irb",
         via: None,
     },
-    // Go (T27d). `gofmt` is typed, and called by editors, by name; the binaries under `pkg/tool/`
+    // Go. `gofmt` is typed, and called by editors, by name; the binaries under `pkg/tool/`
     // are not, and `go` finds them from its own `GOROOT`.
     Command {
         name: "go",
@@ -220,7 +219,7 @@ pub const COMMANDS: &[Command] = &[
         executable: "gofmt",
         via: None,
     },
-    // Java (T27e): exactly the keys of the artifact's `provides`. The JDK's other tools are reached
+    // Java: exactly the keys of the artifact's `provides`. The JDK's other tools are reached
     // through PATH, whose first entry under a shim is that JDK's `bin/`.
     Command {
         name: "java",
@@ -259,8 +258,8 @@ pub const COMMANDS: &[Command] = &[
         via: None,
     },
     // Composer. A file and not a program: `composer.phar`, run by the PHP the directory resolves
-    // to (T27c). Its own row so that a version of *Composer* is pinned and defaulted like any
-    // runtime's, and `via` so that the shim knows whose program to start.
+    // to. Its own row so that a version of *Composer* is pinned and defaulted like any runtime's,
+    // and `via` so that the shim knows whose program to start.
     Command {
         name: "composer",
         kind: RuntimeKind::Composer,
@@ -311,7 +310,7 @@ pub fn file_name(command: &Command) -> String {
 /// that is holding it until that process exits.
 pub const MOVED_ASIDE: &str = ".mixengine-replaced";
 
-/// A command `bin/` fronts that [`COMMANDS`] does not name — roadmap tasks **T130** and **T131**.
+/// A command `bin/` fronts that [`COMMANDS`] does not name.
 ///
 /// **The caller decides these and this module only copies them**, which is the whole shape of the
 /// change: an extra is read out of the database — an installed package's client commands, a tool
@@ -383,7 +382,7 @@ pub struct Claimed {
     pub on_preferred_port: bool,
 }
 
-/// Give every contested name to exactly one package — roadmap task **T130**, the design's §A.4.
+/// Give every contested name to exactly one package.
 ///
 /// **A total order, so that the answer is the same on every machine and on every run.** Never "give
 /// it to neither": a name a person expects and cannot type is the complaint this whole task opens
@@ -471,7 +470,7 @@ pub struct Refreshed {
     /// claiming a `bin/` it had not achieved.
     pub refused: Vec<String>,
 
-    /// Names more than one installed package claimed, and who got each — roadmap task **T130**.
+    /// Names more than one installed package claimed, and who got each.
     ///
     /// **Filled by the caller and carried here**, because the conflict is settled before the copy
     /// happens: [`resolve_claims`] answers it out of the database, and one value describing one pass
@@ -484,14 +483,14 @@ pub struct Refreshed {
 /// A constant rather than a literal inside [`source`] because it is also **what every release
 /// artifact has to contain**: a stage without this name in it is an install whose `bin/` is empty
 /// and whose every runtime command is missing. `crates/mixengine-core/tests/packaging.rs` asserts
-/// `packaging/common.sh` ships it, which is roadmap task T85c not happening twice.
+/// `packaging/common.sh` ships it, so an artifact without the shim cannot ship a second time.
 pub const BINARY: &str = "mixengine-shim";
 
-/// The file `<root>/bin` holds under every name on Windows — roadmap task **T185**. See [`Source`].
+/// The file `<root>/bin` holds under every name on Windows. See [`Source`].
 ///
 /// Shipped beside [`BINARY`] and held to `packaging/common.sh` by the same test: a Windows install
-/// without it falls back to copying the shim itself into `bin/`, which works and weighs what T185
-/// set out to remove.
+/// without it falls back to copying the shim itself into `bin/`, which works and weighs what the
+/// trampoline exists to remove.
 pub const TRAMPOLINE: &str = "mixengine-trampoline";
 
 /// What [`refresh`] fills `bin/` from.
@@ -508,7 +507,7 @@ pub struct Source {
 }
 
 /// Where the shim binary is, given the program that is asking — and, on Windows, the trampoline
-/// beside it (T185).
+/// beside it.
 ///
 /// It sits beside whatever is running — `mixengined` in an install, and the same `target/debug` in
 /// a development tree — because a release ships the two next to each other and there is nothing
@@ -525,10 +524,11 @@ pub fn source(program: &Path) -> Result<Source> {
 
     // The same constant `link` reads, for the same reason: see [`Source::placed`].
     //
-    // **Without a trampoline, the shim itself**, as before T185. An install that updated itself
-    // onto this release has none: `updates::apply::swap` never adds a binary the install lacked. A
-    // `bin/` of full-size shim copies is heavy and works; refusing to fill it would leave every
-    // command missing. The next full install brings the trampoline and the next start moves to it.
+    // **Without a trampoline, the shim itself**, as before trampolines existed. An install that
+    // updated itself onto this release has none: `updates::apply::swap` never adds a binary the
+    // install lacked. A `bin/` of full-size shim copies is heavy and works; refusing to fill it
+    // would leave every command missing. The next full install brings the trampoline and the next
+    // start moves to it.
     let placed = match cfg!(windows) {
         true => present(beside, TRAMPOLINE).unwrap_or_else(|_| resolver.clone()),
         false => resolver.clone(),
@@ -558,8 +558,8 @@ fn present(directory: &Path, name: &str) -> Result<PathBuf> {
 /// **The pass that is *not* idempotent — the first one, on a home that has never had a daemon — is
 /// the expensive one, and `place` is where that cost is paid or avoided.** Nineteen names is a hard
 /// link apiece where the filesystem gives one file a second name, and nineteen copies where it does
-/// not — which on Windows is always, for the reason stated there. Since T185 what is copied there is
-/// the trampoline, a few hundred KB, and `bin/` also holds [`RESOLVER_POINTER`]: the one line that
+/// not — which on Windows is always, for the reason stated there. What is copied there is the
+/// trampoline, a few hundred KB, and `bin/` also holds [`RESOLVER_POINTER`]: the one line that
 /// tells each trampoline where the resolver is.
 ///
 /// **Not a transaction, and it cannot be one**: nineteen files cannot be renamed into place at
@@ -587,10 +587,9 @@ pub fn refresh(
     // happen — must not displace the compiled row, or `bin/npm` would be a shim that dispatches to
     // a file found by a shim that dispatches to a file. A name already spoken for is dropped here
     // rather than refused, because the caller's list is a description of a disk and not a request.
-    // **Only what is installed** — roadmap task T185b. A `node` in `bin/` on a machine with no
-    // Node.js made `which node` say yes and then refused, and — `bin/` being first on the PATH —
-    // hid a Node the person had installed themselves. A row fronted by another kind (`composer`,
-    // run by PHP) needs both.
+    // **Only what is installed.** A `node` in `bin/` on a machine with no Node.js made `which node`
+    // say yes and then refused, and — `bin/` being first on the PATH — hid a Node the person had
+    // installed themselves. A row fronted by another kind (`composer`, run by PHP) needs both.
     let mut names: Vec<String> = COMMANDS
         .iter()
         .filter(|command| {
@@ -601,14 +600,14 @@ pub fn refresh(
         .collect();
     let mut expected: HashSet<String> = names.iter().map(|name| fold(name)).collect();
 
-    // T185: the trampolines' way to the resolver is not a stranger to sweep.
+    // The trampolines' way to the resolver is not a stranger to sweep.
     if cfg!(windows) {
         expected.insert(fold(RESOLVER_POINTER));
     }
 
     for extra in extra {
         // A tool installed into a runtime is that runtime's command, and goes with it: the table of
-        // discovered tools may still list it from before the last version went (T185b).
+        // discovered tools may still list it from before the last version went.
         if let Origin::Global { kind } = &extra.origin
             && !installed.contains(kind)
         {
@@ -637,7 +636,7 @@ pub fn refresh(
         refreshed.commands.push(name);
     }
 
-    // T185: only on Windows is there a trampoline to read it.
+    // Only on Windows is there a trampoline to read it.
     if cfg!(windows) {
         point_at(bin, &source.resolver)?;
     }
@@ -646,7 +645,7 @@ pub fn refresh(
 }
 
 /// Every runtime kind — what a caller passes to [`refresh`] to front every row, as a refresh did
-/// before roadmap task **T185b**.
+/// before `bin/` fronted only what is installed.
 #[must_use]
 pub fn every_kind() -> std::collections::BTreeSet<RuntimeKind> {
     RuntimeKind::ALL.into_iter().collect()
@@ -721,7 +720,7 @@ fn sweep(bin: &Path, expected: &HashSet<String>, refreshed: &mut Refreshed) {
 
         let removed = std::fs::remove_file(entry.path()).is_ok();
 
-        // The pointer, and a staged one a crash left behind (T185), are MixEngine's own and not
+        // The pointer, and a staged one a crash left behind, are MixEngine's own and not
         // commands: removing them is `clear` doing its job, not something to report.
         if name.ends_with(MOVED_ASIDE) || name.starts_with(RESOLVER_POINTER) {
             continue;

@@ -209,7 +209,7 @@ export function applyDelete(
     return invalid("Collection and record IDs must be 64 lowercase hex characters.");
   }
   // D4 weighs a deletion like any other edit, so it needs the time it was made — kept as the
-  // tombstone's own, never the replaced version's (T178c, C1).
+  // tombstone's own, never the replaced version's.
   if (!isTimestamp(updatedAt)) return invalid("A deletion needs updatedAt.");
   if (ifMatch === undefined) {
     return {
@@ -270,7 +270,7 @@ export function listSince(
 
   // D3: a machine that has been away longer than a tombstone lives is told to resync from empty
   // rather than told incomplete news quietly. `resync` is a cursor from a read that began at 0,
-  // which has missed nothing (T178b, M4).
+  // which has missed nothing.
   const reapedBelow = account(sql).reaped_below_seq;
   if (since > 0 && since < reapedBelow && !resync) {
     return {
@@ -304,9 +304,9 @@ export function listSince(
   const last = page.at(-1)?.seq ?? since;
   return {
     records: page.map(wire),
-    // The last page ends at the account's latest seq (M3): a cursor stopped at the collection's own
-    // last row would sit below every later write in the account. The Durable Object runs one
-    // request at a time, so nothing is written between these reads.
+    // The last page ends at the account's latest seq: a cursor stopped at the collection's own last
+    // row would sit below every later write in the account. The Durable Object runs one request at
+    // a time, so nothing is written between these reads.
     nextSince: more ? last : Math.max(last, account(sql).next_seq),
     more,
   };
@@ -318,8 +318,8 @@ export interface Heads {
 }
 
 /**
- * `POST /v1/records/heads` (T189, D2): which of the cursors a pull would bring news of. A row this
- * device wrote is not news to it, since its push remembered the row; a row of unknown device is.
+ * `POST /v1/records/heads`: which of the cursors a pull would bring news of. A row this device
+ * wrote is not news to it, since its push remembered the row; a row of unknown device is.
  * The Durable Object runs one request at a time, so `nextSince` and every test below read one
  * state.
  */

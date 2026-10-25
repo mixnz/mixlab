@@ -15,13 +15,13 @@ import ExtensionsPanel from "../Packages/ExtensionsPanel";
 import styles from "./PhpExtensions.module.css";
 
 /**
- * Turning PHP extensions on and off — T118.
+ * Turning PHP extensions on and off.
  *
- * **No new method.** `runtime.list_extensions` and `runtime.set_extension` have existed since T28,
- * and `ExtensionsPanel` has drawn them since the Runtimes screen (now Packages) existed. What was
- * missing was *the way there*: it sat behind a version row that had to be expanded on a screen then
- * called Runtimes, four rows above a sidebar item called *Extensions* that was about something else
- * entirely.
+ * **No new method.** `runtime.list_extensions` and `runtime.set_extension` are older than this
+ * screen, and `ExtensionsPanel` has drawn them since the Runtimes screen (now Packages) existed.
+ * What was missing was *the way there*: it sat behind a version row that had to be expanded on a
+ * screen then called Runtimes, four rows above a sidebar item called *Extensions* that was about
+ * something else entirely.
  *
  * **The same component, drawn in two places**, not two copies: opening it from Packages still
  * works, and a second copy would drift apart on exactly the day one of them gets changed.

@@ -1,4 +1,4 @@
-//! The PostgreSQL recipe against a **real** PostgreSQL — roadmap task **T34**.
+//! The PostgreSQL recipe against a **real** PostgreSQL.
 //!
 //! Everything else about this recipe is provable in one process and is proved there: three files
 //! render with every path quoted, no line of `pg_hba.conf` says `trust`, the spec builds, the file
@@ -14,9 +14,10 @@
 //! `.github/scripts/test-no-network.sh` starts a `gnome-keyring` on a session bus of its own, which
 //! is why the Linux leg runs this from inside that script rather than beside it.
 //!
-//! **And on Windows it needs T34a.** `postgres` refuses a token holding an enabled
-//! `BUILTIN\Administrators`, and this repository's Windows runner holds one deliberately (T2b) — so
-//! before T34a this suite could not have run there at all. That it runs is the assertion T34a buys.
+//! **And on Windows it needs a supervised child that never inherits Administrators.** `postgres`
+//! refuses a token holding an enabled `BUILTIN\Administrators`, and this repository's Windows
+//! runner holds one deliberately — so before the supervisor dropped it this suite could not have
+//! run there at all. That it runs is the assertion that change buys.
 //!
 //! Nothing here ever reads the credential, for `mariadb.rs`' measured reason: a macOS keychain item
 //! carries an ACL naming its creator, and any other process asking raises a dialog nobody on a
@@ -27,11 +28,10 @@
 //! `pg_ctl reload` is in the spec and asserted where it is written — see
 //! `recipes::postgres::postgres_reloads_the_same_way_on_every_system`. What cannot be driven from
 //! out here is *asking* for one: there is no `service.reload` in
-//! [`rpc`](mixengine_proto::rpc::method) and no `mix service set`, so a running server has no way to
-//! be handed a changed file and told to re-read it. Nothing in T34 could have added one without
-//! adding an RPC and a subcommand this task did not ask for. The claim this suite makes is
-//! therefore the bootstrap and the credential, and the reload waits for the task that gives a
-//! service a way to be reconfigured.
+//! [`rpc`](mixengine_proto::rpc::method) and no `mix service set`, so a running server has no way
+//! to be handed a changed file and told to re-read it, and adding one means an RPC and a subcommand
+//! of their own. The claim this suite makes is therefore the bootstrap and the credential, and the
+//! reload waits for a way to reconfigure a running service.
 
 mod harness;
 
@@ -104,7 +104,8 @@ const SERVICE: &str = "postgres@main";
 ///
 /// A name of its own, so the two ignored tests in this file, which run at once in two homes, read
 /// apart in a log. PostgreSQL's first run never went through the MySQL family's space-free view,
-/// whose shared name (roadmap task **T33b**) is why the other two suites chose one.
+/// whose name was once shared by every home on a machine — which is why the other two suites chose
+/// one.
 const RESET: &str = "postgres@reset";
 
 /// The PostgreSQL this suite is about, or the reason there is none.
@@ -231,16 +232,16 @@ fn server_log(home: &Home) -> String {
     said
 }
 
-/// Whether `key` is this home's keyring address for `address` — roadmap task **T126**.
+/// Whether `key` is this home's keyring address for `address`.
 ///
-/// **The whole string cannot be written down in a test.** Since T126 an address begins with an id
-/// the home mints for itself at its first migration — six random bytes, so twelve hex characters —
-/// which is what stopped every `MIXENGINE_HOME` on a machine from sharing one entry. What a test can
-/// state is the shape: this home's id, a slash, and the address as it was spelled before homes were
+/// **The whole string cannot be written down in a test.** An address begins with an id the home
+/// mints for itself at its first migration — six random bytes, so twelve hex characters — which is
+/// what stopped every `MIXENGINE_HOME` on a machine from sharing one entry. What a test can state
+/// is the shape: this home's id, a slash, and the address as it was spelled before homes were
 /// named.
 ///
 /// Asserted rather than ignored, because the prefix is the fix: a key that is *only* the old
-/// spelling is the defect T126 exists to have removed.
+/// spelling is the defect ADR 0032 removed.
 fn is_this_homes_address(key: &str, address: &str) -> bool {
     key.strip_suffix(address)
         .and_then(|home| home.strip_suffix('/'))
@@ -292,10 +293,9 @@ fn without_a_password(root: &Path, port: u16, user: &str, database: &str) -> Str
     said
 }
 
-/// The positive counterpart of [`without_a_password`] — roadmap task **T77b**. A query that
-/// succeeds with exactly the password this test chose *is* the proof the daemon stored and used
-/// it, on T77a's D13 reasoning: nothing here ever reads the keyring, because nothing needs to —
-/// the value was never MixEngine's to generate.
+/// The positive counterpart of [`without_a_password`]. A query that succeeds with exactly the
+/// password this test chose *is* the proof the daemon stored and used it: nothing here ever reads
+/// the keyring, because nothing needs to — the value was never MixEngine's to generate.
 fn with_the_password(root: &Path, port: u16, user: &str, database: &str, password: &str) -> String {
     let psql = root.join(format!("bin/psql{}", std::env::consts::EXE_SUFFIX));
 
@@ -330,8 +330,8 @@ fn with_the_password(root: &Path, port: u16, user: &str, database: &str, passwor
 /// The archive every test in this suite installs, packed by the first test that asks for it.
 ///
 /// Every test packs the same [`package`] directory into the same archive, and on Windows deflating
-/// a real server is the slowest thing this suite does (T170c). The tests run in parallel, so the
-/// others wait on the lock rather than packing a copy each.
+/// a real server is the slowest thing this suite does. The tests run in parallel, so the others
+/// wait on the lock rather than packing a copy each.
 fn packed() -> Packed {
     static PACKED: OnceLock<Packed> = OnceLock::new();
 
@@ -414,7 +414,7 @@ async fn created_as(service: &str) -> (Home, harness::Daemon, MockRegistry, Path
     (home, daemon, registry, installed_at, port)
 }
 
-/// **The whole of T34 that needs a server, in the order a user meets it.**
+/// **The whole of the recipe that needs a server, in the order a user meets it.**
 ///
 /// One test rather than six, deliberately: each step is the previous one's precondition, and six
 /// tests would be six real bootstraps performed to re-reach the state this one is already in.
@@ -503,8 +503,8 @@ async fn a_cluster_is_bootstrapped_started_queried_stopped_and_not_bootstrapped_
     // --- a database and an account for it ---------------------------------------------------------
     //
     // **Nothing here reads a credential**, which is the whole reason the proof that the account's
-    // password *works* is a step inside the daemon rather than an assertion here — roadmap task
-    // T77a, design D13. See this file's module note for what reading one costs on macOS.
+    // password *works* is a step inside the daemon rather than an assertion here. See this file's
+    // module note for what reading one costs on macOS.
     at("creating a database and an account for it");
     let created = expect(
         &home,
@@ -526,7 +526,7 @@ async fn a_cluster_is_bootstrapped_started_queried_stopped_and_not_bootstrapped_
     );
 
     // **Asking twice changes nothing**, which is what makes a failed apply resumable rather than
-    // restartable — and what `blueprint.apply` will lean on in T78.
+    // restartable — and what `blueprint.apply` leans on.
     at("creating the same database a second time");
     let again = expect(
         &home,
@@ -559,9 +559,8 @@ async fn a_cluster_is_bootstrapped_started_queried_stopped_and_not_bootstrapped_
 
     // --- a chosen password ---------------------------------------------------------------------
     //
-    // Roadmap task **T77b**. Success against the real server *is* the proof the daemon stored and
-    // used exactly the password given — T77a's D13 reasoning, extended to a value nobody
-    // generated.
+    // Success against the real server *is* the proof the daemon stored and used exactly the
+    // password given — the reasoning above, extended to a value nobody generated.
     at("creating an account with a chosen password");
     let chosen = expect(
         &home,
@@ -723,9 +722,9 @@ async fn a_cluster_is_bootstrapped_started_queried_stopped_and_not_bootstrapped_
 
 /// Set the superuser's password in this cluster to something MixEngine does not know.
 ///
-/// **The T126 collision, reproduced from the server's side rather than the keyring's** — the MariaDB
-/// suite's reasoning, and the same constraint: a test process that touched this home's credential
-/// store would be one macOS raises a dialog for.
+/// **Two homes sharing one keyring entry, reproduced from the server's side rather than the
+/// keyring's** — the MariaDB suite's reasoning, and the same constraint: a test process that
+/// touched this home's credential store would be one macOS raises a dialog for.
 ///
 /// `--single` is the recipe's own mechanism, and it opens no port and no socket.
 ///
@@ -777,8 +776,8 @@ async fn set_the_superuser_password_behind_mixengines_back(
     );
 }
 
-/// **A credential nothing can produce any more is re-set by a command, and the databases are kept**
-/// — roadmap task **T127**.
+/// **A credential nothing can produce any more is re-set by a command, and the databases are
+/// kept.**
 ///
 /// PostgreSQL's half of the claim, and it is a different mechanism rather than a second spelling:
 /// the repair is `postgres --single`, which performs its own crash recovery on a cluster that was
@@ -814,18 +813,18 @@ async fn a_superuser_credential_is_re_set_and_the_databases_are_kept() {
         "the cluster accepted a password it no longer has"
     );
 
-    // **The refusal itself is roadmap task T127's other half.** `28P01` is PostgreSQL's SQLSTATE and
-    // psql never prints it for a refused login, so until that task the sentence below reached
-    // nobody.
+    // **The refusal itself is the credential repair's other half.** `28P01` is PostgreSQL's
+    // SQLSTATE and psql never prints it for a refused login, so until the repair read it the
+    // sentence below reached nobody.
     // **And what refuses it is the *start*, not the provisioning probe** — measured, and the
     // difference from MariaDB is the ready check. This cluster's is an authenticated query, so a
     // password it does not have never lets it leave `starting`; MariaDB's is `mariadb-admin ping`,
     // which answers before authentication and lets the service reach `running`, where the
     // provisioning probe meets the refusal instead.
     //
-    // So this is **T127a**: the start reads what the server printed before it decides what to call
-    // the failure, and a PostgreSQL user reaches the same repair a MariaDB user always could. Until
-    // it did, this assertion recorded the symptom — `did not start — not ready within 2m`.
+    // So the start reads what the server printed before it decides what to call the failure, and a
+    // PostgreSQL user reaches the same repair a MariaDB user always could. Until it did, this
+    // assertion recorded the symptom — `did not start — not ready within 2m`.
     let said = String::from_utf8_lossy(&refused.stderr);
     assert!(
         said.contains("refuses the superuser password this home holds"),

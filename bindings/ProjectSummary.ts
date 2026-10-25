@@ -25,7 +25,7 @@ created_at: string,
  */
 manifest?: string | null, 
 /**
- * Whether this project's services are held out of idle shutdown — roadmap task **T69**.
+ * Whether this project's services are held out of idle shutdown.
  *
  * In the listing rather than in `project.show` alone, because it is the answer to "why is that
  * still running?" and the person asking is looking at a list.

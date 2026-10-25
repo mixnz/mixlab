@@ -39,7 +39,7 @@ describe("the direction icon", () => {
   });
 
   it("never shows for a full run that only asks, however long it takes", () => {
-    // T189: a full run first asks the server what changed. Asking is not downloading, and a run
+    // A full run first asks the server what changed. Asking is not downloading, and a run
     // told that nothing changed only pushes.
     const store = createActivity();
     vi.advanceTimersByTime(SHOW_AFTER_MS * 10);

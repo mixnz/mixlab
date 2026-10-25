@@ -1,12 +1,14 @@
-//! One step of a plan, carried out — roadmap task **T78**.
+//! One step of a plan, carried out.
 //!
-//! **Every action is an ensure** (the T78 design, D3): a doer asks the world before it acts, so a
+//! **Every action is an ensure** (D3): a doer asks the world before it acts, so a
 //! step that is already true costs a read. That is what makes a failed apply resumable rather than
 //! restartable, and it is why one daemon call may make several steps true at once — `site.create`
 //! writes the row, queues the hosts entries and issues the certificate, and the steps that follow it
 //! find themselves already so.
 //!
 //! A step is reported by **what became true**, not by how many calls it took.
+//!
+//! The D-numbers below are those of `docs/specs/2026-09-01-t78-blueprint-apply-design.md`.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -34,23 +36,23 @@ pub(crate) struct Context {
     /// Every version this apply will install, decided before it wrote anything (D9).
     pub(crate) resolved: BTreeMap<String, PackageVersion>,
 
-    /// The agreement to run the blueprint's own command, if the request carried one — roadmap task
-    /// **T78a**. Already checked against this plan before the job began.
+    /// The agreement to run the blueprint's own command, if the request carried one. Already
+    /// checked against this plan before the job began.
     pub(crate) consent: Option<ScaffoldConsent>,
 
-    /// Whether the services this apply creates start with the daemon — roadmap task **T116**.
+    /// Whether the services this apply creates start with the daemon.
     ///
     /// Read by the `EnsureService` step and by nothing else, and only on the branch that *creates*
     /// an instance: a step that planned `Satisfied` never reaches `service.create`, which is what
     /// makes "only what this apply made" true by construction rather than by a check.
     pub(crate) autostart: bool,
 
-    /// The account the `CreateDatabase` step really used — roadmap task **T205**, D6. Reported in
-    /// the apply's answer, which is the one place it is known: T202 may have chosen another name.
+    /// The account the `CreateDatabase` step really used. Reported in the apply's answer, which is
+    /// the one place it is known: the step may have chosen another name around a foreign account.
     pub(crate) database: Option<mixengine_proto::AppliedDatabase>,
 
-    /// The `.env` keys the request agreed to have written — roadmap task **T205a**. Already
-    /// checked against this plan before the job began.
+    /// The `.env` keys the request agreed to have written. Already checked against this plan before
+    /// the job began.
     pub(crate) dotenv: Vec<String>,
 }
 
@@ -87,12 +89,11 @@ pub(crate) fn package_key(package: &str) -> String {
 ///
 /// [`None`] means *this one is work*, and the caller is what does it.
 ///
-/// `consent` is the agreement the request carried, if it carried one — roadmap task **T78a**, its
-/// design's D4. By the time it reaches here it has already been checked against this plan.
+/// `consent` is the agreement the request carried, if it carried one. By the time it reaches here
+/// it has already been checked against this plan.
 ///
-/// `dotenv` is the `.env` keys the request agreed to — roadmap task **T205a**. Apart from
-/// `consent`, because a plan can carry a scaffold and a key at once and one answer must not stand
-/// for the other.
+/// `dotenv` is the `.env` keys the request agreed to. Apart from `consent`, because a plan can
+/// carry a scaffold and a key at once and one answer must not stand for the other.
 pub(crate) fn untouched_with_consent(
     step: &PlanStep,
     consent: Option<&ScaffoldConsent>,
@@ -101,7 +102,7 @@ pub(crate) fn untouched_with_consent(
     match (&step.disposition, &step.action) {
         (Disposition::Satisfied, _) => Some(StepResult::AlreadyTrue),
 
-        // **Its own consent** (T205a). The line holds a password, so it is written only for a key
+        // **Its own consent.** The line holds a password, so it is written only for a key
         // the request names.
         (Disposition::Confirm { .. }, PlanAction::WriteDotenv { key, path }) => {
             match dotenv.iter().any(|agreed| agreed == key) {
@@ -115,7 +116,7 @@ pub(crate) fn untouched_with_consent(
             }
         }
 
-        // **Agreed to, or left** (T78a, D4). A blueprint's own command is arbitrary code from
+        // **Agreed to, or left.** A blueprint's own command is arbitrary code from
         // whoever wrote it: with a consent naming it this is work, and without one the step is left
         // as a sentence while everything else is applied — because a blueprint must not become
         // worthless over the one step nobody answered for.
@@ -129,16 +130,16 @@ pub(crate) fn untouched_with_consent(
             }),
         },
 
-        // **Its program is not there, so it is left** — roadmap task **T78b**, its design's D5.
-        // With a consent it was refused before the job existed; without one it was never going to
-        // run. Either way the sentence carries the command and the reason.
+        // **Its program is not there, so it is left.** With a consent it was refused before the job
+        // existed; without one it was never going to run. Either way the sentence carries the
+        // command and the reason.
         (Disposition::Blocked { reason }, _)
             if matches!(
                 step.action,
                 PlanAction::RunScaffold { .. } | PlanAction::FetchArchive { .. }
             ) =>
         {
-            // The command, or the archive's URL — roadmap task **T205**, D2.
+            // The command, or the archive's URL.
             let command = match &step.action {
                 PlanAction::RunScaffold { command } => command.as_str(),
                 PlanAction::FetchArchive { url, .. } => url.as_str(),
@@ -169,8 +170,7 @@ pub(crate) fn untouched_with_consent(
     }
 }
 
-/// Every service the plan's `EnsureService` steps name, whatever became of them — roadmap task
-/// **T204a**, D3.
+/// Every service the plan's `EnsureService` steps name, whatever became of them.
 ///
 /// What a site with no list of its own links. Read off the plan rather than collected on the walk:
 /// a shared instance that was already here plans `Satisfied` and is never carried out, and it is no
@@ -187,9 +187,9 @@ pub(crate) fn ensured_in(plan: &BlueprintPlan) -> Vec<ServiceId> {
         .collect()
 }
 
-/// The names of the site an `AddDomain` at `position` belongs to — roadmap task **T204a**, D4:
-/// the group that starts at the nearest `CreateSite` before it. Empty for a name with no site
-/// before it, which no plan this build makes holds.
+/// The names of the site an `AddDomain` at `position` belongs to: the group that starts at the
+/// nearest `CreateSite` before it. Empty for a name with no site before it, which no plan this
+/// build makes holds.
 pub(crate) fn group_names(plan: &BlueprintPlan, position: usize) -> Vec<String> {
     plan.steps
         .get(..position)
@@ -281,8 +281,8 @@ mod tests {
         }
     }
 
-    /// **Each consent answers its own step** — roadmap task **T205a**. A plan can carry a
-    /// scaffold and a `.env` key at once, and agreeing to one is not agreeing to the other.
+    /// **Each consent answers its own step.** A plan can carry a scaffold and a `.env` key at once,
+    /// and agreeing to one is not agreeing to the other.
     #[test]
     fn a_scaffold_consent_does_not_write_the_key_and_a_key_does_not_run_the_scaffold() {
         let scaffold = ScaffoldConsent {
@@ -335,8 +335,8 @@ mod tests {
         );
     }
 
-    /// **Nobody agreed to it, so it was left** — roadmap task **T78a**, its design's D4. The
-    /// sentence carries the command, because that is the one line a person has to act on.
+    /// **Nobody agreed to it, so it was left.** The sentence carries the command, because that is
+    /// the one line a person has to act on.
     #[test]
     fn a_scaffold_nobody_agreed_to_is_left_with_the_command() {
         let left = untouched_with_consent(
@@ -354,7 +354,7 @@ mod tests {
         assert!(why.contains("--run-scaffold"), "{why}");
     }
 
-    /// **An archive nothing agreed to is left with its URL** — roadmap task **T205**, D2.
+    /// **An archive nothing agreed to is left with its URL.**
     #[test]
     fn an_archive_nobody_agreed_to_is_left_with_its_url() {
         let archive = PlanStep {
@@ -460,7 +460,7 @@ mod tests {
         }
     }
 
-    /// **T204a, D3.** A shared instance that was already here plans `Satisfied` and is never
+    /// A shared instance that was already here plans `Satisfied` and is never
     /// carried out, and the site still links it.
     #[test]
     fn every_ensure_in_the_plan_is_linked_whatever_its_disposition() {
@@ -490,7 +490,7 @@ mod tests {
         );
     }
 
-    /// **T204a, D4.** A name belongs to the site whose group it is in, and to no other.
+    /// A name belongs to the site whose group it is in, and to no other.
     #[test]
     fn a_domain_step_knows_the_names_of_its_own_site_only() {
         let plan = a_plan(vec![
@@ -542,10 +542,10 @@ mod tests {
         assert!(names_after(&plan, 0).is_empty());
     }
 
-    /// **A scaffold whose program is missing is left with the reason, consent or no consent** —
-    /// roadmap task **T78b**, its design's D5. With a consent it was refused before the job existed;
-    /// reaching here means the plan changed underneath the apply, and not running is the safe
-    /// reading of a command whose program is not there.
+    /// **A scaffold whose program is missing is left with the reason, consent or no consent.** With
+    /// a consent it was refused before the job existed; reaching here means the plan changed
+    /// underneath the apply, and not running is the safe reading of a command whose program is not
+    /// there.
     #[test]
     fn a_scaffold_whose_program_is_missing_is_left_with_the_reason() {
         let step = PlanStep {

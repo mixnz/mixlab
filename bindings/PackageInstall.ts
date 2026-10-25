@@ -2,7 +2,7 @@
 import type { PackageVersion } from "./PackageVersion";
 
 /**
- * What `package.install` takes: a version, and what the person agreed to — roadmap task **T149**.
+ * What `package.install` takes: a version, and what the person agreed to.
  *
  * [`RuntimeInstall`](crate::RuntimeInstall)'s shape, for the same reason.
  */

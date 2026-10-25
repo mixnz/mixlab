@@ -1,4 +1,4 @@
-//! `extension.*` — roadmap tasks **T80** and **T81**.
+//! `extension.*`.
 //!
 //! **Not [`crate::php_extensions`]**, which turns a *PHP* extension on for one installed runtime.
 //! These are MixEngine's own: Mailpit, phpMyAdmin, Adminer.
@@ -40,10 +40,10 @@ mod configure;
 /// takes (`generate::recipe::Context::secret_address`) — one namespace, two shapes that cannot
 /// collide because a service id has no `/` in it.
 ///
-/// **The home in front is roadmap task T126**, and it is the same sentence a service's address
-/// carries: the credential store is one per user, `MIXENGINE_HOME` means a user may have several
-/// homes, and two homes that each installed phpMyAdmin were signing their session cookies with one
-/// shared value.
+/// **The home in front is ADR 0032's**, and it is the same sentence a service's address carries:
+/// the credential store is one per user, `MIXENGINE_HOME` means a user may have several homes, and
+/// two homes that each installed phpMyAdmin were signing their session cookies with one shared
+/// value.
 const EXTENSION_SECRET_PREFIX: &str = "extensions/";
 
 /// What `{secret}` is stored under, for the one extension-owned secret there is.
@@ -72,17 +72,17 @@ pub(crate) struct Extensions {
     /// This system, for the port allocator's bind probe.
     host: Arc<dyn mixengine_platform::Host>,
 
-    /// The sites, for what a `web-app` install does after its row — roadmap task **T81b**, the
-    /// design's D7. Held rather than reached for, the reason `Domains` holds it: every path that
-    /// writes a site has to ask for the hosts file, issue the certificate and regenerate, and a
-    /// mechanism the caller has to remember is one the caller eventually forgets.
+    /// The sites, for what a `web-app` install does after its row. Held rather than reached for,
+    /// the reason `Domains` holds it: every path that writes a site has to ask for the hosts file,
+    /// issue the certificate and regenerate, and a mechanism the caller has to remember is one the
+    /// caller eventually forgets.
     sites: Arc<crate::sites::Sites>,
 
-    /// The supervisor, for the one thing a `web-app`'s uninstall now has to do first — roadmap task
-    /// **T82a**, its design's D11.
+    /// The supervisor, for the one thing a `web-app`'s uninstall now has to do first.
     ///
-    /// `mixengine_core::extensions::uninstall`'s note says supervision belongs to the daemon and the
-    /// order it walks is stop-then-this; until that task a `web-app` had no process to stop.
+    /// `mixengine_core::extensions::uninstall`'s note says supervision belongs to the daemon and
+    /// the order it walks is stop-then-this; until it had a pool of its own a `web-app` had no
+    /// process to stop.
     services: Arc<crate::services::Registry>,
 }
 
@@ -91,7 +91,7 @@ impl Extensions {
     ///
     /// **The registry client is built by the caller** — `main.rs`, beside the `Fetcher`, so that a
     /// compiled-in key that is not a key fails the start rather than the first install — and this
-    /// is built after `Sites`, which it holds (roadmap task **T81b**).
+    /// is built after `Sites`, which it holds.
     pub(crate) fn new(
         paths: Paths,
         store: Store,
@@ -134,8 +134,7 @@ impl Extensions {
             .await
             .map_err(|error| error.to_wire())?;
 
-        // One read for the whole listing: the domain of every extension-owned site, by extension —
-        // roadmap task **T81b**.
+        // One read for the whole listing: the domain of every extension-owned site, by extension.
         let served: std::collections::BTreeMap<ExtensionId, String> =
             mixengine_core::sites::records(&self.store, None)
                 .await
@@ -297,10 +296,10 @@ impl Extensions {
         };
         let at = Timestamp::from_system_time(std::time::SystemTime::now());
 
-        // **The front end judges the fragment before a byte is fetched** — roadmap task **T81c**,
-        // the design's D5. A `[[recipe.front_end]]` this home's front end will not parse is refused
-        // here, where nothing has been downloaded, unpacked or written; running it afterwards would
-        // leave the choice between a wedged front end and an uninstall in an error path.
+        // **The front end judges the fragment before a byte is fetched.** A `[[recipe.front_end]]`
+        // this home's front end will not parse is refused here, where nothing has been downloaded,
+        // unpacked or written; running it afterwards would leave the choice between a wedged front
+        // end and an uninstall in an error path.
         self.would_be_served(manifest, source, at).await?;
 
         let installed = install::install(
@@ -318,16 +317,16 @@ impl Extensions {
         .await
         .map_err(|error| error.to_wire())?;
 
-        // **What `site.create` does after its row**, for the site the install just wrote — roadmap
-        // task **T81b**, the design's D7. A `service` needs none of this: `extension.start` walks
-        // `service.start` and regenerates on the way. A site has nothing to walk.
+        // **What `site.create` does after its row**, for the site the install just wrote. A
+        // `service` needs none of this: `extension.start` walks `service.start` and regenerates on
+        // the way. A site has nothing to walk.
         let site = mixengine_core::sites::of_extension(&self.store, &installed.id)
             .await
             .map_err(|error| error.to_wire())?;
 
         if let Some(site) = &site {
             // **Before the site is declared**, so the first file the front end reads already names
-            // the activator after the pool — T200, D1.
+            // the activator after the pool.
             handle.progress(86, "making its pool reachable").await;
             self.make_pool_reachable().await;
 
@@ -338,21 +337,20 @@ impl Extensions {
             self.sites.now_declares(site).await?;
         } else if carries_a_fragment(manifest) {
             // **A `recipe` extension has neither a service to start nor a site to declare, and
-            // still changed what the front end reads** — roadmap task **T81c**. Nothing else on
-            // this path would regenerate, so the fragment would sit in the table until the next
-            // thing that happened to render.
+            // still changed what the front end reads.** Nothing else on this path would regenerate,
+            // so the fragment would sit in the table until the next thing that happened to render.
             handle.progress(90, "regenerating the front end").await;
             self.sites.now_serves_what_it_declares().await?;
         }
 
-        // **And every managed PHP's `conf.d`, if this extension added to it** — roadmap task
-        // **T82**, found by installing the real Mailpit.
+        // **And every managed PHP's `conf.d`, if this extension added to it**, found by installing
+        // the real Mailpit.
         //
-        // T81 wired `[recipe] php_ini` and left it written by `refresh_all` at boot and by a runtime
-        // install, neither of which happens here — so `sendmail_path` appeared only after the daemon
-        // was restarted, and the acceptance criterion says *with no manual php.ini edit*, not *after
-        // a restart*. This is T81c's own lesson arriving for the other half of `[recipe]`: nothing
-        // else on this path would regenerate.
+        // `[recipe] php_ini` was first left written by `refresh_all` at boot and by a runtime
+        // install, neither of which happens here — so `sendmail_path` appeared only after the
+        // daemon was restarted, and the acceptance criterion says *with no manual php.ini edit*,
+        // not *after a restart*. This is the front-end fragments' lesson arriving for the other
+        // half of `[recipe]`: nothing else on this path would regenerate.
         if carries_php_ini(manifest) {
             handle.progress(94, "telling every managed PHP").await;
             self.refresh_ini_sets().await;
@@ -370,8 +368,7 @@ impl Extensions {
         })
     }
 
-    /// Would this home's front end accept what installing this would give it? — roadmap task
-    /// **T81c**, the design's D5.
+    /// Would this home's front end accept what installing this would give it?
     ///
     /// **Here rather than in `mixengine_core::extensions::install`**, and the reason is where a
     /// [`Generator`] can be built: it needs the recipe catalogue and this system's port mapping,
@@ -441,57 +438,55 @@ impl Extensions {
         &self,
         asked: &ExtensionUninstall,
     ) -> Result<ExtensionRemoval, Error> {
-        // **Stop before removing** — roadmap task **T82a**, its design's D11, and the order
-        // `mixengine_core::extensions::uninstall`'s own note states for a `service` extension's
-        // process. A `web-app` is served rather than run and had nothing to stop until it was given
-        // a pool of its own; a row deleted from under a live php-fpm would leave a master with no
-        // configuration and nothing left that knows about it.
+        // **Stop before removing**, the order `mixengine_core::extensions::uninstall`'s own note
+        // states for a `service` extension's process. A `web-app` is served rather than run and had
+        // nothing to stop until it was given a pool of its own; a row deleted from under a live
+        // php-fpm would leave a master with no configuration and nothing left that knows about it.
         self.stop_what_it_runs(&asked.id).await?;
 
-        // **Read before the row is gone, and used after it is** — roadmap task **T81c**. Whether
-        // this extension put anything in the front end's configuration is a fact about its manifest,
-        // and the manifest lives in the row this is about to delete.
+        // **Read before the row is gone, and used after it is.** Whether this extension put
+        // anything in the front end's configuration is a fact about its manifest, and the manifest
+        // lives in the row this is about to delete.
         let manifest = extension_store::get(&self.store, &asked.id)
             .await
             .map_err(|error| error.to_wire())?
             .map(|installed| installed.manifest);
         let had_a_fragment = manifest.as_ref().is_some_and(carries_a_fragment);
-        // The same question for the other half of `[recipe]` — roadmap task **T82**. Read here for
-        // the reason above: the manifest lives in the row this is about to delete.
+        // The same question for the other half of `[recipe]`. Read here for the reason above: the
+        // manifest lives in the row this is about to delete.
         let had_php_ini = manifest.as_ref().is_some_and(carries_php_ini);
 
-        // **The rows go first and the regeneration second, and that order is the escape hatch** —
-        // roadmap task **T81c**, the design's D6. A fragment that was accepted at install can be
-        // refused later — the front-end package is upgraded, or this home switches to the other
-        // front end and its fragment was never judged — and in that state nothing regenerates. The
-        // way out is this call, and it works only because by the time anything renders, the row
-        // carrying the fragment is not in the table. Swapping these two lines would remove the only
-        // exit from a home in that state; the suites in `tests/caddy.rs` and `tests/nginx.rs` are
-        // what would notice.
+        // **The rows go first and the regeneration second, and that order is the escape hatch.** A
+        // fragment that was accepted at install can be refused later — the front-end package is
+        // upgraded, or this home switches to the other front end and its fragment was never judged
+        // — and in that state nothing regenerates. The way out is this call, and it works only
+        // because by the time anything renders, the row carrying the fragment is not in the table.
+        // Swapping these two lines would remove the only exit from a home in that state; the suites
+        // in `tests/caddy.rs` and `tests/nginx.rs` are what would notice.
         let removed = uninstall::uninstall(&self.store, &self.paths, &asked.id, asked.delete_data)
             .await
             .map_err(|error| error.to_wire())?;
 
-        // **The activator goes with the pool** — T200, D2. After the row, so nothing can wake a
+        // **The activator goes with the pool.** After the row, so nothing can wake a
         // service that no longer exists in between.
         if let Some(pool) = &removed.pool {
             crate::services::activate::release(pool).await;
         }
 
-        // **After the row, so a failed uninstall does not lose a secret it still needs** — roadmap
-        // task **T82**, the design's D7. Idempotent, so an uninstall of something that never had
-        // one costs a keyring call and no error.
+        // **After the row, so a failed uninstall does not lose a secret it still needs.**
+        // Idempotent, so an uninstall of something that never had one costs a keyring call and no
+        // error.
         self.forget_config_secret(&asked.id).await;
 
-        // What `site.delete` does after its row — roadmap task **T81b**, the design's D8.
+        // What `site.delete` does after its row.
         if removed.site.is_some() {
             self.sites.no_longer_declares().await?;
         } else if had_a_fragment {
             self.sites.now_serves_what_it_declares().await?;
         }
 
-        // And the line it added to every managed PHP goes with it — roadmap task **T82**. After the
-        // row, so what is rewritten is a home this extension is no longer in.
+        // And the line it added to every managed PHP goes with it. After the row, so what is
+        // rewritten is a home this extension is no longer in.
         if had_php_ini {
             self.refresh_ini_sets().await;
         }
@@ -524,7 +519,7 @@ impl Extensions {
         match uninstall::service_of(&installed) {
             Some(service) => Ok(service),
 
-            // A web-app is served, not run — roadmap task **T81b**, the design's D10.
+            // A web-app is served, not run.
             None if installed.kind() == mixengine_proto::ExtensionKind::WebApp => {
                 let domain = mixengine_core::sites::of_extension(&self.store, id)
                     .await
@@ -626,7 +621,7 @@ fn agrees(
     Ok(())
 }
 
-/// Whether this manifest puts anything in the front end's configuration — roadmap task **T81c**.
+/// Whether this manifest puts anything in the front end's configuration.
 ///
 /// Asked three times on two paths — before an install is judged, after one has written its rows,
 /// and before an uninstall removes them — and it is one function because the three have to agree:
@@ -640,7 +635,7 @@ fn carries_a_fragment(manifest: &ExtensionManifest) -> bool {
         .is_some_and(|recipe| !recipe.front_end.is_empty())
 }
 
-/// Whether this extension adds anything to a managed PHP's `conf.d` — roadmap task **T82**.
+/// Whether this extension adds anything to a managed PHP's `conf.d`.
 ///
 /// [`carries_a_fragment`]'s twin, and one function for the install and the uninstall for its reason:
 /// an install that regenerated where an uninstall did not would leave the line behind.
@@ -652,7 +647,7 @@ fn carries_php_ini(manifest: &ExtensionManifest) -> bool {
 }
 
 /// Whether this extension declared a database, which is what makes an unwritten configuration worth
-/// a warning rather than silence — roadmap task **T82**.
+/// a warning rather than silence.
 fn needs_a_database(installed: &extension_store::Installed) -> bool {
     matches!(
         &installed.manifest.body,
@@ -660,7 +655,7 @@ fn needs_a_database(installed: &extension_store::Installed) -> bool {
     )
 }
 
-/// A `web-app` is served, not run — roadmap task **T81b**, the design's D10.
+/// A `web-app` is served, not run.
 fn served_as_a_site(id: &ExtensionId, domain: &str) -> Error {
     Error::new(
         ErrorCode::PreconditionFailed,
@@ -693,7 +688,7 @@ fn summary(
             .collect(),
         site,
         description: Some(installed.manifest.extension.description.clone()),
-        // `127.0.0.1` whatever the network reach: it is where the person's browser is (T200a, D1).
+        // `127.0.0.1` whatever the network reach: it is where the person's browser is.
         ui: installed.manifest.ui.as_ref().and_then(|ui| {
             installed
                 .ports

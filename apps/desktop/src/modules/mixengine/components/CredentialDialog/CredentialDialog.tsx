@@ -16,7 +16,7 @@ import styles from "./CredentialDialog.module.css";
  *
  * The address in the credential store comes along because it answers a different question: **where
  * this lives** when someone wants to change it with the operating system's tools. `SecretAddress`
- * carries both halves (T84), so this can be drawn without knowing MixEngine's namespace.
+ * carries both halves, so this can be drawn without knowing MixEngine's namespace.
  */
 export default function CredentialDialog({
   credentials,

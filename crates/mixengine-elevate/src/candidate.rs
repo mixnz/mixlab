@@ -1,5 +1,4 @@
-//! Deciding whether a replacement helper deserved the prompt it is about to be installed by —
-//! roadmap task **T88a**.
+//! Deciding whether a replacement helper deserved the prompt it is about to be installed by.
 //!
 //! **This is the only place in MixEngine where a signature is checked by a process running as
 //! root.** Everything else the updater verifies is verified by the daemon, which runs as the user
@@ -54,7 +53,7 @@ pub(crate) const MAX_CANDIDATE: u64 = 128 * 1024 * 1024;
 
 /// Why a candidate will not be installed.
 ///
-/// Two shapes, because they settle the queue differently — the T40b design, D5:
+/// Two shapes, because they settle the queue differently:
 /// [`OpOutcome::Refused`] deletes the row, since the same request will be refused again, and
 /// [`OpOutcome::Failed`] keeps it, since trying again may work and nothing about the request is
 /// wrong.

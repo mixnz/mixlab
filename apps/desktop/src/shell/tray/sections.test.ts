@@ -10,7 +10,7 @@ describe("the tray's sections", () => {
     expect(traySections(visibleModules(MODULE_PRESETS.mixengine)).map((m) => m.id)).toEqual(["mixengine"]);
   });
 
-  /* T203, D5: Tunnel lends a section whether or not a tunnel runs, so the Database tools preset,
+  /* Tunnel lends a section whether or not a tunnel runs, so the Database tools preset,
      which lent none before it, now opens the panel; the panel's header still has Open MixLab. */
   it("come from Tunnel on the Database tools preset, so the icon opens the panel", () => {
     expect(traySections(visibleModules(MODULE_PRESETS.databaseTools)).map((m) => m.id)).toEqual(["tunnel"]);

@@ -1,9 +1,9 @@
 //! What a group of processes is costing, measured against this machine rather than against a table
 //! a test wrote.
 //!
-//! Roadmap task **T71** built the sampler and its unit tests drive [`Snapshot::aggregate`] from
-//! invented rows, which is what makes the minute arithmetic testable. What no invented row can catch
-//! is what the *collection* puts in front of it — and that is what this file is for.
+//! The sampler's unit tests drive [`Snapshot::aggregate`] from invented rows, which is what makes
+//! the minute arithmetic testable. What no invented row can catch is what the *collection* puts in
+//! front of it — and that is what this file is for.
 
 use std::process;
 
@@ -21,8 +21,8 @@ fn me() -> GroupRoot {
     }
 }
 
-/// **One process is one process, however many threads it is running** — roadmap task **T71a**'s
-/// prerequisite, found by T72.
+/// **One process is one process, however many threads it is running** — the memory watchdog's
+/// prerequisite, found when CI's memory budget was first measured.
 ///
 /// A test binary is a tokio runtime with a worker per core and nothing spawned under it, so its
 /// group is exactly one process. On Linux `sysinfo` lists **threads alongside processes**, each
@@ -30,8 +30,8 @@ fn me() -> GroupRoot {
 /// filtering counts one process once per thread, and its `rss_bytes` comes out multiplied by the
 /// thread count.
 ///
-/// That is not a small error: a Caddy with ten threads read as 445 MB, and a php-fpm pool would have
-/// been restarted by T71a's memory watchdog for a ceiling it was nowhere near. `processes` is the
+/// That is not a small error: a Caddy with ten threads read as 445 MB, and a php-fpm pool would
+/// have been restarted by the memory watchdog for a ceiling it was nowhere near. `processes` is the
 /// sharper assertion of the two — it fails by a factor, where a memory figure needs a threshold
 /// somebody has to choose.
 #[test]

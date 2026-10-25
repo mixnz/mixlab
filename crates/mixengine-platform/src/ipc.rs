@@ -22,8 +22,8 @@
 //! [`Error::EndpointNotOurs`](crate::Error::EndpointNotOurs) when the answer is somebody else.
 //!
 //! This module deliberately does not speak HTTP or JSON-RPC. It hands back a byte stream
-//! ([`Connection`] is `AsyncRead + AsyncWrite`); the protocol on top of it is the daemon's business
-//! (roadmap task T8).
+//! ([`Connection`] is `AsyncRead + AsyncWrite`); the protocol on top of it is the daemon's
+//! business.
 
 use std::ffi::{OsStr, OsString};
 use std::fmt;
@@ -162,11 +162,11 @@ impl Listener {
     /// answers nothing was never the reason `bind` failed — and the original refusal is returned
     /// unchanged rather than being relabelled as a daemon that is not there.
     ///
-    /// That probe is not a substitute for the single-instance lock in roadmap task T9, and does not
-    /// try to be. Two daemons starting at the same instant can both find the endpoint dead, and on
-    /// Unix the second one's `bind` then replaces the first one's socket file while the first is
-    /// still listening on it. The lock is what makes that unreachable; this only handles the far
-    /// commoner case of one daemon starting after another one died.
+    /// That probe is not a substitute for the daemon's single-instance lock, and does not try to
+    /// be. Two daemons starting at the same instant can both find the endpoint dead, and on Unix
+    /// the second one's `bind` then replaces the first one's socket file while the first is still
+    /// listening on it. The lock is what makes that unreachable; this only handles the far commoner
+    /// case of one daemon starting after another one died.
     ///
     /// # Errors
     ///
@@ -202,12 +202,12 @@ impl Listener {
 
     /// Start accepting now, and queue what arrives until somebody asks for it.
     ///
-    /// **What a Unix socket's listen queue already is, made true on Windows too** (T170). A bound
-    /// named pipe that nobody is accepting on has exactly one instance, so every client after the
-    /// first meets `ERROR_PIPE_BUSY` — and the daemon binds its endpoint a long way before it
-    /// reaches its accept loop. A client retries a busy pipe for a second; a loaded machine starting
-    /// many daemons at once kept that window open for longer, and clients were refused by a daemon
-    /// that was about to serve them. The task spawned here accepts from the moment of the call, so a
+    /// **What a Unix socket's listen queue already is, made true on Windows too.** A bound named
+    /// pipe that nobody is accepting on has exactly one instance, so every client after the first
+    /// meets `ERROR_PIPE_BUSY` — and the daemon binds its endpoint a long way before it reaches its
+    /// accept loop. A client retries a busy pipe for a second; a loaded machine starting many
+    /// daemons at once kept that window open for longer, and clients were refused by a daemon that
+    /// was about to serve them. The task spawned here accepts from the moment of the call, so a
     /// client that dials early is connected and waits for its answer instead.
     ///
     /// At most [`BACKLOG`] accepted connections wait; past that the task stops accepting until one
@@ -288,8 +288,8 @@ impl Drop for Backlog {
 
 /// One client's byte stream.
 ///
-/// `AsyncRead + AsyncWrite`, and nothing else: this is what T8 hands to `hyper`, and what a client
-/// writes a JSON-RPC request into.
+/// `AsyncRead + AsyncWrite`, and nothing else: this is what the daemon hands to `hyper`, and what a
+/// client writes a JSON-RPC request into.
 #[derive(Debug)]
 pub struct Connection(sys::Connection);
 
@@ -300,7 +300,7 @@ impl Connection {
     ///
     /// Nothing is retried past the moment of connecting: a daemon that is not running is an answer
     /// this returns rather than waits for, because the caller is the one that knows whether to
-    /// start one (roadmap task T10) or to report that none is up.
+    /// start one or to report that none is up.
     ///
     /// **Who answered is checked before anything is sent.** See the module documentation for why
     /// the daemon's own peer check does not cover this direction.

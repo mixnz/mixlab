@@ -1,18 +1,19 @@
-//! `mix elevation grant` against a real `mixengined`, over a real endpoint. Roadmap task **T64**.
+//! `mix elevation grant` against a real `mixengined`, over a real endpoint.
 //!
 //! **Nothing here grants anything, and that is the point rather than a gap.** A successful grant is
 //! a real UAC dialog, a real `osascript` prompt or a real `pkexec` on the machine running
 //! `cargo test`; `crates/mixengine-daemon/tests/elevation.rs` says the same about its own suite. So
-//! every test below drives the half T64 added — the screen that comes *before* the prompt, and the
-//! three answers that stop there — and none of them passes `--yes`.
+//! every test below drives the half `mix` adds — the screen that comes *before* the prompt, and
+//! the three answers that stop there — and none of them passes `--yes`.
 //!
 //! That is also what makes the suite safe to run anywhere: the operating system is never reached,
 //! because a client that could not be answered never calls `elevation.grant` at all.
 //!
 //! Rows reach the queue the way they will on a user's machine: a site is created, and `site.create`
-//! asks for the hosts file the home now needs (T41). Until T41 there was no producer at all and this
-//! suite wrote its own row through `mixengine_testkit::privileged`, which is gone with that change —
-//! a test that creates a site and *then* finds an operation waiting proves what a fixture could not.
+//! asks for the hosts file the home now needs. Before the hosts file there was no producer at all
+//! and this suite wrote its own row through `mixengine_testkit::privileged`, which is gone since —
+//! a test that creates a site and *then* finds an operation waiting proves what a fixture could
+//! not.
 //!
 //! There is no `mix elevation enqueue` and never will be: what needs an administrator's permission
 //! is decided by the operation that needs it, and a command that let a person queue an arbitrary
@@ -43,11 +44,12 @@ fn a_domain_of_this_run() -> String {
 
 /// A home with a daemon, a site in it, and therefore something waiting.
 ///
-/// **How many is measured rather than assumed**, and T49a is why: a started daemon's own producers
-/// put what first-run setup needs into this queue before any test touches it, so the count is a
-/// property of the machine — whether it has a trust store, whether it has a resolver mechanism —
-/// rather than a constant. `nothing_was_granted` compares against this, which makes it the stronger
-/// assertion it always meant to be: the queue is exactly what it was, not merely one row long.
+/// **How many is measured rather than assumed**, and the system trust store is why: a started
+/// daemon's own producers put what first-run setup needs into this queue before any test touches
+/// it, so the count is a property of the machine — whether it has a trust store, whether it has a
+/// resolver mechanism — rather than a constant. `nothing_was_granted` compares against this, which
+/// makes it the stronger assertion it always meant to be: the queue is exactly what it was, not
+/// merely one row long.
 fn a_home_with_something_waiting() -> (Home, harness::Daemon, String, usize) {
     let home = Home::new();
     let daemon = home.start_daemon();
@@ -90,11 +92,11 @@ fn granting_with_nothing_waiting_asks_no_question() {
     let home = Home::new();
     let _daemon = home.start_daemon();
 
-    // **A started daemon asks for what first-run setup needs**, so an empty queue is now something a
-    // test has to make rather than something a fresh home is — T49a's install is the row that made
-    // that true on every machine with a trust store. Emptied rather than filtered: this test is
-    // about the daemon's own refusal when there is genuinely nothing, and reaching a real prompt
-    // instead is the one thing this suite must never do.
+    // **A started daemon asks for what first-run setup needs**, so an empty queue is now something
+    // a test has to make rather than something a fresh home is — the authority's install is the row
+    // that made that true on every machine with a trust store. Emptied rather than filtered: this
+    // test is about the daemon's own refusal when there is genuinely nothing, and reaching a real
+    // prompt instead is the one thing this suite must never do.
     let dropped = home.mix(&["elevation", "drop", "--all"]);
     assert!(dropped.status.success(), "{}", stderr(&dropped));
 
@@ -113,8 +115,8 @@ fn granting_with_nothing_waiting_asks_no_question() {
     );
 }
 
-/// The claim T64 exists for, now driven by the product: the list comes first, and the question
-/// comes after it.
+/// The claim the screen exists for, now driven by the product: the list comes first, and the
+/// question comes after it.
 #[test]
 fn granting_says_what_each_operation_will_change_before_it_asks() {
     let (home, _daemon, domain, _waiting) = a_home_with_something_waiting();
@@ -210,9 +212,9 @@ fn json_cannot_be_asked_so_it_has_to_be_told_in_advance() {
 
 /// The degraded mode a decline leaves behind is visible from the command people actually type.
 ///
-/// **A guard rather than a driver.** T40b already put the count on `daemon.status`, so this passed
-/// the day it was written; it is here because it is one of T64's claims, and the claim is about the
-/// pair — a decline that returns to the shell, and a count that survives it.
+/// **A guard rather than a driver.** The elevation queue already put the count on `daemon.status`,
+/// so this passed the day it was written; it is here because it is one of the screen's claims, and
+/// the claim is about the pair — a decline that returns to the shell, and a count that survives it.
 #[test]
 fn status_keeps_counting_what_is_waiting_after_a_decline() {
     let (home, _daemon, _domain, waiting) = a_home_with_something_waiting();
@@ -268,8 +270,8 @@ fn nothing_was_granted(home: &Home, waiting: usize) {
     );
 }
 
-/// **T179.** The row a site queued goes when the site does, so nothing describes a name this home
-/// no longer declares — the reproduction that found this, as a user runs it.
+/// The row a site queued goes when the site does, so nothing describes a name this home no longer
+/// declares — the reproduction that found this, as a user runs it.
 #[test]
 fn deleting_the_site_takes_its_operation_out_of_the_queue() {
     let (home, _daemon, domain, _waiting) = a_home_with_something_waiting();

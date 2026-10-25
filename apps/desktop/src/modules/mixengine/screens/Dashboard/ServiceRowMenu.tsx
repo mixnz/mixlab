@@ -113,7 +113,7 @@ export default function ServiceRowMenu({
               onClick={() => {
                 const id = menu.id;
                 onClose();
-                // A `db` tab in this window; the password travels neither way through here (T83).
+                // A `db` tab in this window; the password travels neither way through here.
                 void api.databaseExploreData(id).catch((e: unknown) => setError(errorMessage(t, e)));
               }}
             >

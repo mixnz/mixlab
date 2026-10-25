@@ -1,6 +1,6 @@
 //! `mix cert …` against a real daemon.
 //!
-//! Roadmap task **T48**'s client half. What the daemon's own `tests/api.rs` proves is that the
+//! The certificate authority's client half. What the daemon's own `tests/api.rs` proves is that the
 //! authority exists and that the method answers; what is proved here is the part only `mix` can be
 //! wrong about — that the answer reaches a screen in both renderings, that the private key does not
 //! reach either, and that the short name this command did *not* take is still free.
@@ -64,7 +64,7 @@ async fn ca_status_as_json_is_the_daemons_own_value() {
     }
 }
 
-/// **The name T48 held open, used** — roadmap task **T53**.
+/// **The short name, held open for the per-site check, used by it.**
 ///
 /// The test this replaces asserted that `mix cert status` *failed*, so that the short name could
 /// not be taken by anything that was not the per-site check `docs/features/tls.md` specifies.
@@ -72,8 +72,8 @@ async fn ca_status_as_json_is_the_daemons_own_value() {
 ///
 /// **A home with no front end is the case worth asserting**, because it is the state every fresh
 /// home is in and the one a diagnostic still has to be useful in: there is no server to hand a
-/// certificate over. There *is* a certificate — T50's producer signed one as the site was created —
-/// and the answer keeps the two facts apart instead of reporting a certificate problem this site
+/// certificate over. There *is* a certificate — the leaf issuer signed one as the site was created
+/// — and the answer keeps the two facts apart instead of reporting a certificate problem this site
 /// does not have.
 #[tokio::test(flavor = "multi_thread")]
 async fn cert_status_reports_a_site_that_nothing_is_serving() {
@@ -128,12 +128,12 @@ async fn cert_status_carries_no_private_key() {
     }
 }
 
-/// Whether this machine trusts it, on the screen — roadmap task **T49a**.
+/// Whether this machine trusts it, on the screen.
 ///
-/// **T48's own test asserted this line was absent**, because there was no such fact in the answer
-/// then. There is now, and what is checked is that the client prints the daemon's word rather than
-/// deciding: on a runner nothing has installed into, the honest answer is "no" or "n/a", and "yes"
-/// would mean the client made it up.
+/// **The first test of this command asserted this line was absent**, because there was no such fact
+/// in the answer then. There is now, and what is checked is that the client prints the daemon's
+/// word rather than deciding: on a runner nothing has installed into, the honest answer is "no" or
+/// "n/a", and "yes" would mean the client made it up.
 #[tokio::test(flavor = "multi_thread")]
 async fn ca_status_says_whether_this_machine_trusts_the_authority() {
     let home = Home::new();
@@ -147,8 +147,9 @@ async fn ca_status_says_whether_this_machine_trusts_the_authority() {
         "nothing installed this authority, so the screen cannot say it is trusted: {printed}"
     );
 
-    // And the private key still reaches neither rendering, which is the assertion T48 made and this
-    // change had every opportunity to break: the trust half reads a store full of certificates.
+    // And the private key still reaches neither rendering, which is the assertion the first version
+    // made and this change had every opportunity to break: the trust half reads a store full of
+    // certificates.
     assert!(!printed.contains("PRIVATE"), "{printed}");
 }
 
@@ -181,10 +182,10 @@ async fn the_trust_answer_is_a_word_a_client_can_match_on() {
     }
 }
 
-/// **The browsers are a second line and a second question** — roadmap task T49b. Firefox and Chrome
-/// on Linux read certificate databases of their own, so a machine whose system store holds this
-/// authority can still show a red padlock in both; the screen says so rather than letting the
-/// trust line stand for both.
+/// **The browsers are a second line and a second question.** Firefox and Chrome on Linux read
+/// certificate databases of their own, so a machine whose system store holds this authority can
+/// still show a red padlock in both; the screen says so rather than letting the trust line stand
+/// for both.
 ///
 /// What a runner answers depends on the runner — Windows and macOS are not searched, a Linux leg
 /// with no browser profile finds none, and a Linux leg with no `libnss3-tools` has no tool — so
@@ -246,7 +247,7 @@ async fn the_browsers_answer_is_a_word_a_client_can_match_on() {
     }
 }
 
-/// A site gets a certificate, and asking again writes nothing — roadmap task **T50**.
+/// A site gets a certificate, and asking again writes nothing.
 ///
 /// **One test through the whole stack**, because what it proves is that the RPC, the daemon's walk
 /// over the rows and the renderer agree; each of those has its own unit tests and none of them can
@@ -284,8 +285,8 @@ async fn a_site_is_issued_a_certificate_and_the_second_ask_reuses_it() {
         .unwrap_or_else(|| panic!("blog.test is not in the report: {first}"));
 
     // **Not `issued`.** The daemon's own producer runs at start and after every site create, so by
-    // the time a person types this the certificate is already there — which is the guarantee T50
-    // exists for, and reading `reused` here is what proves it rather than a defect.
+    // the time a person types this the certificate is already there — which is the guarantee the
+    // leaf issuer exists for, and reading `reused` here is what proves it rather than a defect.
     assert!(
         matches!(
             issued["outcome"]["outcome"].as_str(),
@@ -339,8 +340,9 @@ async fn a_home_with_no_site_is_told_so() {
 ///
 /// The authority this daemon just made is seconds old and in no store on this machine, so the
 /// honest answer is that nothing is left — reached without a prompt, because
-/// `Certificates::require_untrust` enqueues nothing for a store that is not holding it. T41's D11,
-/// one capability along: no prompt is spent on a row whose only outcome is `AlreadyDone`.
+/// `Certificates::require_untrust` enqueues nothing for a store that is not holding it. The hosts
+/// file's rule, one capability along: no prompt is spent on a row whose only outcome is
+/// `AlreadyDone`.
 #[tokio::test(flavor = "multi_thread")]
 async fn ca_uninstall_finds_nothing_left_in_a_store_that_never_held_it() {
     let home = Home::new();
@@ -410,7 +412,7 @@ async fn ca_uninstall_refuses_when_there_is_nobody_to_answer() {
     );
 }
 
-/// **A rotation end to end, and it is a system test because the first draft was not** — T54.
+/// **A rotation end to end, and it is a system test because the first draft was not.**
 ///
 /// This was written as an ordinary `#[test]` on the assumption that no machine running `cargo test`
 /// could raise an elevation prompt, so the rotation would always refuse and the assertion could be

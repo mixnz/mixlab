@@ -39,7 +39,7 @@ interface SettingsModalProps {
   onClose: () => void;
   /** The pane to open on — the closing strip opens Sync. Appearance when absent. */
   initialSection?: string;
-  /** MixLab's updater, owned by `Workspace` so the Settings button can show its dot (T187). */
+  /** MixLab's updater, owned by `Workspace` so the Settings button can show its dot. */
   updates: Updates;
 }
 
@@ -75,10 +75,10 @@ function SettingsModal({
      app this window has at all, then whatever the visible modules contribute, then the errands.
      Appearance leads because it is the pane a user opens this dialog for most; Modules sits right
      under it because it is the setting that decides which of the panes below it exist. General
-     sits between them: MixLab-wide behaviour that is not how it looks (T192).
+     sits between them: MixLab-wide behaviour that is not how it looks.
 
-     Rebuilt on every render rather than held as a module-level constant — T108 — because the module
-     panes come and go with the setting the Modules pane carries.
+     Rebuilt on every render rather than held as a module-level constant, because the module panes
+     come and go with the setting the Modules pane carries.
 
      A module names its own pane, and every one of them names itself after the module — so the
      column reads as the app's parts, and a reader can tell before clicking which entries are the

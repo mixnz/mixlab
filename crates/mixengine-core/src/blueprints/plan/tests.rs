@@ -172,7 +172,7 @@ fn step_of(planned: &BlueprintPlan, wanted: impl Fn(&PlanAction) -> bool) -> &Pl
 
 /// The `InstallPackage` or `EnsureService` step for one package.
 ///
-/// **Since T115 a plan holds more than one of each.** A manifest with a `[site]` applied to a
+/// **A plan can hold more than one of each.** A manifest with a `[site]` applied to a
 /// home with no front end plans Caddy as well, so a test asking for "the install step" would
 /// get whichever came first and assert about the wrong service.
 fn for_package<'a>(planned: &'a BlueprintPlan, name: &str) -> Vec<&'a PlanStep> {

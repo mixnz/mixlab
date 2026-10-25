@@ -74,14 +74,14 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** The pane Settings opens on this time; `undefined` is its own default. */
   const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined);
-  /* MixLab's own updater — T187. Here rather than in the pane, so the Settings button can say that
+  /* MixLab's own updater. Here rather than in the pane, so the Settings button can say that
      a release is waiting whatever modules are visible, and the pane reads the same state. */
   const updates = useUpdates(settingsOpen);
-  /* MixLab ▸ Remove MixLab from this Mac…: T182a. The menu item and its words are
+  /* MixLab ▸ Remove MixLab from this Mac…. The menu item and its words are
      `useWindowChrome`'s; the dialog it opens is drawn here. */
   const [removeOpen, setRemoveOpen] = useState(false);
   /* The release on the Settings button's dot: offered, downloading or ready to install. *Later*
-     hides the corner panel and not the dot, which interrupts nothing (T188 D1). */
+     hides the corner panel and not the dot, which interrupts nothing. */
   const pendingView = updates.view === "offer" || updates.view === "downloading" || updates.view === "ready";
   const offered = pendingView ? (updates.status?.feed?.version ?? null) : null;
 
@@ -168,8 +168,8 @@ function Workspace({ enabled, onEnabledChange }: WorkspaceProps) {
         onDismissNotice={(id) => setEnabledFor((prev) => forgetNotice(prev, id))}
       />
 
-      {/* MixLab's own release, offered in the corner: T188. Under Settings when that is open, and
-          drawn whatever modules are visible (ADR 0056). T187's once-per-release strip is gone: one
+      {/* MixLab's own release, offered in the corner. Under Settings when that is open, and drawn
+          whatever modules are visible (ADR 0056). The strip once shown per release is gone: one
           notice for one release. */}
       <UpdatePanel
         updates={updates}

@@ -2,10 +2,10 @@
 import type { ExtensionId } from "./ExtensionId";
 
 /**
- * Where an install gets its manifest — roadmap task **T81**.
+ * Where an install gets its manifest.
  *
  * **`ExtensionOrigin` and not `ExtensionSource`**: that name belongs to a *PHP* extension's
- * `runtime_api`, which is the same collision `php_extensions.rs` was renamed for in T80.
+ * `runtime_api`, which is the same collision `php_extensions.rs` was renamed for.
  */
 export type ExtensionOrigin = { "type": "registry", 
 /**

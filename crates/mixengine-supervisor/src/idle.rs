@@ -1,4 +1,4 @@
-//! Reading an [`IdleProbe`] — roadmap task **T69**.
+//! Reading an [`IdleProbe`].
 //!
 //! The third of the three questions a `ServiceSpec` can ask about a running service, and it lives
 //! beside the other two for that reason. [`ready`](crate::ready) asks *can I route traffic to it
@@ -64,8 +64,8 @@ pub enum Observation {
 /// previous sweep. Held by the caller and handed back in, so this module keeps nothing between
 /// calls and a daemon restart forgets — which is correct, since a service just adopted has been
 /// observed zero times.
-/// **Only [`IdleProbe::HttpCounter`] keeps anything here**, and T72a is the task that found out why
-/// a second counting probe should not: php-fpm's `accepted conn` counts the daemon's own health
+/// **Only [`IdleProbe::HttpCounter`] keeps anything here**, and measuring the cold path found out
+/// why a second counting probe should not: php-fpm's `accepted conn` counts the daemon's own health
 /// checks, so a difference taken across two sweeps is mostly the daemon's own footprints — the
 /// `FastCgiStatus` arm of [`observe`] says what it reads instead.
 pub type Counters = BTreeMap<ServiceId, u64>;
@@ -152,18 +152,19 @@ pub async fn observe(
             judge(active)
         }
 
-        // **The one wildcard arm in this task, and it is forced.** `IdleProbe` is `#[non_exhaustive]`
-        // and lives in another crate, so this cannot be an exhaustive match however much T47b's rule
-        // would prefer one. What it must not become is a silent fall-through: a probe this build
-        // cannot read is a spec written for a newer MixEngine, and the honest answer is that nothing
-        // was measured — which keeps the service running rather than stopping it on no evidence.
+        // **The one wildcard arm in this module, and it is forced.** `IdleProbe` is
+        // `#[non_exhaustive]` and lives in another crate, so this cannot be an exhaustive match
+        // however much the rule that matches are exhaustive would prefer one. What it must not
+        // become is a silent fall-through: a probe this build cannot read is a spec written for a
+        // newer MixEngine, and the honest answer is that nothing was measured — which keeps the
+        // service running rather than stopping it on no evidence.
         other => Observation::Unmeasurable {
             because: format!("this build cannot read the idle probe {other:?}"),
         },
     }
 }
 
-/// What a pool's status page says about whether anybody is using it — **T72a**.
+/// What a pool's status page says about whether anybody is using it.
 ///
 /// **A pool is busy when a worker is serving something, and idle when none is.** `active processes`
 /// counts exactly that, and the `<= 1` is the probe's own request: reading a status page over the

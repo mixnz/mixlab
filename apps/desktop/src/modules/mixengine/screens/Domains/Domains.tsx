@@ -26,7 +26,7 @@ function Fact({ on }: { on: boolean }) {
 }
 
 /**
- * The domain diagnosis table — T2.5.
+ * The domain diagnosis table.
  *
  * **Four independent facts, not one verdict.** `hosts_entry`, `wildcard`, `server_answers` and
  * `resolves_to` each answer a different question; `because` is the only sentence saying what is

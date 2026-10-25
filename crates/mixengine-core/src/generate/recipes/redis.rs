@@ -1,10 +1,10 @@
-//! Redis — roadmap task **T35**, with [`memcached`](super::memcached) the other half of it.
+//! Redis, with [`memcached`](super::memcached) the other cache.
 //!
 //! The simplest recipe in the catalogue, and it is worth saying what makes it simple: there is
 //! nothing to create before it runs. No data directory a second program has to build, no credential
 //! that must exist in the OS keyring before anything touches the disk — a rendered file, a command
-//! line, and a server. What T33 and T34 needed [`Recipe::ritual`] for, this one does not need
-//! at all.
+//! line, and a server. What MariaDB and PostgreSQL needed [`Recipe::ritual`] for, this one does not
+//! need at all.
 //!
 //! # The one constraint, and it is upstream's
 //!
@@ -33,8 +33,9 @@
 //! is what [`ReloadBehaviour`](mixengine_proto::ReloadBehaviour)'s own documentation already says
 //! about this service.
 //!
-//! **It listens on no Unix socket.** One address is one thing for T38 to diagnose and one thing for
-//! a project's `.env` to name, and the socket would buy a local round trip that is loopback already.
+//! **It listens on no Unix socket.** One address is one thing for a failed start to be diagnosed
+//! against and one thing for a project's `.env` to name, and the socket would buy a local round
+//! trip that is loopback already.
 
 use mixengine_proto::{
     HealthCheck, HealthProbe, Millis, ReadyCheck, ServiceSpec, ServiceSpecBuilder, StopBehaviour,
@@ -103,12 +104,12 @@ impl Recipe for Redis {
     }
 
     /// RESP, which a desktop client opens although this server names no administrator — a handoff
-    /// to it simply carries no credential. T83.
+    /// to it simply carries no credential.
     fn protocol(&self) -> Option<mixengine_proto::DatabaseProtocol> {
         Some(mixengine_proto::DatabaseProtocol::Redis)
     }
 
-    /// One command — roadmap task **T130**.
+    /// One command.
     ///
     /// `redis-check-rdb` and `redis-check-aof` are absent: both read a data file the daemon owns
     /// while the server that writes it may be running, and neither is a thing a person types in a
@@ -185,9 +186,9 @@ impl Recipe for Redis {
     ///
     /// Redis has no `--test-config`, and no mode that reads a configuration without becoming a
     /// server: the only way to find out whether a `redis.conf` is acceptable is to start one. What
-    /// T30's staging buys every other recipe, this one gets from the start itself — a configuration
-    /// Redis refuses is a service that fails to start, with the server's own complaint on the stream
-    /// `mix service logs` reads.
+    /// the generator's staging buys every other recipe, this one gets from the start itself — a
+    /// configuration Redis refuses is a service that fails to start, with the server's own
+    /// complaint on the stream `mix service logs` reads.
     fn validator(&self, _context: &Context) -> Option<Validator> {
         None
     }
@@ -214,7 +215,7 @@ impl Recipe for Redis {
             // note: any other spelling is joined to `getcwd()` by the server itself.
             .args([CONFIG_FILE.to_owned()])
             .cwd(context.etc())
-            // What a failed start is diagnosed against (T38).
+            // What a failed start is diagnosed against.
             .ports([port])
             .ready(ReadyCheck::Command {
                 program: client.clone(),
@@ -223,7 +224,7 @@ impl Recipe for Redis {
             })
             .health(HealthCheck {
                 // `PING` over one connection, not `redis-cli ping`: the same answer without starting
-                // a process every ten seconds — roadmap task T190b, D4.
+                // a process every ten seconds.
                 probe: HealthProbe::RedisPing {
                     addr: address(context)?,
                 },
@@ -249,26 +250,26 @@ impl Recipe for Redis {
             }))
     }
 
-    /// Its port, and nothing else — T70a's D4. It listens on no Unix socket; the module doc above
+    /// Its port, and nothing else. It listens on no Unix socket; the module doc above
     /// says why, and an address the server never binds is one the daemon must not bind either.
     fn held_while_stopped(&self, context: &Context) -> Result<Vec<Upstream>> {
         Ok(vec![Upstream::Tcp(address(context)?)])
     }
 
-    /// An hour — T70a, design D9, and the number `resource-isolation.md` already publishes.
+    /// An hour — the number `resource-isolation.md` already publishes.
     ///
     /// **Longer than php-fpm's half hour on purpose.** A pool starts in tens of milliseconds; a
     /// server replays its log first, so a developer coming back to a project after fifty minutes
     /// would pay for the stop rather than benefit from it. What the extra half hour costs is one
     /// idle server's memory, which is the thing being traded and is worth naming.
     ///
-    /// **Answerable only now.** Until T70a the daemon could stop this and nothing could start it
-    /// again, and a default that idled it would have been a default that broke a home which changed
-    /// nothing — which is why the number arrives in the last commit of that task rather than the
-    /// first.
+    /// **Answerable only once a connection can start this server.** Before that the daemon could
+    /// stop it and nothing could start it again, and a default that idled it would have been a
+    /// default that broke a home which changed nothing — which is why the number arrived with the
+    /// last of that work rather than the first.
     ///
-    /// **Only while the home saves resources** — roadmap task **T167b**, ADR 0041. Until then this
-    /// number was the default for every home; now a service nobody set is never idle-stopped.
+    /// **Only while the home saves resources** (ADR 0041). Before that this number was the default
+    /// for every home; now a service nobody set is never idle-stopped.
     fn idle_when_saving(&self) -> Option<mixengine_proto::Millis> {
         Some(mixengine_proto::Millis::from_secs(60 * 60))
     }
@@ -295,7 +296,7 @@ fn ping(context: &Context, port: u16) -> Vec<String> {
     args
 }
 
-/// Where this instance listens, as one value — T70a.
+/// Where this instance listens, as one value.
 ///
 /// The client's arguments are built from [`connection`] rather than from this, because a client
 /// takes a host and a port as two words; what needs them as one address is the daemon, which binds
@@ -403,8 +404,8 @@ mod tests {
     /// **Redis is woken at its port and nowhere else**, which is not an omission: it listens on
     /// no Unix socket, and an address the server never binds is one the daemon must not bind
     /// either — a client reaching it would be answered by something that is not Redis.
-    /// **Health is asked in the server's own protocol** — roadmap task T190b, D4. Readiness, which
-    /// runs once per start, still asks the client program.
+    /// **Health is asked in the server's own protocol.** Readiness, which runs once per start,
+    /// still asks the client program.
     #[test]
     fn health_is_asked_in_the_protocol_and_readiness_is_still_the_client() {
         let spec = Redis
@@ -444,7 +445,8 @@ mod tests {
     }
 
     /// An artifact that unpacks and will not run is one the user meets against their own site,
-    /// which is T20a's finding and the reason `Installer::install` takes a smoke test at all.
+    /// which is what the first real package showed and the reason `Installer::install` takes a
+    /// smoke test at all.
     #[test]
     fn redis_proves_itself_by_running() {
         let smoke = Redis.smoke_test().expect("a server proves that it runs");
@@ -453,7 +455,7 @@ mod tests {
         assert_eq!(smoke.args, ["--version"]);
     }
 
-    /// What a failed start is diagnosed against — roadmap task **T38**.
+    /// What a failed start is diagnosed against.
     #[test]
     fn the_spec_declares_the_port_it_will_bind() {
         assert_eq!(spec("{}").ports(), [6379]);

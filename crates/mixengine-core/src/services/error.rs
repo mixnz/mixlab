@@ -1,7 +1,7 @@
 //! The ways a service's state, settings, generated configuration and ports can be wrong.
 //!
 //! One of the enums [`crate::Error`] wraps transparently, so its messages and sources are
-//! the ones a caller of this crate always saw — roadmap task **T207j**.
+//! the ones a caller of this crate always saw.
 
 use std::path::PathBuf;
 
@@ -10,9 +10,9 @@ use std::path::PathBuf;
 pub enum ServiceError {
     /// A database or account name is not one this build will put in a statement.
     ///
-    /// **The refusal is the boundary** — roadmap task **T77a**. Every statement quotes its
-    /// identifiers and nothing escapes them, which is safe for exactly one reason: this refused
-    /// every character that could end a quoted identifier.
+    /// **The refusal is the boundary.** Every statement quotes its identifiers and nothing escapes
+    /// them, which is safe for exactly one reason: this refused every character that could end a
+    /// quoted identifier.
     #[error("{name} cannot be a database or account name: {reason}")]
     InvalidDatabaseName {
         /// What was asked for.
@@ -23,10 +23,10 @@ pub enum ServiceError {
 
     /// A password a person chose is not one this build will put in a statement.
     ///
-    /// **Never the value** — roadmap task **T77b**. Unlike [`Error::InvalidDatabaseName`], this
-    /// variant carries no copy of what was refused: a database or account name is meant to be seen
-    /// again, a password is not, and an error that echoed it back would put it in a terminal's
-    /// scrollback and a CI log for the one call that exists to keep it out of both.
+    /// **Never the value.** Unlike [`Error::InvalidDatabaseName`], this variant carries no copy of
+    /// what was refused: a database or account name is meant to be seen again, a password is not,
+    /// and an error that echoed it back would put it in a terminal's scrollback and a CI log for
+    /// the one call that exists to keep it out of both.
     ///
     /// [`Error::InvalidDatabaseName`]: crate::ServiceError::InvalidDatabaseName
     #[error("that password cannot be used: {reason}")]
@@ -37,9 +37,9 @@ pub enum ServiceError {
 
     /// An account of this name is on the server and MixEngine holds no credential for it.
     ///
-    /// **A keyring entry is the deed of ownership** — the T77a design, D3. Without this refusal,
-    /// "make sure the account exists" would be an `ALTER USER` that silently resets the password of
-    /// an account somebody else made.
+    /// **A keyring entry is the deed of ownership.** Without this refusal, "make sure the account
+    /// exists" would be an `ALTER USER` that silently resets the password of an account somebody
+    /// else made.
     #[error(
         "an account called {user} already exists on {service}, and MixEngine has no credential for \
          it"
@@ -279,7 +279,7 @@ pub enum ServiceError {
         service: mixengine_proto::ServiceId,
     },
 
-    /// Another service already points at this data directory — roadmap task **T36**.
+    /// Another service already points at this data directory.
     ///
     /// Two instances of one server are two data directories, and the layout the generator derives
     /// guarantees that on its own. This is the case it cannot guarantee: a caller that named the
@@ -294,7 +294,7 @@ pub enum ServiceError {
         holder: String,
     },
 
-    /// Nothing free was found near the port a recipe asked for — roadmap task **T34c**.
+    /// Nothing free was found near the port a recipe asked for.
     ///
     /// **A bounded search, and running out of it is an error rather than a longer loop.** A machine
     /// on which sixty-four consecutive ports above 3306 are all held is not a machine one more

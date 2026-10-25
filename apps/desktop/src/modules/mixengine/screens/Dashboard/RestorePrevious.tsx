@@ -12,7 +12,7 @@ import { offerFrom, type RestoreOffer } from "../../previousCopy";
 import styles from "./RestorePrevious.module.css";
 
 /**
- * A copy of an earlier install's state, found in the folders this home keeps — roadmap task T182h.
+ * A copy of an earlier install's state, found in the folders this home keeps.
  *
  * Drawn only while `home.previous` answers a copy, which the daemon does only while this home has
  * nothing of its own yet; gone once restored. The report stays until the card is left, so what was

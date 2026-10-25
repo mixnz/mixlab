@@ -1,11 +1,11 @@
-//! The php-fpm pool a `web-app` extension's site runs on — roadmap task **T82a**.
+//! The php-fpm pool a `web-app` extension's site runs on.
 //!
 //! # Why a pool of its own, for every `web-app` and not only the ones that ask for a password
 //!
-//! The design's D1. A manifest field must not decide whether an extension gets a process of its
-//! own: one that grew `signs_in` in a later release would, on the next install, quietly stop
-//! sharing a pool and start owning one — a change to what runs on the machine, arriving from a
-//! document rather than from a decision.
+//! A manifest field must not decide whether an extension gets a process of its own: one that grew
+//! `signs_in` in a later release would, on the next install, quietly stop sharing a pool and start
+//! owning one — a change to what runs on the machine, arriving from a document rather than from a
+//! decision.
 //!
 //! And the isolation belongs to the *kind*. A `web-app` is an administrative interface onto this
 //! machine's own databases, served on a runtime MixEngine picks rather than the user's; today it
@@ -13,21 +13,20 @@
 //! developing. That is true whether or not a credential is involved.
 //!
 //! What it costs is one php-fpm master per installed `web-app`, and that is bounded by machinery
-//! that already exists: a pool is idle-stopped after half an hour ([`Recipe::idle_default`], T70's
-//! D9) and woken by the request that needs it.
+//! that already exists: a pool is idle-stopped after half an hour ([`Recipe::idle_default`]) and
+//! woken by the request that needs it.
 //!
 //! # The id is derived and the row is confirmed
 //!
 //! [`id`] composes `php-fpm@<extension-id>`, which is the rule a `service` extension's process
 //! already follows one step along — there the process *is* `<id>`. [`of`] reads the row back before
-//! anything names it, because T81b paid once already for the difference between formatting an id
-//! and having one.
+//! anything names it, because extension sites paid once already for the difference between
+//! formatting an id and having one.
 //!
 //! # And it is not a pool anybody else may name
 //!
-//! [`crate::sites`] refuses it to a site that is not this extension's — the design's D5 — because a
-//! project's PHP inside this process would be a project's PHP able to read a database superuser's
-//! password.
+//! [`crate::sites`] refuses it to a site that is not this extension's, because a project's PHP
+//! inside this process would be a project's PHP able to read a database superuser's password.
 //!
 //! [`Recipe::idle_default`]: crate::generate::recipe::Recipe::idle_default
 
@@ -40,14 +39,13 @@ use crate::services::{Declaration, Origin, Port};
 use crate::sites::SiteOwner;
 use crate::{Error, ExtensionError, Paths, Result, Store};
 
-/// The variable a `web-app` declaring `signs_in` finds the database superuser's password in — the
-/// design's D2.
+/// The variable a `web-app` declaring `signs_in` finds the database superuser's password in.
 ///
-/// **A constant and not a manifest field.** T80's D2 made an address unwritable so that there would
-/// be no check to forget; the same move here means an author cannot collide with `PATH`, with
-/// `PHP_INI_SCAN_DIR`, or with the two variables a Windows pool is configured through. A manifest
-/// reaches it through `{db_password_env}` rather than by spelling it, so the name lives in one
-/// place in one repository and a manifest published from the other keeps working the day it
+/// **A constant and not a manifest field.** The manifest format made an address unwritable so that
+/// there would be no check to forget; the same move here means an author cannot collide with
+/// `PATH`, with `PHP_INI_SCAN_DIR`, or with the two variables a Windows pool is configured through.
+/// A manifest reaches it through `{db_password_env}` rather than by spelling it, so the name lives
+/// in one place in one repository and a manifest published from the other keeps working the day it
 /// changes.
 pub const CREDENTIAL_ENV: &str = "MIXENGINE_DB_PASSWORD";
 
@@ -108,8 +106,8 @@ pub async fn of(store: &Store, extension: &ExtensionId) -> Result<Option<Service
 /// rather than derived at every start.
 ///
 /// **The caller must not be holding the port allocator's lock**: [`crate::services::create`] takes
-/// it, and it is not reentrant — which T81 found by writing a daemon that stopped answering rather
-/// than one that failed.
+/// it, and it is not reentrant — which the first install found by writing a daemon that stopped
+/// answering rather than one that failed.
 ///
 /// # Errors
 ///
@@ -151,8 +149,8 @@ pub async fn create(
             bind_addr: None,
             data_dir: None,
             // **Not on by default**, for the reason a shared pool is not: the request that needs it
-            // starts it, through the activator T70 built, and a machine that boots with two
-            // administrative interfaces running is a machine spending memory on nobody.
+            // starts it, through the activator, and a machine that boots with two administrative
+            // interfaces running is a machine spending memory on nobody.
             autostart: false,
             overrides: "{}".to_owned(),
         },
@@ -168,8 +166,7 @@ pub async fn create(
 /// uninstall interrupted by a daemon restart has to be able to finish rather than refuse.
 ///
 /// **Nothing here stops a process.** Supervision belongs to the daemon, which stops the pool before
-/// calling this — the design's D11, and the order that module's note already states for a `service`
-/// extension.
+/// calling this — the order that module's note already states for a `service` extension.
 ///
 /// # Errors
 ///
@@ -193,16 +190,16 @@ pub async fn remove(
 
 /// Give every `web-app` extension's site a pool of its own, and say which were made.
 ///
-/// **Idempotent, and run at boot as well as after an install** — the design's D10, which is
+/// **Idempotent, and run at boot as well as after an install**:
 /// [`crate::services::pools::ensure`]'s note at a second site and for its reasons. It is what gives
-/// a `web-app` installed before this task a pool of its own with no data migration, and what
-/// repairs a home whose pool row somebody deleted by hand.
+/// a `web-app` still on the shared pool one of its own with no data migration, and what repairs a
+/// home whose pool row somebody deleted by hand.
 ///
-/// **The runtime comes from the pool the site already names**, which is the honest source: T81b
-/// froze a PHP into that row at install, and re-resolving `[web-app.runtime].requires` here would
+/// **The runtime comes from the pool the site already names**, which is the honest source: the
+/// install froze a PHP into that row, and re-resolving `[web-app.runtime].requires` here would
 /// silently move an application onto a newer PHP because a daemon restarted. A site naming no pool
-/// at all — the state a forced `runtime.uninstall` leaves — is skipped with a line naming what would
-/// fix it, because there is nothing to read a runtime out of.
+/// at all — the state a forced `runtime.uninstall` leaves — is skipped with a line naming what
+/// would fix it, because there is nothing to read a runtime out of.
 ///
 /// **A no-op on a home that is already right**, which is what lets it run at boot: one query on a
 /// home with no extension sites at all.
@@ -286,12 +283,12 @@ pub async fn ensure(store: &Store, host: &dyn mixengine_platform::Host) -> Resul
     Ok(made)
 }
 
-/// A credential a service's processes are handed at spawn — the design's D4.
+/// A credential a service's processes are handed at spawn.
 ///
 /// **An address and never a value.** `mixengine-core` has no business reaching a credential store
-/// (`generate::databases`' D1); what travels here is what the supervisor will look up, so a
-/// [`Context`](crate::generate::context::Context) holding one may be `Debug`-printed exactly as it
-/// always could.
+/// (the division `generate::databases` opens with); what travels here is what the supervisor will
+/// look up, so a [`Context`](crate::generate::context::Context) holding one may be `Debug`-printed
+/// exactly as it always could.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Credential {
     /// The variable it arrives in — [`CREDENTIAL_ENV`].
@@ -307,18 +304,17 @@ pub struct Credential {
 
     /// The service that credential opens.
     ///
-    /// Carried so the pool can declare an edge to it (the design's D7): a pool started before the
-    /// database has ever run finds no entry at all, because the entry is written by that database's
-    /// first run.
+    /// Carried so the pool can declare an edge to it: a pool started before the database has ever
+    /// run finds no entry at all, because the entry is written by that database's first run.
     pub database: ServiceId,
 }
 
 /// Which pools in this home carry a credential, by pool.
 ///
 /// **Resolved once per generation walk, off the link and never off `engines`.** The link is the
-/// `site_service_links` row T82 froze at install; re-resolving the preference order at render time
+/// `site_service_links` row frozen at install; re-resolving the preference order at render time
 /// would re-point an application at a different server than the one it was installed against, which
-/// is why the pool is frozen too (T81b's D5).
+/// is why the pool is frozen too.
 ///
 /// **It fails closed.** A pool a site that is not its extension's also names carries nothing, and
 /// says so: that state is unreachable through [`crate::sites`]' refusal, and these few lines are the
@@ -381,9 +377,10 @@ pub async fn credentials(store: &Store) -> Result<BTreeMap<ServiceId, Credential
                     Credential {
                         env: CREDENTIAL_ENV.to_owned(),
                         keyring_service: mixengine_platform::KEYRING_SERVICE.to_owned(),
-                        // **Through the one composition** (T84), so the address carries the home
-                        // T126 put in front of every other one. Spelled by hand here it asked for
-                        // `mariadb@main/root`, which nothing writes, and the pool never started.
+                        // **Through the one composition**, so the address carries the home that
+                        // ADR 0032 put in front of every other one. Spelled by hand here it asked
+                        // for `mariadb@main/root`, which nothing writes, and the pool never
+                        // started.
                         keyring_key: crate::services::handoff::secret_key(
                             &home,
                             &endpoint.service,
@@ -447,11 +444,10 @@ mod tests {
         assert_eq!(of(&store, &extension).await.expect("a lookup"), None);
     }
 
-    /// **The credential is resolved off the frozen link, and named rather than carried** — the
-    /// design's D4.
+    /// **The credential is resolved off the frozen link, and named rather than carried.**
     ///
     /// Re-resolving `engines` here would quietly re-point an application at a different server than
-    /// the one it was installed against, which is why the pool is frozen too (T81b's D5).
+    /// the one it was installed against, which is why the pool is frozen too.
     #[tokio::test]
     async fn a_signing_in_web_app_names_the_keyring_entry_its_pool_will_read() {
         let (_home, store) = a_home().await;
@@ -467,10 +463,10 @@ mod tests {
             credential.keyring_service,
             mixengine_platform::KEYRING_SERVICE
         );
-        // **With the home in front** — T126 moved every address under the home it belongs to
-        // (ADR 0032), and the entry this pool has to read is the one the database's own recipe
-        // wrote through `Context::secret_address`. Without the prefix the pool asks for an address
-        // nothing writes, and a signing-in web-app never starts.
+        // **With the home in front** — ADR 0032 moved every address under the home it belongs to,
+        // and the entry this pool has to read is the one the database's own recipe wrote through
+        // `Context::secret_address`. Without the prefix the pool asks for an address nothing
+        // writes, and a signing-in web-app never starts.
         assert_eq!(
             credential.keyring_key,
             format!("{home}/mariadb@main/root"),
@@ -489,8 +485,8 @@ mod tests {
         assert!(credentials(&store).await.expect("a resolution").is_empty());
     }
 
-    /// **It fails closed** — the design's D4. A pool a second site also names carries nothing, even
-    /// though [`crate::sites`] refuses to write that site: the check costs four lines and is the
+    /// **It fails closed.** A pool a second site also names carries nothing, even though
+    /// [`crate::sites`] refuses to write that site: the check costs four lines and is the
     /// difference between a bug there and a disclosure here.
     #[tokio::test]
     async fn a_pool_a_second_site_also_names_carries_nothing() {
@@ -515,17 +511,18 @@ mod tests {
         );
     }
 
-    /// **A home installed the T82 way is repaired, not migrated** — the design's D10.
+    /// **A home whose `web-app` runs on the shared pool is repaired, not migrated.**
     ///
     /// Idempotent, run at boot, and the same shape [`crate::services::pools::ensure`] has for the
-    /// same reasons: it gives a `web-app` installed before this task a pool of its own with no data
+    /// same reasons: it gives a `web-app` still on the shared pool one of its own with no data
     /// migration, and repairs a home whose row somebody deleted by hand.
     #[tokio::test]
     async fn a_web_app_on_the_shared_pool_is_moved_onto_one_of_its_own() {
         let (_home, store) = a_home().await;
         a_phpmyadmin(&store, true).await;
 
-        // Put it back the way T82 left it: the site on the shared pool, and no pool of its own.
+        // Put it back the way the first installs left it: the site on the shared pool, and no pool
+        // of its own.
         sqlx::query(
             "INSERT INTO services (id, runtime_install_id, instance_name, state)
              VALUES ('php-fpm@8.3.34', (SELECT id FROM runtime_installs LIMIT 1), '8.3.34',
@@ -538,7 +535,7 @@ mod tests {
         sqlx::query("UPDATE sites SET php_service_id = 'php-fpm@8.3.34'")
             .execute(store.pool())
             .await
-            .expect("the site as T82 left it");
+            .expect("the site as the first installs left it");
 
         crate::services::delete(
             &store,

@@ -1,9 +1,9 @@
 //! One program a piece of work runs, with a deadline and possibly a credential.
 //!
-//! Lifted out of [`first_run`](super::first_run) when a second kind of work needed the same shape —
-//! roadmap task **T77a**. A bootstrap and a database provisioning have nothing else in common, and
-//! the thing they do share is not "what has to happen once before a service is ever started", which
-//! is what the module it used to live in is named after.
+//! Lifted out of [`first_run`](super::first_run) when a second kind of work — provisioning a
+//! database — needed the same shape. A bootstrap and a database provisioning have nothing else in
+//! common, and the thing they do share is not "what has to happen once before a service is ever
+//! started", which is what the module it used to live in is named after.
 //!
 //! Both hand-written [`Debug`] impls came with it, and they are why this is a file rather than a
 //! pair of struct definitions: a step may hold a generated password on its standard input, and
@@ -30,12 +30,12 @@ pub struct Step {
 
     /// A file this step needs to exist while it runs, and never a moment longer.
     ///
-    /// **MySQL is why this exists** — roadmap task **T34c**. MariaDB sets its root password through
-    /// `mariadbd --bootstrap`, which reads SQL on standard input; MySQL removed `--bootstrap` at
-    /// 5.7.6 and offers `--init-file` instead, which is a *path*. The three ways to get a statement
-    /// carrying a generated password into that server are a file, an argument list every process on
-    /// the machine can read, or a temporary server on a port anybody can connect to — and the file
-    /// is the only one whose exposure is bounded by something we control.
+    /// **MySQL is why this exists.** MariaDB sets its root password through `mariadbd --bootstrap`,
+    /// which reads SQL on standard input; MySQL removed `--bootstrap` at 5.7.6 and offers
+    /// `--init-file` instead, which is a *path*. The three ways to get a statement carrying a
+    /// generated password into that server are a file, an argument list every process on the
+    /// machine can read, or a temporary server on a port anybody can connect to — and the file is
+    /// the only one whose exposure is bounded by something we control.
     ///
     /// So the daemon writes it as narrowly as the OS allows, runs the step, and removes it —
     /// whether the step succeeded, failed or ran out of time. A recipe never touches the disk.

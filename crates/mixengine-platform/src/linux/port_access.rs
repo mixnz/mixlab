@@ -1,9 +1,8 @@
 //! Linux: `cap_net_bind_service`, read straight off the file.
 //!
-//! **`getxattr` and not `getcap`** — the T42 design, D8: `libcap` is a package that may not be
-//! installed, and this runs on every daemon start on every Linux machine. It was measured that an
-//! ordinary user can read the attribute back in full, which is what makes probing on every start
-//! cost nothing.
+//! **`getxattr` and not `getcap`**: `libcap` is a package that may not be installed, and this runs
+//! on every daemon start on every Linux machine. It was measured that an ordinary user can read the
+//! attribute back in full, which is what makes probing on every start cost nothing.
 
 use std::ffi::CString;
 use std::os::unix::ffi::OsStrExt as _;
@@ -134,7 +133,7 @@ fn names(path: &Path) -> Result<(CString, CString)> {
     ))
 }
 
-/// Grant `cap_net_bind_service` — the T42 design, D8 and D11.
+/// Grant `cap_net_bind_service`.
 ///
 /// **What bounds this is the kernel, and it was measured rather than assumed**: any write to the
 /// file clears the attribute, by `cp` and by `mv` alike. So what root approved is the exact bytes

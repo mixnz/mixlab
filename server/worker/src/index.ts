@@ -117,7 +117,7 @@ export default {
 
     // Read once, here: routing needs the address out of the body, and a body can only be read
     // once. Everything downstream is handed the text.
-    // A DELETE carries a body too: the time the deletion was made (T178c, C1).
+    // A DELETE carries a body too: the time the deletion was made.
     const body = request.method === "GET" ? null : await request.text();
 
     // Unauthenticated, asked about any address, and on this server every question wakes that

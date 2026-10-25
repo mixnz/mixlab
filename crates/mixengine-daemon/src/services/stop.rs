@@ -1,4 +1,4 @@
-//! Stopping services — roadmap task **T207d** gave it a file.
+//! Stopping services.
 //!
 //! The walk over a stop plan, and the claim that makes two stops of one service one stop. The
 //! state it reads and writes is the [`Registry`]'s.
@@ -15,11 +15,11 @@ impl Registry {
     /// Stop everything in `plan`, in its order, waiting for each to have gone before the next.
     ///
     /// A service that is not running is already where the caller wants it, so nearly every stop
-    /// reaches everything it was asked to. **Nearly, and not always — since T18.** A survivor this
-    /// daemon adopted and could not kill keeps its row in `stopping` and keeps holding the port, and
-    /// a walk that reported it as reached would tell somebody their database is down while it is
-    /// answering queries. So the row is what decides, and a service that is still supervised when its
-    /// runner has finished stops the walk.
+    /// reaches everything it was asked to. **Nearly, and not always — since crash recovery.** A
+    /// survivor this daemon adopted and could not kill keeps its row in `stopping` and keeps
+    /// holding the port, and a walk that reported it as reached would tell somebody their database
+    /// is down while it is answering queries. So the row is what decides, and a service that is
+    /// still supervised when its runner has finished stops the walk.
     ///
     /// **Stopping there rather than carrying on is the stop order doing its job.** A plan is
     /// dependents first — `web` before the `db` it talks to — precisely so that nothing is left
@@ -43,7 +43,7 @@ impl Registry {
         walk
     }
 
-    /// [`Registry::stop`], saying why — roadmap task **T123**.
+    /// [`Registry::stop`], saying why.
     ///
     /// **The stop half of [`Registry::start_because`]**, and it exists for what the row keeps rather
     /// than for what the event says. `daemon.shutdown` and a person's `service.stop` walk the same
@@ -66,11 +66,12 @@ impl Registry {
     /// Cancel one service, wait for its runner to finish, and say where that left it.
     ///
     /// **The answer comes from the row and not from the task having ended**, which is the whole
-    /// reason this returns anything at all. Since T18 a runner can finish with the service still up:
-    /// a survivor this daemon adopted and could not kill leaves its row in `stopping` on purpose —
-    /// see [`Runner::stop_adopted`][runner] — because writing `stopped` for a process that is still
-    /// holding the port is the one lie crash recovery exists to prevent. The task ends either way,
-    /// so a caller that read only that would report the stop it did not get.
+    /// reason this returns anything at all. Since crash recovery a runner can finish with the
+    /// service still up: a survivor this daemon adopted and could not kill leaves its row in
+    /// `stopping` on purpose — see [`Runner::stop_adopted`][runner] — because writing `stopped` for
+    /// a process that is still holding the port is the one lie crash recovery exists to prevent.
+    /// The task ends either way, so a caller that read only that would report the stop it did not
+    /// get.
     ///
     /// A row nobody can read is not evidence the service is still running, and neither is one that
     /// is not there: both are answered `true`, because the stop itself was performed and the failure
@@ -185,8 +186,8 @@ mod tests {
     use super::super::now;
     use super::*;
 
-    /// **A service whose spec stops it with a command of its own is stopped by running it** —
-    /// roadmap task T15a, and the behaviour Phase 3's MariaDB rests on.
+    /// **A service whose spec stops it with a command of its own is stopped by running it** — the
+    /// behaviour MariaDB rests on.
     ///
     /// The fixture is what makes this provable rather than merely plausible. The service ignores
     /// every request to stop, so neither a `SIGTERM` nor — on Windows, where there is no such
@@ -368,7 +369,7 @@ mod tests {
         assert_eq!(pid, None, "a stopped service names no process");
     }
 
-    /// **A shutdown's stop is not the stop a person makes** — roadmap task **T123**.
+    /// **A shutdown's stop is not the stop a person makes.**
     ///
     /// `daemon.shutdown` and `service.stop` walk this same function, so the row is the only place
     /// the difference can be made — and on-demand activation is what reads it at the next boot to
@@ -424,11 +425,12 @@ mod tests {
         );
     }
 
-    /// **A stop that did not take the service down does not report that it did**, which since T18
-    /// is a thing that can happen: a survivor this daemon adopted and could not kill keeps its row
-    /// in a supervised state on purpose — `Runner::stop_adopted` — because writing `stopped` for a
-    /// process still holding the port is the lie crash recovery exists to prevent. The runner's task
-    /// ends either way, so a walk that read *that* would report the stop nobody got.
+    /// **A stop that did not take the service down does not report that it did**, which since crash
+    /// recovery is a thing that can happen: a survivor this daemon adopted and could not kill keeps
+    /// its row in a supervised state on purpose — `Runner::stop_adopted` — because writing
+    /// `stopped` for a process still holding the port is the lie crash recovery exists to prevent.
+    /// The runner's task ends either way, so a walk that read *that* would report the stop nobody
+    /// got.
     ///
     /// Arranged through the row rather than through a process that refuses to die, which is not
     /// something a test can stage on three operating systems. It is the row `stop_one` answers from,

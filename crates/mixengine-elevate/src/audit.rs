@@ -6,7 +6,7 @@
 //! `mixengine_platform::elevated::audit_directory`.
 //!
 //! **Created by the helper on first run**, not by the installer: the helper has to work on a machine
-//! no installer has touched, which is exactly the machine roadmap task T41a runs it on.
+//! no installer has touched, which is exactly the machine an unsigned build was first tried on.
 //!
 //! **Written only when this process is elevated.** Under an ordinary token there is no privileged
 //! directory to create and nothing worth recording — every operation with effects is refused there
@@ -108,7 +108,7 @@ pub(crate) fn append(log: &Path, entry: &serde_json::Value) -> Result<(), String
         .map_err(|source| format!("cannot write {}: {source}", log.display()))
 }
 
-/// Remove the log, and the directory holding it when that is all there was — roadmap task **T87**.
+/// Remove the log, and the directory holding it when that is all there was.
 ///
 /// **The directory too, because an empty `/var/log/mixengine` is still something left behind.**
 /// `remove_dir` and never `remove_dir_all`: a directory somebody else has put a file in is not ours
@@ -119,7 +119,7 @@ pub(crate) fn append(log: &Path, entry: &serde_json::Value) -> Result<(), String
 ///
 /// Nothing here records what it did, and nothing can: the line would recreate the file. That is why
 /// `main::apply_each` applies this operation after every other one in the batch and writes no entry
-/// for it — the T87 design, D5.
+/// for it.
 pub(crate) fn remove(log: &Path) -> OpOutcome {
     let mut removed: Vec<String> = Vec::new();
 
@@ -141,10 +141,10 @@ pub(crate) fn remove(log: &Path) -> OpOutcome {
             removed.push(ledger.display().to_string());
         }
 
-        // **The helper's own lock files go with the log** — T182a's walk found four of them left
-        // behind (`hosts.lock`, `resolver.lock`, `trust.lock`, `port-access.lock`), each written by
-        // one of the platform's operations beside the log. A `.lock` in this directory is the
-        // helper's by construction: `directory()` refuses one an ordinary account created.
+        // **The helper's own lock files go with the log** — walking a macOS uninstall found four of
+        // them left behind (`hosts.lock`, `resolver.lock`, `trust.lock`, `port-access.lock`), each
+        // written by one of the platform's operations beside the log. A `.lock` in this directory
+        // is the helper's by construction: `directory()` refuses one an ordinary account created.
         if let Ok(entries) = std::fs::read_dir(directory) {
             for entry in entries.flatten() {
                 let path = entry.path();
@@ -258,7 +258,7 @@ mod tests {
         }
     }
 
-    /// D7: a directory root appends into is itself a target. One that is already there and belongs
+    /// A directory root appends into is itself a target. One that is already there and belongs
     /// to an ordinary account was arranged by somebody.
     #[test]
     fn a_directory_an_ordinary_account_created_is_refused() {
@@ -312,7 +312,8 @@ mod tests {
 
     /// The lock files the helper's own operations leave beside the log (`hosts.lock`,
     /// `resolver.lock`, …) are the helper's, and an uninstall that left four of them behind was not
-    /// finished — found by T182a's walk. They go with the log, and so does the directory.
+    /// finished — found by walking a macOS uninstall. They go with the log, and so does the
+    /// directory.
     #[test]
     fn removing_the_log_takes_the_helpers_own_lock_files_with_it() {
         let parent = tempfile::TempDir::new().unwrap();

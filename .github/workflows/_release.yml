@@ -1,5 +1,5 @@
-# Signing and the draft release, on a tag only (T86).
-# Called from ci.yml, never run on its own (T172e); the triggers, the `jobs` choice and
+# Signing and the draft release, on a tag only.
+# Called from ci.yml, never run on its own; the triggers, the `jobs` choice and
 # concurrency live there. `inputs.jobs` below is the caller's choice, passed through.
 name: release
 
@@ -17,14 +17,14 @@ env:
   CARGO_TERM_COLOR: always
   # CI builds are never incremental: it only costs cache size and hurts a cold runner.
   CARGO_INCREMENTAL: 0
-  # T170l: line tables only in debug builds. Set in every workflow rather than per job because
+  # Line tables only in debug builds. Set in every workflow rather than per job because
   # rust-cache hashes the `CARGO_*` environment into its key.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   RUST_BACKTRACE: 1
 
 jobs:
-  # T86, D4: signing happens once, here. `needs` omits `system` and `bench`: a person reads them,
-  # and they do not gate.
+  # Signing happens once, here. `needs` omits `system` and `bench`: a person reads them, and they do
+  # not gate.
   release:
     name: release
     if: ${{ startsWith(github.ref, 'refs/tags/v') && (inputs.jobs == '' || inputs.jobs == 'all') }}
@@ -43,7 +43,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes minisign
 
-      # `mixengine-*` and nothing else. Since T171 a run also carries each leg's `window-<os>` and
+      # `mixengine-*` and nothing else. A run also carries each leg's `window-<os>` and
       # `binaries-<os>`, which are what `build` was made from and not release files, and the gather
       # below would move them into `dist` along with the rest.
       - uses: actions/download-artifact@v4
@@ -68,11 +68,11 @@ jobs:
           done
           ls -l "$dist"
 
-      # T56: the contract, packed from the committed tree, before signing so that it is signed.
+      # The contract, packed from the committed tree, before signing so that it is signed.
       - name: Pack the published API contract
         run: bash packaging/bindings.sh --pack
 
-      # T88. The feed lists the payload archives of every leg, and no build leg can see the other
+      # The feed lists the payload archives of every leg, and no build leg can see the other
       # four — so it is written here, and it is written *before* the step below, which is what puts
       # `latest.json.minisig` beside it under the name an installed MixEngine appends.
       - name: Write the update feed
@@ -83,7 +83,7 @@ jobs:
           MIX_SIGN_SECRET_KEY: ${{ secrets.UPDATE_SECRET_KEY }}
           MIX_SIGN_PASSWORD: ${{ secrets.UPDATE_PASSWORD }}
         run: bash packaging/sign.sh
-      - name: Every file the install scripts can choose is in this release (T197)
+      - name: Every file the install scripts can choose is in this release
         run: bash .github/scripts/install-names.sh "${GITHUB_REF_NAME#v}" target/packaging/dist
 
       # A draft, which a person publishes. The unsigned-binary warning goes at the top of the notes.
@@ -106,8 +106,9 @@ jobs:
           fi
           gh release upload "$GITHUB_REF_NAME" target/packaging/dist/* --clobber
 
-      # T79a's D5, one repository along: *created* and *published* are different claims, and an
-      # upload that clobbered the wrong asset is exactly what the second check catches.
+      # The gallery's rule, one repository along: what is verified is the published bytes. *Created*
+      # and *published* are different claims, and an upload that clobbered the wrong asset is
+      # exactly what the second check catches.
       - name: Verify what was published, and not only what was signed
         env:
           GH_TOKEN: ${{ github.token }}

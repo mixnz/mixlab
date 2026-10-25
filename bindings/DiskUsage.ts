@@ -29,12 +29,13 @@ categories: Array<CategoryUsage>,
  * Everything else this home holds: `bin/`, `etc/`, `packages/`, `extensions/`, `blueprints/`,
  * `run/`, the database with its write-ahead log, and `config.toml`.
  *
- * **Dominated by `packages/`** — nginx, MariaDB, Redis — on any home with a database installed.
- * That is a compromise rather than a conclusion: `packages/` is reclaimable through
+ * **Dominated by `packages/`** — nginx, MariaDB, Redis — on any home with a database
+ * installed. That is a compromise rather than a conclusion: `packages/` is reclaimable through
  * `package.uninstall`, which [`Reclaim::ByMethod`] could say, and it is in here only because
- * T96's sentence says *five categories*. A sixth is a roadmap edit.
+ * the disk-usage design names *five categories*. A sixth is a change to
+ * `docs/specs/2026-09-06-t96-disk-usage-and-cleanup-design.md`.
  *
  * Measured from that closed list of directories and not from a walk of whatever happens to be
- * sitting in the home — `daemon.bundle`'s rule (**T93**) applied in the other direction.
+ * sitting in the home — `daemon.bundle`'s rule applied in the other direction.
  */
 other_bytes: number, };

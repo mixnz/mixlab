@@ -35,9 +35,9 @@ import styles from "./TraySection.module.css";
 const POLL_MS = 2000;
 
 /**
- * The MixEngine section of the tray panel — T168's D3, lent to the shell's frame since T192. What
- * the Dashboard would say about this machine, in a few hundred pixels: the daemon, its services with
- * Start and Stop, *Stop all*, the sites, and the way out of MixEngine.
+ * The MixEngine section of the tray panel, lent to the shell's frame (ADR 0058). What the Dashboard
+ * would say about this machine, in a few hundred pixels: the daemon, its services with Start and
+ * Stop, *Stop all*, the sites, and the way out of MixEngine.
  *
  * **It keeps nothing the Dashboard does not.** Every show reads `service.list` and `site.list`
  * again, and the event stream moves rows in between — the same `applyEvent` the Dashboard runs.

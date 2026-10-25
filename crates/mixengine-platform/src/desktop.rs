@@ -1,4 +1,4 @@
-//! Starting a desktop application and judging it — roadmap task **T83**, D8, D9 and D11.
+//! Starting a desktop application and judging it.
 //!
 //! One launcher for three systems, over [`crate::process::spawn_detached`]: the application inherits
 //! this process's environment — a GUI needs the session, which is the opposite of what a supervised
@@ -82,7 +82,7 @@ pub(crate) fn launch(
     Ok(Started::Running { pid })
 }
 
-/// The window this MixEngine install has, if it has one — roadmap task **T107**, the design's D3.
+/// The window this MixEngine install has, if it has one.
 ///
 /// Called by [`Apps`], the one [`crate::DesktopApps`] every system uses: what differs per system is
 /// `sys::install::window_dirs`, and nothing else here does.
@@ -98,7 +98,7 @@ pub(crate) fn locate_window(executable: &str, bundle: &str) -> Result<Located> {
     Ok(window_at(directory, executable, bundle))
 }
 
-/// The [`DesktopApps`] every system's host holds — roadmap task **T165**.
+/// The [`DesktopApps`] every system's host holds.
 ///
 /// One type and not three: what differs per system is `sys::install::window_dirs`, which
 /// [`window_at`] already reaches, and the launcher is [`launch`] everywhere.

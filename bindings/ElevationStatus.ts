@@ -33,8 +33,7 @@ reason?: string | null,
  */
 helper?: string | null, 
 /**
- * What the installed helper turned out to be, when there is one and it answered — roadmap
- * task **T88a**.
+ * What the installed helper turned out to be, when there is one and it answered.
  *
  * `default`, so a client built before this field existed still reads a newer daemon's answer.
  */

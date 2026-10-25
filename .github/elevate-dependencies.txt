@@ -1,22 +1,25 @@
 # The dependency closure of `mixengine-elevate` built on its own, as `lint` regenerates and diffs it.
-# Everything here runs as root. Adding a line is a security decision — see the T40 design, D8, and the
-# comment above `[dependencies]` in crates/mixengine-elevate/Cargo.toml.
+# Everything here runs as root. Adding a line is a security decision — see D8 of
+# docs/specs/2026-08-22-t40-elevate-design.md, and the comment above `[dependencies]` in
+# crates/mixengine-elevate/Cargo.toml.
 # Generated on Linux, which is where the `lint` job runs:
 #   cargo tree -p mixengine-elevate --no-default-features --edges normal --prefix none --format '{p}' | sed 's/ v[0-9].*//' | sort -u
 #
-# T49a added two: `pem` and its `base64`. The helper writes MixEngine's authority into an anchors
-# directory on Linux and hands it to `security` on macOS, and both of those are PEM text; Windows
-# carries DER through its certificate-store API and never sees an envelope, so the dependency is
-# declared under `cfg(unix)`. Two crates, measured against the 22 `x509-parser` would have cost and
-# the 8 `sha2` would — both of which that task refused, writing its own DER reader instead. What
-# these buy is base64 padding rules nobody should hand-write, at the version `rcgen` pins so the
-# workspace holds one copy. See the T49a design, D11.
+# The system trust store added two: `pem` and its `base64`. The helper writes MixEngine's authority
+# into an anchors directory on Linux and hands it to `security` on macOS, and both of those are PEM
+# text; Windows carries DER through its certificate-store API and never sees an envelope, so the
+# dependency is declared under `cfg(unix)`. Two crates, measured against the 22 `x509-parser` would
+# have cost and the 8 `sha2` would — both of which the trust-store work refused, writing its own
+# DER reader instead. What these buy is base64 padding rules nobody should hand-write, at the
+# version `rcgen` pins so the workspace holds one copy. See D11 of
+# docs/specs/2026-08-24-t49a-system-trust-store-design.md.
 #
-# T88a added one: `minisign-verify`, and it brings nothing with it — the crate has no dependencies of
-# its own and vendors the Ed25519 and Blake2b it needs. It is what checks a replacement helper inside
-# the elevated process, against a key compiled into the copy already installed, which is the single
-# rule `docs/features/updates.md` calls the most important on its page. Weighed against the eight
-# crates `sha2` would have cost, which is the trade T49a refused two paragraphs up.
+# The helper's update added one: `minisign-verify`, and it brings nothing with it — the crate has no
+# dependencies of its own and vendors the Ed25519 and Blake2b it needs. It is what checks a
+# replacement helper inside the elevated process, against a key compiled into the copy already
+# installed, which is the single rule `docs/features/updates.md` calls the most important on its
+# page. Weighed against the eight crates `sha2` would have cost, which is the trade the trust store
+# refused two paragraphs up.
 base64
 itoa
 libc

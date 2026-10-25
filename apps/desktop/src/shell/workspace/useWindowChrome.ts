@@ -34,7 +34,7 @@ export function useWindowChrome({ hasTraySection, onRemoveRequested }: WindowChr
     }).catch((e: unknown) => void logError("tray", e));
   }, [hasTraySection, tl]);
 
-  /* MixLab ▸ Remove MixLab from this Mac…: T182a. The menu item is Rust's, built before any string
+  /* MixLab ▸ Remove MixLab from this Mac…. The menu item is Rust's, built before any string
      was loaded, so its text is sent from here; where there is no item the command does nothing. */
   const removeRequested = useEffectEvent(() => onRemoveRequested());
   useEffect(() => {

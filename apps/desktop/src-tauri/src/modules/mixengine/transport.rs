@@ -3,8 +3,7 @@
 //! `mixengine_platform::ipc::Connection` does the whole of it: on Windows it waits out a pipe
 //! that is between instances and refuses one another account holds *before* a byte is written; on
 //! Unix it opens the socket file under `run/`. What used to be here — a named-pipe dial, a retry
-//! loop, an owner check read through `windows-sys` — was that crate's code kept in step by hand
-//! (phase 11, T102).
+//! loop, an owner check read through `windows-sys` — was that crate's code kept in step by hand.
 
 use mixengine_platform::ipc::{Connection, Endpoint};
 

@@ -1,4 +1,4 @@
-//! `mix path` against a real `mixengined` — roadmap task **T26**.
+//! `mix path` against a real `mixengined`.
 //!
 //! **Only the read is end to end, and that is deliberate rather than a gap.** `path.install` writes
 //! the PATH of the account running it: on Windows a value in this user's registry hive, on both
@@ -30,7 +30,7 @@ fn php() -> String {
 }
 
 /// Every command in this home's `bin/`: every file but the one that tells a Windows trampoline
-/// where the shim is (T185), which is MixEngine's own and not a name anybody types.
+/// where the shim is, which is MixEngine's own and not a name anybody types.
 fn listing(home: &Home) -> BTreeSet<String> {
     std::fs::read_dir(home.path().join("bin"))
         .expect("a daemon that started has a bin/")
@@ -40,11 +40,10 @@ fn listing(home: &Home) -> BTreeSet<String> {
         .collect()
 }
 
-/// **A daemon that has started has a `bin/`, and fronts no language it has not installed** —
-/// roadmap task T185b. Phase 2's milestone was a `bin/` of commands; since T185b a `php` there
-/// appears with the first PHP (proved in `mixengine-daemon`'s
-/// `bin_holds_php_only_while_a_php_is_installed`), because a `node` on a machine with no Node.js hid
-/// a Node the person had installed themselves.
+/// **A daemon that has started has a `bin/`, and fronts no language it has not installed.** Phase
+/// 2's milestone was a `bin/` of commands; now a `php` there appears with the first PHP (proved in
+/// `mixengine-daemon`'s `bin_holds_php_only_while_a_php_is_installed`), because a `node` on a
+/// machine with no Node.js hid a Node the person had installed themselves.
 #[test]
 fn a_daemon_that_has_started_has_a_bin_with_no_language_in_it() {
     let home = Home::new();

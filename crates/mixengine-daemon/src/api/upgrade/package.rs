@@ -1,4 +1,4 @@
-//! `package.upgrade_plan` and `package.upgrade` — roadmap task **T193c**, the design's D6.
+//! `package.upgrade_plan` and `package.upgrade` — D6 of the design [`super`] names.
 //!
 //! **One instance at a time, and each one proven before the next.** An instance that does not
 //! start on `to` is put back on `from` and started again, and `from` is removed only when every

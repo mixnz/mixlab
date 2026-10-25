@@ -4,11 +4,11 @@ use super::*;
 
 /// Caddy, as the suites that need a real front end have to know it.
 ///
-/// **Here rather than in `tests/caddy.rs`** since T72: the idle-footprint budget needs a home
+/// **Here rather than in `tests/caddy.rs`**: the idle-footprint budget needs a home
 /// with a real Caddy running in it and nothing else, which is this const and `declared` and
 /// nothing more. A second copy of it would be a second answer to what version the index
 /// publishes and what file the recipe renders.
-/// The other program a site can be reached through — roadmap task **T37**, moved here by **T124a**.
+/// The other program a site can be reached through.
 ///
 /// **Beside `CADDY` rather than in `tests/nginx.rs`**, because it stopped being that suite's alone:
 /// `welcome.rs` drives the same arc through both front ends, and a second copy of this table is a
@@ -42,8 +42,8 @@ pub(crate) const NGINX: FrontEnd = FrontEnd {
         )
     },
     broken: |status| nginx_overrides(status, Some("this is not nginx {".to_owned())),
-    // Inside `http { }`, which is where `include extensions/*.conf;` puts it — roadmap task T81c,
-    // and the same difference from Caddy the free-form override above is written around.
+    // Inside `http { }`, which is where `include extensions/*.conf;` puts it — the same difference
+    // from Caddy the free-form override above is written around.
     fragment: "server {\n    listen {listen}:{fragment_port};\n    location / {\n        \
                return 200 \"from the fragment\";\n    }\n}\n",
     broken_fragment: "notadirective {\n",
@@ -90,7 +90,7 @@ pub(crate) const CADDY: FrontEnd = FrontEnd {
         )
     },
     broken: |admin| overrides(admin, Some("this is not a Caddyfile {".to_owned())),
-    // At the top level, which is where `import extensions/*.caddy` puts it — roadmap task T81c.
+    // At the top level, which is where `import extensions/*.caddy` puts it.
     fragment: "http://{listen}:{fragment_port} {\n\trespond \"from the fragment\"\n}\n",
     broken_fragment: "notadirective {\n",
     control_line: |admin| format!("admin 127.0.0.1:{admin}"),
@@ -99,9 +99,9 @@ pub(crate) const CADDY: FrontEnd = FrontEnd {
     control_path: "/config/",
 };
 
-/// **A free TLS port, and not the 443 the preset carries** — roadmap task T51.
+/// **A free TLS port, and not the 443 the preset carries.**
 ///
-/// From T51 a front end actually binds `https_port`, because a site with a certificate renders a TLS
+/// A front end actually binds `https_port`, because a site with a certificate renders a TLS
 /// listener. These suites run a real server as an unprivileged user, where 443 is refused — and both
 /// servers reject the *whole* configuration over one listener they cannot bind, so the failure is
 /// not "no HTTPS" but "the reload was refused and the old configuration is still running". The HTTP
@@ -126,10 +126,10 @@ fn overrides(admin: u16, extra: Option<String>) -> String {
 
 /// A home with this server **installed** in it, on ports nothing else is using, and a daemon over it.
 ///
-/// The archive is packed out of what the `_services.yml` step fetched, served by a registry that signs its
-/// own index, and installed through `package.install` — so this covers the whole T31a path against a
-/// real artifact on all three systems at no extra cost, and the service it then creates is one
-/// `service.create` wrote rather than one a fixture inserted.
+/// The archive is packed out of what the `_services.yml` step fetched, served by a registry that
+/// signs its own index, and installed through `package.install` — so this covers the whole package
+/// path against a real artifact on all three systems at no extra cost, and the service it then
+/// creates is one `service.create` wrote rather than one a fixture inserted.
 ///
 /// The control port is moved off the recipe's default for the reason the site port is chosen rather
 /// than fixed: a developer running this suite may well have a Caddy of their own on 2019, and a test
@@ -198,8 +198,7 @@ pub(crate) async fn declared(
 /// What a `[[recipe.front_end]]` fragment says when it is being served.
 pub(crate) const FRAGMENT_SAYS: &str = "from the fragment";
 
-/// **An extension's front-end fragment, judged and served by the real server** — roadmap task
-/// **T81c**.
+/// **An extension's front-end fragment, judged and served by the real server.**
 ///
 /// The claim no unit test can make. A fragment is arbitrary text in the server's own language, so
 /// the only thing that can say whether one is a configuration is the program that reads
@@ -210,7 +209,7 @@ pub(crate) const FRAGMENT_SAYS: &str = "from the fragment";
 ///    leaves the home exactly as it was;
 /// 3. an uninstall **takes the fragment with it**, which is the sweep — and it does so by removing
 ///    the row before anything renders, which is the only way out of a home whose front end has
-///    stopped accepting a fragment it once took (the design's D6).
+///    stopped accepting a fragment it once took.
 pub(crate) async fn serves_what_an_extension_s_fragment_adds(front: &FrontEnd) {
     let (home, _daemon, _registry, _site_port, control) = declared(front).await;
     let id = front.package;
@@ -370,7 +369,7 @@ fn manifest_directory(id: &str, front: &FrontEnd, fragment: &str) -> tempfile::T
              name = \"A front-end fragment\"\n\
              version = \"1.0.0\"\n\
              kind = \"recipe\"\n\
-             description = \"What T81c wires: directives an extension adds to the front end\"\n\n\
+             description = \"Directives an extension adds to the front end\"\n\n\
              [ports]\n\
              fragment_port = 18081\n\n\
              [[recipe.front_end]]\n\
@@ -479,7 +478,8 @@ pub(crate) async fn is_generated_validated_started_reloaded_and_stopped(front: &
          {reloaded}"
     );
 
-    // **No front end MixEngine runs may install a certificate authority** — found by T76.
+    // **No front end MixEngine runs may install a certificate authority** — found while building
+    // LAN sharing.
     //
     // Caddy provisions a local CA of its own and installs its root into the user's trust store the
     // first time it starts, unless told not to: `auto_https off` stops it *obtaining* certificates
@@ -489,9 +489,9 @@ pub(crate) async fn is_generated_validated_started_reloaded_and_stopped(front: &
     // because adding to that store wants a consent nobody is there to give.
     //
     // MixEngine reaches a trust store exactly once, through `mixengine-elevate`, for its own
-    // authority and with the user's agreement (T48, T49a). A second one arriving because a front
-    // end's default said so is that design undone, so it is asserted against the running server
-    // rather than trusted from the template.
+    // authority and with the user's agreement. A second one arriving because a front end's default
+    // said so is that design undone, so it is asserted against the running server rather than
+    // trusted from the template.
     let said = service_log(&home, id);
     assert!(
         !said.contains("installing root certificate"),
@@ -501,10 +501,10 @@ pub(crate) async fn is_generated_validated_started_reloaded_and_stopped(front: &
 
     // --- a site, declared the way a person declares one ------------------------------------------
     //
-    // Everything above went through a free-form override, which proves the *reload* and says nothing
-    // about T43. This is the task itself: a `sites` row becomes a file in the front end's own
-    // document set, judged by the server's own checker as part of that set, and served by the
-    // process that was already running.
+    // Everything above went through a free-form override, which proves the *reload* and says
+    // nothing about sites. This is the claim itself: a `sites` row becomes a file in the front
+    // end's own document set, judged by the server's own checker as part of that set, and served by
+    // the process that was already running.
     let project = tempfile::Builder::new()
         .prefix("mixengine-site")
         .tempdir()
@@ -576,9 +576,9 @@ pub(crate) async fn is_generated_validated_started_reloaded_and_stopped(front: &
 
     // --- stopped, which is the sweep and the reload together --------------------------------------
     //
-    // D9 and D4 in one step: the flag goes down, the file goes with it because `sites/` holds exactly
-    // what was rendered into it, and the removal is what makes the walk count as changed — without
-    // that the site would go on being served by a server nobody told.
+    // The sweep and the reload in one step: the flag goes down, the file goes with it because
+    // `sites/` holds exactly what was rendered into it, and the removal is what makes the walk
+    // count as changed — without that the site would go on being served by a server nobody told.
     let stopped_site = json(&home.mix(&["site", "stop", "blog.test", "--json"]));
     assert_eq!(stopped_site["site"]["state"], "disabled", "{stopped_site}");
 

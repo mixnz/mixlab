@@ -320,7 +320,7 @@ function metricFrames(): MetricsFrame[] {
   const running = SERVICES.filter((s) => s.pid !== null);
   return Array.from({ length: 30 }, (_, i) => ({
     at: NOW - (29 - i) * 2_000,
-    // Eight logical processors: the tray and the Dashboard draw a share of the machine (T190c).
+    // Eight logical processors: the tray and the Dashboard draw a share of the machine.
     cores: 8,
     samples: [
       { subject: "daemon", cpu_percent: 0.6 + 0.3 * Math.sin(i / 4), rss_bytes: 38 * MB, processes: 1 },
@@ -354,7 +354,7 @@ export const mixengineHandlers: Handlers = {
     places: [{ name: "/Users/ada/.zprofile", present: true, changed: false }],
     commands: ["composer", "node", "npm", "php", "python3"],
   }),
-  // Nothing an earlier install left, so the adopt cards stay out of the pictures (T182g, T182i).
+  // Nothing an earlier install left, so the adopt cards stay out of the pictures.
   mixengine_service_found: returns<ServiceFoundList>({ found: [] }),
   mixengine_home_previous: returns<HomePrevious>({}),
   mixengine_runtime_found: returns<RuntimeFoundList>({ found: [] }),

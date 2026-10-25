@@ -2,7 +2,7 @@
 
 use super::*;
 
-// --- Index schema 2: the contract `mixengine-packages` states, kept — roadmap task **T196**. ---
+// --- Index schema 2: the contract `mixengine-packages` states, kept. ---
 //
 // What is asserted on is, as often as not, *what was asked for*: a client that downloaded the whole
 // index and answered correctly looks exactly like one that asked for a signature and stopped.

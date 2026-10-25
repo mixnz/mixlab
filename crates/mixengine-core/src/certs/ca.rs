@@ -10,9 +10,9 @@
 //! is the number a browser shows and therefore the only one a person can compare against anything.
 //!
 //! **Damage is reported here and never repaired.** Regenerating on finding a broken authority would
-//! invalidate every leaf already issued and every trust store the old certificate reached, in answer
-//! to a request nobody made. Rotation is roadmap task T54, and it exists because it has the steps
-//! this would skip: reissue the leaves, then remove the old certificate from the stores.
+//! invalidate every leaf already issued and every trust store the old certificate reached, in
+//! answer to a request nobody made. Rotation is its own operation, `cert.ca_rotate`, because it has
+//! the steps this would skip: reissue the leaves, then remove the old certificate from the stores.
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
@@ -64,7 +64,7 @@ pub fn certificate_path(certs: &Path) -> PathBuf {
     certs.join("ca").join("root.crt")
 }
 
-/// Where a candidate authority is staged, before anything has agreed to trust it — task **T54**.
+/// Where a candidate authority is staged, before anything has agreed to trust it.
 ///
 /// **A certificates root of its own rather than a directory beside `ca/`.** Every function here
 /// takes the certificates root as its first argument, so [`ensure`] *generates* the candidate and
@@ -78,7 +78,7 @@ pub fn pending_root(certs: &Path) -> PathBuf {
     certs.join("pending")
 }
 
-/// Throw a staged candidate away, if there is one — roadmap task **T54**.
+/// Throw a staged candidate away, if there is one.
 ///
 /// **Not finding one is success.** A home that has never rotated is the ordinary case, and the
 /// first thing a rotation does is call this: a private key nothing uses should not outlive the
@@ -101,7 +101,7 @@ pub fn discard(certs: &Path) -> Result<()> {
     }
 }
 
-/// Make the staged candidate this home's authority — roadmap task **T54**.
+/// Make the staged candidate this home's authority.
 ///
 /// **Moved rather than copied, and the key first.** A move keeps the file the permissions
 /// [`mixengine_platform::write_private`] gave it, where a copy would create a new file with whatever
@@ -163,8 +163,8 @@ pub fn ensure(certs: &Path, now: SystemTime) -> Result<CaState> {
 
     // **The key first.** A crash between the two writes then leaves a key with no certificate,
     // which `read` recognises by name; the other order leaves a certificate with no key, which
-    // looks exactly like a certificate whose key was lost — and is a thing T50 could try to issue
-    // against.
+    // looks exactly like a certificate whose key was lost — and is a thing [`super::leaf`] could
+    // try to issue against.
     mixengine_platform::write_private(&key_path(certs), key.serialize_pem().as_bytes())?;
 
     let path = certificate_path(certs);
@@ -181,10 +181,10 @@ pub fn ensure(certs: &Path, now: SystemTime) -> Result<CaState> {
 
 /// The DER inside a certificate's PEM envelope, or [`None`] when it is not one.
 ///
-/// **Here rather than in the daemon**, so that whatever asks a machine to trust this authority hands
-/// over the same bytes this module wrote — roadmap task **T49a** passes them to `mixengine-elevate`,
-/// which compares what a store already holds against exactly these. A second decoder somewhere else
-/// would be a second answer to "which bytes are the certificate".
+/// **Here rather than in the daemon**, so that whatever asks a machine to trust this authority
+/// hands over the same bytes this module wrote — the system trust store's install passes them to
+/// `mixengine-elevate`, which compares what a store already holds against exactly these. A second
+/// decoder somewhere else would be a second answer to "which bytes are the certificate".
 #[must_use]
 pub fn der(certificate_pem: &str) -> Option<Vec<u8>> {
     pem::parse(certificate_pem)

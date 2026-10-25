@@ -46,8 +46,8 @@
 //! number measured there is about the profile rather than about the design. A debug run still
 //! measures and still prints.
 //!
-//! It needs a secret service for T33's reason: the MariaDB bootstrap refuses a machine with no
-//! credential store. Windows and macOS have one in the OS; on Linux the `bench` job installs
+//! It needs a secret service for `mariadb.rs`' reason: the MariaDB bootstrap refuses a machine with
+//! no credential store. Windows and macOS have one in the OS; on Linux the `bench` job installs
 //! `gnome-keyring` and wraps this command in a `dbus-run-session` of its own.
 
 mod harness;
@@ -637,8 +637,8 @@ async fn three_services_start_together_inside_the_budget() {
         // **And that log did answer.** Every slow round had the same shape: InnoDB up, then four to
         // thirteen seconds of nothing, then `Server socket created`. Between those two lines 11.4
         // runs `init_ssl`, and a server with no certificate configured generates a 4096-bit RSA key
-        // there at every start — a prime search, which is why the same runner gave 4 s one round and
-        // 13 s the next. The recipe now renders a leaf this home's authority signed (T99), with the
+        // there at every start — a prime search, which is why the same runner gave 4 s one round
+        // and 13 s the next. The recipe now renders a leaf this home's authority signed, with the
         // measurement beside it; `skip-ssl` was tried first and withdrawn, because an 11.4 client
         // with a password on its command line refuses a server without TLS. The two tails stay
         // printed: the next cause will need the same diagnosis.

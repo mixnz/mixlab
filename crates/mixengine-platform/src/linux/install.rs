@@ -6,10 +6,10 @@ use crate::Result;
 
 /// Root-owned on every Linux, and the same path the `.deb` and the `.rpm` write to.
 ///
-/// **One lookup path per system, whatever put the file there** — the T85 design, D3. A distribution
-/// package writing under `/usr/local` is against Debian policy and is deliberate: these packages are
-/// published by us and installed by hand, and a daemon that had to look in two places depending on
-/// how MixEngine arrived is a daemon with two answers to the question of which file it runs as root.
+/// **One lookup path per system, whatever put the file there.** A distribution package writing
+/// under `/usr/local` is against Debian policy and is deliberate: these packages are published by
+/// us and installed by hand, and a daemon that had to look in two places depending on how MixEngine
+/// arrived is a daemon with two answers to the question of which file it runs as root.
 ///
 /// `libexec` rather than `bin` because nobody runs this by hand: it is started by the elevation
 /// prompt with one argument, and by nothing else.
@@ -25,8 +25,7 @@ const BIN: &str = "/usr/bin";
 /// Where a copy placed by hand conventionally goes.
 const LOCAL_BIN: &str = "/usr/local/bin";
 
-/// Where the `.deb`, the `.rpm` and a hand-placed copy put MixEngine's programs — roadmap task
-/// **T107**.
+/// Where the `.deb`, the `.rpm` and a hand-placed copy put MixEngine's programs.
 ///
 /// [`BIN`] first, because that is what both native packages write and what `packaging/common.sh`
 /// declares; [`LOCAL_BIN`] after it, for a copy somebody placed themselves. The AppImage and the
@@ -36,7 +35,7 @@ pub(crate) fn program_dirs() -> Vec<PathBuf> {
     vec![PathBuf::from(BIN), PathBuf::from(LOCAL_BIN)]
 }
 
-/// Nowhere beyond the directory the programs are in — roadmap task **T107**.
+/// Nowhere beyond the directory the programs are in.
 ///
 /// This system's installer places the window beside the other four, so the step in front of this
 /// one has already looked. Present rather than absent so the three systems keep one signature.
@@ -46,7 +45,7 @@ pub(crate) fn window_dirs(_directory: Option<&std::path::Path>) -> Vec<PathBuf> 
     Vec::new()
 }
 
-/// Beside the program, and nowhere else — roadmap task **T88d**.
+/// Beside the program, and nowhere else.
 ///
 /// **The `.deb` and the `.rpm` ship their source into [`BIN`], which is where `mixengined` is**, so
 /// this system needs no candidate the beside rule does not already produce. That directory is
@@ -72,7 +71,7 @@ const RPM: &str = "/usr/bin/rpm";
 /// database that is locked or broken, which is not a reason for an uninstall plan to hang.
 const ASKING: std::time::Duration = std::time::Duration::from_secs(5);
 
-/// The package that owns `path`: `dpkg-query -S` first, then `rpm -qf` — roadmap task **T88e**.
+/// The package that owns `path`: `dpkg-query -S` first, then `rpm -qf`.
 ///
 /// **A database that is missing, fails or does not answer in time is "no package"**, which leaves
 /// the row as it was before this task: a helper `mix uninstall` removes. Both programs answer an
@@ -81,8 +80,8 @@ pub(crate) fn packaged_by(path: &std::path::Path) -> Option<String> {
     owner(path).map(|(_, name)| name)
 }
 
-/// [`packaged_by`], and which database answered — roadmap task **T182b**, D5: an update of a
-/// packaged copy is the next package of *that* kind, `.deb` or `.rpm`.
+/// [`packaged_by`], and which database answered: an update of a packaged copy is the next package
+/// of *that* kind, `.deb` or `.rpm`.
 pub(crate) fn owner(path: &std::path::Path) -> Option<(crate::packages::PackageDatabase, String)> {
     use crate::packages::{PackageDatabase, owning_package};
 
@@ -144,11 +143,11 @@ fn answer(program: &str, args: &[&str]) -> Option<String> {
 
 /// What to tell a person who is missing the helper on this system.
 ///
-/// **The `.deb` and the `.rpm` ship a source into [`BIN`]** — roadmap task T88d — so the answer is
-/// no longer "reinstall the package": the file the next elevation prompt installs from is already
-/// on the machine, and `mix uninstall` does not touch the directory it is in. The AppImage and the
-/// tarball keep theirs beside the program they were unpacked to, which is the same sentence with a
-/// different directory in it.
+/// **The `.deb` and the `.rpm` ship a source into [`BIN`]**, so the answer is not "reinstall the
+/// package": the file the next elevation prompt installs from is already on the machine, and `mix
+/// uninstall` does not touch the directory it is in. The AppImage and the tarball keep theirs
+/// beside the program they were unpacked to, which is the same sentence with a different directory
+/// in it.
 pub(crate) fn missing_helper_advice() -> &'static str {
     "the .deb and the .rpm keep a copy of mixengine-elevate beside mixengined in /usr/bin, and the \
      AppImage and the tarball keep theirs beside the program — granting the next elevation prompt \
@@ -165,10 +164,10 @@ pub(crate) fn remove_helper() -> Result<crate::install::HelperRemoval> {
     crate::unix::install::remove(&helper_path()?, true)
 }
 
-/// The executable bit an archive may not have carried — roadmap task **T88**.
+/// The executable bit an archive may not have carried.
 pub(crate) use crate::unix::install::{file_identity, make_executable};
 
-/// What a desktop application is called on disk here — roadmap task **T106**.
+/// What a desktop application is called on disk here.
 ///
 /// The bare name. Linux has no application bundle and no executable suffix; a `.desktop` file points
 /// at this file and the packaging scripts place it beside the other four.
@@ -189,7 +188,7 @@ pub(crate) fn application_executable(
     placed.to_path_buf()
 }
 
-/// Only the macOS `.pkg` places the program this way — roadmap task **T182a**.
+/// Only the macOS `.pkg` places the program this way.
 pub(crate) fn package_paths() -> Option<crate::install::PackagePaths> {
     None
 }
@@ -223,7 +222,7 @@ mod application_tests {
         );
     }
 
-    /// T88d. [`BIN`](super::BIN) is `MIX_INSTALL_LINUX`, so the copy the `.deb` and the `.rpm` ship
+    /// [`BIN`](super::BIN) is `MIX_INSTALL_LINUX`, so the copy the `.deb` and the `.rpm` ship
     /// beside `mixengined` **is** the beside candidate — this system needs no second one.
     #[test]
     fn linux_offers_the_copy_beside_the_program_and_nothing_else() {

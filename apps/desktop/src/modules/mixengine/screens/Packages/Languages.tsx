@@ -130,7 +130,7 @@ export default function Languages({ active }: { active: boolean }) {
         await Promise.all([local, catalogue]);
         setError(stillShow);
         // Read beside the rest and never at its expense: a listing that fails here costs the
-        // devkit button, not the screen (T206a).
+        // devkit button, not the screen.
         void api
           .packagesAvailable(DEVKIT_PACKAGE)
           .then((catalogue) => setDevkit((current) => ({ ...current, offer: devkitOffer(catalogue) })))
@@ -168,7 +168,7 @@ export default function Languages({ active }: { active: boolean }) {
     return subscribeDaemonWatch((raw) => {
       setJobs((current) => applyJob(current, raw));
       // A job being followed has just finished: the "installed" table does not learn of the new
-      // build unless it reads again — no other API carries this news (T3, `daemonState.ts`: an
+      // build unless it reads again — no other API carries this news (`daemonState.ts`: an
       // event is never the only path, but here it is the *first* one, and reopening the tab
       // stays the fallback).
       const finished = jobFinished(raw);
@@ -189,7 +189,7 @@ export default function Languages({ active }: { active: boolean }) {
   }, [reload, t]);
 
   // Ask what this machine lacks first, so a click ends in a working runtime or in one question —
-  // never in a download that fails at its last step (T151).
+  // never in a download that fails at its last step.
   async function install(release: RuntimeRelease) {
     setError("");
     // Said before the download, as the daemon's first progress line says it to `mix` — ADR 0023.
@@ -214,7 +214,7 @@ export default function Languages({ active }: { active: boolean }) {
       return;
     }
 
-    // **Said, not asked** — T27e: `mix` prints the same warning and installs, so the window does
+    // **Said, not asked**: `mix` prints the same warning and installs, so the window does
     // too rather than putting a dialog in front of a machine that can run this perfectly well.
     if (step.kind === "notice") {
       const libraries = t("mixengine.requirements.librariesNotice", {
@@ -254,7 +254,7 @@ export default function Languages({ active }: { active: boolean }) {
   }
 
   // The devkit's job rides in `installingJob` under its own key, so the watch above reloads this
-  // screen, the devkit's state included, when it ends — T206a.
+  // screen, the devkit's state included, when it ends.
   async function installDevkit(version: string) {
     setError("");
     try {
@@ -265,7 +265,7 @@ export default function Languages({ active }: { active: boolean }) {
     }
   }
 
-  // The devkit's own uninstall — T206d. One install serves every Ruby, so it is removed here, beside
+  // The devkit's own uninstall. One install serves every Ruby, so it is removed here, beside
   // the notice that offered it, as well as from the Packages list.
   async function removeDevkit(version: string) {
     setError("");
@@ -278,10 +278,10 @@ export default function Languages({ active }: { active: boolean }) {
   }
 
   /**
-   * What one release cannot do on this machine, as **one** mark — T206. Its every reason is the
-   * tooltip. The devkit is not offered here: one install serves every Ruby, so it is offered once,
-   * above the list (`devkitNotice`). Measured by hand, two marks and a button on every Ruby row
-   * overflowed the row onto the next.
+   * What one release cannot do on this machine, as **one** mark. Its every reason is the tooltip.
+   * The devkit is not offered here: one install serves every Ruby, so it is offered once, above the
+   * list (`devkitNotice`). Measured by hand, two marks and a button on every Ruby row overflowed
+   * the row onto the next.
    */
   function lacksMark(release: RuntimeRelease): ReactNode {
     const marks = lacksLabels(release);
@@ -324,7 +324,7 @@ export default function Languages({ active }: { active: boolean }) {
       );
     }
     const devkitJob = jobFor(jobs, installingJob[DEVKIT_JOB]);
-    // Recorded and its folder gone — T206d: put back that version, or forget it.
+    // Recorded and its folder gone: put back that version, or forget it.
     if (devkitHere.state === "missing") {
       return (
         <div className={styles.devkitNotice}>
@@ -383,7 +383,7 @@ export default function Languages({ active }: { active: boolean }) {
     }
   }
 
-  // T193b: the plan first, then what this machine lacks for the new version (T151), then the job.
+  // The plan first, then what this machine lacks for the new version, then the job.
   async function askToUpgrade(update: RuntimeUpdate) {
     setError("");
     try {
@@ -459,8 +459,8 @@ export default function Languages({ active }: { active: boolean }) {
   }
 
   const shownInstalled = newestFirst(installed, (row) => row.kind);
-  // One row per line, the rest behind a toggle — T193a. Which line a release is in and which is
-  // newest are the daemon's answers; `groupByLine` only groups by them.
+  // One row per line, the rest behind a toggle. Which line a release is in and which is newest are
+  // the daemon's answers; `groupByLine` only groups by them.
   const lineGroups = groupByLine(
     newestFirst(
       available.filter((release) => !release.installed),
@@ -498,7 +498,7 @@ export default function Languages({ active }: { active: boolean }) {
         <span className={styles.version}>{release.version}</span>
         <span className={styles.tag}>{release.channel}</span>
         {/* One grid cell for both: the row is six columns, and a seventh child starts a new row,
-            which is what pushed Install onto the next line (T206). */}
+            which is what pushed Install onto the next line. */}
         <span className={styles.needsCell}>
           <span
             className={styles.needs}
@@ -551,7 +551,7 @@ export default function Languages({ active }: { active: boolean }) {
               {shownInstalled.map((row) => {
                 const key = versionKey(row.kind, row.version);
                 const open = expanded === key;
-                // Its folder is gone — T206d: the same version, offered again, puts it back.
+                // Its folder is gone: the same version, offered again, puts it back.
                 const gone = row.missing === true;
                 const restore = gone
                   ? releaseToRestore(available, (release) => release.kind === row.kind, row.version)

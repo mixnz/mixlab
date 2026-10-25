@@ -14,8 +14,8 @@ export interface CertRow {
 }
 
 /**
- * `cert.issue` called without `site` both draws the table and reissues — the way the roadmap chose
- * for T2.7. Only `state.state === "present"` has a `cert` to read `sans`/`days_left` from;
+ * `cert.issue` called without `site` both draws the table and reissues: one call answers for every
+ * site. Only `state.state === "present"` has a `cert` to read `sans`/`days_left` from;
  * `absent`/`unusable` have nothing to read, which is not an error.
  */
 export function buildCertRows(report: CertIssueReport): CertRow[] {
@@ -43,7 +43,7 @@ export interface ServedCell {
 }
 
 /**
- * The Served cell for one row — roadmap task **T199**, the design's D3.
+ * The Served cell for one row.
  *
  * **The problem decides, not the handshake.** `cert.status` names the one condition worth acting
  * on, and a cell that re-derived it from the handshake would be a second opinion that can disagree

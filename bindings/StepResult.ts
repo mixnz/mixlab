@@ -3,16 +3,16 @@
 /**
  * What happened to one step.
  *
- * **A step is reported by what became true, not by how many calls it took** (the T78 design, D3):
- * one daemon call can make several steps true at once — `site.create` writes the row, queues the
- * hosts entry and issues the certificate — and the steps that follow it report
- * [`AlreadyTrue`](Self::AlreadyTrue).
+ * **A step is reported by what became true, not by how many calls it took**
+ * (`docs/specs/2026-09-01-t78-blueprint-apply-design.md`, D3): one daemon call can make several
+ * steps true at once — `site.create` writes the row, queues the hosts entry and issues the
+ * certificate — and the steps that follow it report [`AlreadyTrue`](Self::AlreadyTrue).
  */
 export type StepResult = { "result": "done", 
 /**
- * What differs from the plan, in one sentence a client prints under the step — roadmap
- * task **T202**, D2: the account used when the plan's was somebody else's, a database
- * that was already there. `None` when nothing does, which is the common case.
+ * What differs from the plan, in one sentence a client prints under the step: the account
+ * used when the plan's was somebody else's, a database that was already there. `None` when
+ * nothing does, which is the common case.
  */
 note?: string | null, } | { "result": "already_true" } | { "result": "not_run", 
 /**

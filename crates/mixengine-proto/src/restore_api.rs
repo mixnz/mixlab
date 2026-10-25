@@ -1,4 +1,4 @@
-//! What `home.previous` and `home.restore` answer — roadmap task **T182h**.
+//! What `home.previous` and `home.restore` answer.
 //!
 //! An uninstall that keeps the folders `[paths]` moved leaves a copy of the home's state in them.
 //! A fresh home pointed at those folders is told what the copy holds and may restore it.

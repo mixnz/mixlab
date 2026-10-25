@@ -1,7 +1,7 @@
 use super::*;
 
 /// **A devkit whose folder is gone is no devkit**, and one that is there beside it still
-/// answers — roadmap task **T206d**, D2.
+/// answers.
 #[tokio::test]
 async fn a_devkit_whose_folder_is_gone_is_skipped() {
     let home = tempfile::tempdir().expect("a temporary directory");
@@ -38,7 +38,7 @@ async fn a_devkit_whose_folder_is_gone_is_skipped() {
     assert_eq!(installed_devkit(&store, RuntimeKind::Ruby).await, None);
 }
 
-/// **A Ruby is pointed at the installed devkit** — roadmap task **T206a**, D6.
+/// **A Ruby is pointed at the installed devkit.**
 #[test]
 fn a_ruby_is_pointed_at_the_installed_devkit() {
     let mut environment = BTreeMap::new();
@@ -99,8 +99,8 @@ fn the_newest_devkit_is_chosen() {
     assert_eq!(chosen.as_deref(), Some(Path::new("/p/msys2/2026.10.08")));
 }
 
-/// T25 left this note: "No `PHPRC`, no `GEM_HOME` — the rest are files T28's `conf.d` model
-/// generates, and a variable pointing at a file nothing writes is worse than no variable."
+/// The first shim left this note: "No `PHPRC`, no `GEM_HOME` — the rest are files the `conf.d`
+/// model generates, and a variable pointing at a file nothing writes is worse than no variable."
 /// Something writes them now.
 #[test]
 fn a_php_shim_is_told_where_its_ini_set_is() {
@@ -167,7 +167,7 @@ fn a_runtime_with_no_generated_set_is_told_nothing() {
     assert!(!environment.contains_key(mixengine_core::runtimes::extensions::SCAN_DIR_ENV));
 }
 
-/// **The pin means the release that was resolved** — roadmap task **T27d**, its design's D5.
+/// **The pin means the release that was resolved.**
 /// `go.env` inside the archive says `auto`, which would let a `go.mod` swap the toolchain.
 #[test]
 fn a_go_is_kept_to_the_toolchain_it_resolved_to() {
@@ -220,7 +220,7 @@ fn no_other_kind_is_told_about_a_go_toolchain() {
     }
 }
 
-/// **A Java command names its own JDK**, over whatever the session said — T27e, D5.
+/// **A Java command names its own JDK**, over whatever the session said.
 #[test]
 fn a_java_command_is_handed_its_own_java_home() {
     let mut environment = BTreeMap::new();

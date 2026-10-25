@@ -1,4 +1,4 @@
-//! Two instances of one service, side by side — roadmap task **T36**.
+//! Two instances of one service, side by side.
 //!
 //! Everything a *single* instance needs is settled and proved by `mariadb.rs`. What is left is the
 //! claim the vocabulary was built for and nothing had yet made: **a home may hold two of one
@@ -330,7 +330,7 @@ async fn created() -> (Home, harness::Daemon, MockRegistry, [u16; 2]) {
     (home, daemon, registry, ports)
 }
 
-/// **The whole of T36, in the order a user meets it.**
+/// **All of it, in the order a user meets it.**
 ///
 /// One test rather than several, for `mariadb.rs`' reason and more so: every step here is the
 /// previous one's precondition, and the expensive part — two real bootstraps — would be paid again

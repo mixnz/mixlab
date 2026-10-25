@@ -1,7 +1,7 @@
 import type { PackageFoundList, RuntimeFoundList } from "@mixengine/api";
 
 /**
- * `runtime.found` and `package.found` as rows to draw — roadmap task T182i.
+ * `runtime.found` and `package.found` as rows to draw.
  *
  * Pure, and reading only what the daemon answered: the reason beside **Adopt** is the daemon's own
  * phrase, and whether adopting works is for `runtime.adopt` / `package.adopt` to say.

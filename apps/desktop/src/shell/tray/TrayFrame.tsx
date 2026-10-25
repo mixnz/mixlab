@@ -19,10 +19,10 @@ const SLIDES = IS_MAC || IS_WINDOWS;
 const SLIDE_OUT_MS = 420;
 
 /**
- * The tray panel's frame — T192, ADR 0058. The window's part of what T168 built: the card, its
- * slide, every way it goes away, and a header that is MixLab's — the mark, the slogan, Open MixLab
- * and Quit MixLab. Under it, every section a visible module lends, in the registry's order, each
- * behind its own error boundary so that one that throws never takes the ways out with it.
+ * The tray panel's frame — ADR 0058. The window's part of the tray: the card, its slide, every way
+ * it goes away, and a header that is MixLab's — the mark, the slogan, Open MixLab and Quit MixLab.
+ * Under it, every section a visible module lends, in the registry's order, each behind its own
+ * error boundary so that one that throws never takes the ways out with it.
  */
 export default function TrayFrame({ sections }: { sections: ModuleDefinition[] }) {
   const { t } = useTranslation();

@@ -1,4 +1,4 @@
-//! `<root>/bin` and this user's PATH — the only door into either. Roadmap task **T26**.
+//! `<root>/bin` and this user's PATH — the only door into either.
 //!
 //! Two mechanisms with one purpose, which is why they are one type: filling the directory makes
 //! `php` a file, putting the directory on the PATH makes `php` a word somebody can type, and either
@@ -43,7 +43,7 @@ struct Found {
     /// Names more than one installed package claimed.
     conflicts: Vec<shims::Conflict>,
 
-    /// The runtime kinds with a version installed, whose compiled names `bin/` fronts — T185b.
+    /// The runtime kinds with a version installed, whose compiled names `bin/` fronts.
     installed: std::collections::BTreeSet<mixengine_proto::RuntimeKind>,
 }
 
@@ -106,7 +106,7 @@ pub(crate) struct Shims {
     /// The OS, for the half of this that is not a file inside the home.
     host: Arc<dyn Host>,
 
-    /// The rows `bin/` is a projection of — roadmap tasks **T130** and **T131**.
+    /// The rows `bin/` is a projection of.
     ///
     /// The directory stopped being a projection of one compiled constant when it started fronting
     /// the clients of installed packages and the tools somebody put inside a runtime, and this is
@@ -119,13 +119,13 @@ pub(crate) struct Shims {
     /// Held across every refresh, so two of them cannot sweep against two different expectations.
     ///
     /// **Three callers now instead of one**: the start, `path.install`, and the pass that notices a
-    /// global install (T131). A refresh removes what is not expected *before* it writes what is, so
-    /// two overlapping passes could each delete the other's files and leave a name on somebody's
-    /// PATH with nothing behind it. The window is small and the failure is not, which is the shape
-    /// of a lock that is worth taking.
+    /// global install. A refresh removes what is not expected *before* it writes what is, so two
+    /// overlapping passes could each delete the other's files and leave a name on somebody's PATH
+    /// with nothing behind it. The window is small and the failure is not, which is the shape of a
+    /// lock that is worth taking.
     filling: tokio::sync::Mutex<()>,
 
-    /// Told when the installed runtimes change, so the watch on their bindirs follows — T185b.
+    /// Told when the installed runtimes change, so the watch on their bindirs follows.
     rearm: tokio::sync::Notify,
 }
 
@@ -149,7 +149,7 @@ impl Shims {
     }
 
     /// A runtime was installed or removed: bring `bin/` up to date now, and watch the bindirs the
-    /// rows name from here on — roadmap task **T185b**.
+    /// rows name from here on.
     ///
     /// A re-scan rather than a refresh, because the table of tools found inside runtimes is part of
     /// what changed: the last Node that had `yarn` going takes `yarn` with it, and a refresh would
@@ -197,7 +197,7 @@ impl Shims {
         Ok(refreshed)
     }
 
-    /// The commands `bin/` fronts on installed packages' behalf — roadmap task **T130**.
+    /// The commands `bin/` fronts on installed packages' behalf.
     ///
     /// **A recipe declares, the rows decide.** Which names exist at all is
     /// [`Recipe::clients`](mixengine_core::generate::Recipe::clients), compiled in; which of them
@@ -229,10 +229,10 @@ impl Shims {
 
         let (mut extra, conflicts) = shims::resolve_claims(&claims);
 
-        // **And the tools somebody installed into a runtime** — roadmap task T131. Read from the
-        // table rather than scanned here: a refresh happens on every start and on every
-        // `path.install`, where a scan of every bindir is work with nothing to show for it, and
-        // [`rescan`](Self::rescan) is what keeps the table current.
+        // **And the tools somebody installed into a runtime.** Read from the table rather than
+        // scanned here: a refresh happens on every start and on every `path.install`, where a scan
+        // of every bindir is work with nothing to show for it, and [`rescan`](Self::rescan) is what
+        // keeps the table current.
         let globals = mixengine_core::bin_commands::all(&self.store)
             .await
             .map_err(|error| error.to_wire())?;
@@ -258,10 +258,10 @@ impl Shims {
 
     /// Look for a tool somebody installed into a runtime, and fill `bin/` with what is found.
     ///
-    /// **`path.rescan`, and the pass the daemon repeats** — roadmap task **T131**. Two steps, and
-    /// the order is the one every projection in this codebase follows: find out what is on disk,
-    /// write the table, *then* make the directory match the table. A `bin/` filled before the table
-    /// was written would hold names the shim could not dispatch.
+    /// **`path.rescan`, and the pass the daemon repeats.** Two steps, and the order is the one
+    /// every projection in this codebase follows: find out what is on disk, write the table, *then*
+    /// make the directory match the table. A `bin/` filled before the table was written would hold
+    /// names the shim could not dispatch.
     ///
     /// Idempotent, and cheap when nothing changed: the scan is a `read_dir` per installed runtime,
     /// the record is one transaction, and `refresh` compares before it writes.
@@ -363,8 +363,8 @@ impl Shims {
             // A copy a Windows refresh could not overwrite and moved out of the way. It is rubbish
             // the next sweep collects, not a command anybody can type.
             .filter(|name| !name.ends_with(shims::MOVED_ASIDE))
-            // Where the Windows trampolines find the resolver (T185): MixEngine's own file, and
-            // not a name anybody types.
+            // Where the Windows trampolines find the resolver: MixEngine's own file, and not a name
+            // anybody types.
             .filter(|name| !name.starts_with(mixengine_platform::handover::RESOLVER_POINTER))
             .collect();
 
@@ -381,7 +381,7 @@ impl Shims {
             .filter(|name| present.iter().any(|found| same(found, name)))
             .collect();
 
-        // **And then everything else `bin/` holds, alphabetically** — roadmap tasks T130 and T131.
+        // **And then everything else `bin/` holds, alphabetically.**
         // A listing composed from [`shims::COMMANDS`] alone used to be the whole answer and is now
         // a claim that `mysqldump` and `yarn` are not there, on a machine where a person can see
         // them and run them.

@@ -2,7 +2,8 @@
 import type { PortRedirect } from "./PortRedirect";
 
 /**
- * What granting port access means on the machine being asked — the T42 design, D2 and D4.
+ * What granting port access means on the machine being asked —
+ * `docs/specs/2026-08-23-t42-port-access-design.md`, D2 and D4.
  *
  * **Two variants rather than one struct holding both a binary and a redirect list**, because a
  * field the helper does not use is a field the helper cannot validate, and validating is that
@@ -12,7 +13,7 @@ import type { PortRedirect } from "./PortRedirect";
 export type PortAccessPlan = { "method": "capability", 
 /**
  * The program the capability goes on. The helper checks that the caller owns it and that
- * nobody else can write it — the T42 design, D5.
+ * nobody else can write it, or the capability would go on whatever replaced it.
  */
 binary: string, 
 /**

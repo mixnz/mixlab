@@ -61,10 +61,9 @@ use parse::service_id;
 
 /// What `--version` prints.
 ///
-/// **A build nobody released is worth saying out loud** — T95. It defaults to its own home
-/// directory, so a bug report pasting this line answers "which MixEngine is this, and which
-/// directory was it looking at" in one go, and `packaging/*/build.sh` refuses an artifact that
-/// carries the note.
+/// **A build nobody released is worth saying out loud.** It defaults to its own home directory, so
+/// a bug report pasting this line answers "which MixEngine is this, and which directory was it
+/// looking at" in one go, and `packaging/*/build.sh` refuses an artifact that carries the note.
 const VERSION: &str = if mixengine_platform::RELEASE {
     env!("CARGO_PKG_VERSION")
 } else {
@@ -427,7 +426,7 @@ fn main() -> ExitCode {
 
     // Answered here, above `run`, and deliberately: `run` resolves a home and most commands then
     // dial a daemon, and `mix docs` must do neither. The page somebody reaches for is usually the
-    // one that explains why nothing starts — roadmap task T90.
+    // one that explains why nothing starts.
     if let Command::Docs {
         topic,
         lang,
@@ -507,10 +506,10 @@ async fn run(args: Args) -> Result<ExitCode, Error> {
     // line and not of a code path somewhere below.
     let autostart = (!args.no_autostart).then(|| Autostart::for_home(&root));
 
-    // Dialled by the command and not here. Every command there is today needs a daemon, but that is
-    // a fact about `status` rather than about `mix` — `mix doctor` (T47) has to be able to describe
-    // a home that has none — and connecting above the match would have made starting one the first
-    // thing every future command did, whether or not it had anything to ask.
+    // Dialled by the command and not here. Not every command needs a daemon — `mix storage` asks
+    // `mixengined --storage` instead, because it is usually asked before the first start — and
+    // connecting above the match would have made starting one the first thing every command did,
+    // whether or not it had anything to ask.
     match args.command {
         Command::Status => status(&endpoint, autostart.as_ref(), args.json).await,
 
@@ -649,7 +648,7 @@ mod tests {
     /// `debug_assert` is clap's own check for the mistakes a type system cannot catch — two
     /// arguments sharing an id, a positional after a variadic one — and it runs at *parse* time,
     /// which means without this test the first person to meet one is whoever typed the command.
-    /// T77 met exactly that: `mix blueprint capture --name` collided with the `name` field of the
+    /// That happened once: `mix blueprint capture --name` collided with the `name` field of the
     /// flattened project argument, and every unit test in this crate passed while the command
     /// panicked on the first real run.
     #[test]

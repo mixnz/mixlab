@@ -19,8 +19,8 @@ import { formatSize, rowTone, type TunnelInfo } from "./tunnelState";
 import styles from "./TunnelTab.module.css";
 
 /**
- * The Tunnel tab — T203a. One list of every tunnel, read from the backend, which holds them so the
- * tray reads the same list and closing this tab stops nothing (D3).
+ * The Tunnel tab. One list of every tunnel, read from the backend, which holds them so the tray
+ * reads the same list and closing this tab stops nothing.
  *
  * **The tab's session slot stays empty**: it is `localStorage`, which holds ids and never a host or
  * a URL, and a target is both. `onStateChange` is never called.

@@ -1,4 +1,4 @@
-//! `elevation.*` against a real `mixengined` over a real socket. Roadmap task **T40b**.
+//! `elevation.*` against a real `mixengined` over a real socket.
 //!
 //! **Nothing here calls `elevation.grant` successfully, and that is deliberate.** These tests spawn a
 //! real daemon, which uses the real `Host` — a successful grant would be a real UAC dialog on the
@@ -9,8 +9,10 @@
 //! Most rows here are put in the queue by opening the daemon's own database and calling
 //! `mixengine_core::elevation::enqueue`, which is the honest way to prove the claim the table
 //! exists for: the queue is on disk, so a daemon that did not write a row still reports it. The
-//! producer T41 added is driven end to end by one test of its own, below — a site is created over
-//! the socket, and an operation is found waiting that nothing in this file wrote.
+//! hosts file's producer is driven end to end by one test of its own, below — a site is created
+//! over the socket, and an operation is found waiting that nothing in this file wrote.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-23-t40b-elevation-queue-design.md`.
 
 use std::process::{Command, Stdio};
 
@@ -58,10 +60,11 @@ impl Fixture {
 
 /// Drop everything a daemon's own start-up producers put in the queue.
 ///
-/// **This did not have to exist until T49a**, and what it is working around is the feature rather
-/// than a test defect. A started daemon asks for what first-run setup needs — the hosts block, the
-/// resolver, the port grant, and now the trust-store install — so "the queue is empty" stopped being
-/// something a fresh home says on a machine that has a trust store, which is every machine in CI.
+/// **This did not have to exist until the trust-store install joined first-run setup**, and what it
+/// is working around is the feature rather than a test defect. A started daemon asks for what
+/// first-run setup needs — the hosts block, the resolver, the port grant, and now the trust-store
+/// install — so "the queue is empty" stopped being something a fresh home says on a machine that
+/// has a trust store, which is every machine in CI.
 ///
 /// The two tests below need an *actually* empty queue to mean what they say, so they empty it rather
 /// than filtering: a grant refused because the queue is empty is a different claim from a grant
@@ -83,12 +86,13 @@ async fn empty_the_queue(client: &mut Client) {
 
 /// The two places a client would look agree about what is waiting.
 ///
-/// **This used to assert a fresh home had nothing waiting, and T49a made that false — correctly.**
-/// `docs/architecture/security-model.md` promises one elevation prompt at first run, and the
-/// producers that fill it run at start; a fresh home on a machine with a trust store therefore has
-/// exactly that install waiting, and by this project's own definition — "not zero means degraded" —
-/// is degraded until somebody grants it. `crates/mixengine-daemon/src/elevation.rs` says so in its
-/// header: a fresh install nobody ever grants stays degraded, and that is the correct behaviour.
+/// **This used to assert a fresh home had nothing waiting, and the trust-store install made that
+/// false — correctly.** `docs/architecture/security-model.md` promises one elevation prompt at
+/// first run, and the producers that fill it run at start; a fresh home on a machine with a trust
+/// store therefore has exactly that install waiting, and by this project's own definition — "not
+/// zero means degraded" — is degraded until somebody grants it.
+/// `crates/mixengine-daemon/src/elevation.rs` says so in its header: a fresh install nobody ever
+/// grants stays degraded, and that is the correct behaviour.
 ///
 /// What is still worth asserting, and what this now asserts, is that the count and the list are the
 /// same answer. A client renders one from the other.
@@ -200,13 +204,13 @@ async fn granting_an_empty_queue_is_refused_before_any_prompt() {
 /// entire setup. A workspace build never produces a daemon without a helper next to it, which is
 /// why this test has to make one.
 ///
-/// **T85 gave the question a second half, and this test now covers both.** A daemon with nothing
-/// beside it looks where this operating system installs one, so what it answers depends on the
-/// machine: on a fresh one — a developer's, and CI's `test` job — there is nothing installed and the
-/// old assertion holds unchanged. On a machine where somebody has run the elevated `system` suite,
-/// there *is* one, and the honest thing to assert is that the daemon found that copy. Both branches
-/// assert something; neither is a skip, which is the shape `mixengine-elevate`'s `audit.rs` already
-/// uses for a premise the machine may refuse to hold.
+/// **Installers gave the question a second half, and this test now covers both.** A daemon with
+/// nothing beside it looks where this operating system installs one, so what it answers depends on
+/// the machine: on a fresh one — a developer's, and CI's `test` job — there is nothing installed
+/// and the old assertion holds unchanged. On a machine where somebody has run the elevated `system`
+/// suite, there *is* one, and the honest thing to assert is that the daemon found that copy. Both
+/// branches assert something; neither is a skip, which is the shape `mixengine-elevate`'s
+/// `audit.rs` already uses for a premise the machine may refuse to hold.
 ///
 /// **The second branch asks for no grant.** On a machine that has a helper the daemon can run, a
 /// grant is a real elevation prompt, and this suite must never raise one.
@@ -261,8 +265,9 @@ async fn a_daemon_with_no_helper_beside_it_says_nothing_can_be_granted() {
         }
 
         // This machine has one. Either the daemon will run it — and says so — or it refuses it as
-        // not an administrator's and says *that*, naming the same path. Both are T85's D5 working;
-        // what would be wrong is a status that never mentions the file at all.
+        // not an administrator's and says *that*, naming the same path. Both are the installed
+        // helper's ownership check working; what would be wrong is a status that never mentions the
+        // file at all.
         Some(installed) => {
             let named = installed.display().to_string();
             let mentioned = status["helper"].as_str() == Some(named.as_str())
@@ -278,8 +283,8 @@ async fn a_daemon_with_no_helper_beside_it_says_nothing_can_be_granted() {
     let _ = child.wait();
 }
 
-/// **The test T64's notes said would replace the fixture.** A site is created over a real socket,
-/// and an operation is found waiting that nothing in the test wrote.
+/// **The test that replaces the fixture.** A site is created over a real socket, and an operation
+/// is found waiting that nothing in the test wrote.
 #[tokio::test]
 async fn creating_a_site_puts_a_hosts_change_in_the_queue() {
     let fixture = Fixture::start().await;
@@ -322,7 +327,7 @@ async fn creating_a_site_puts_a_hosts_change_in_the_queue() {
     );
 }
 
-/// A started daemon has already asked this machine to trust its authority — roadmap task **T49a**.
+/// A started daemon has already asked this machine to trust its authority.
 ///
 /// **The ordering claim, proved where it is made.** A unit test calling `require_trust_store` proves
 /// the function works; only a daemon started over an empty home proves that something calls it *at
@@ -345,8 +350,8 @@ async fn a_started_daemon_has_already_asked_to_be_trusted() {
         .find(|row| row["op"]["op"] == "trust-ca-install");
 
     // A machine with no trust store MixEngine knows how to write asks for nothing, and that is a
-    // supported machine rather than a failure — the T49a design, D7. On the three CI runners there
-    // is always one, so this is the case that actually gets exercised.
+    // supported machine rather than a failure. On the three CI runners there is always one, so this
+    // is the case that actually gets exercised.
     let Some(install) = install else {
         let method = mixengine_platform::host()
             .trust_store()

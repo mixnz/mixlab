@@ -1,14 +1,15 @@
-//! What a shared home is listening on — roadmap task **T76**, the first of two enforcement tests.
+//! What a shared home is listening on, the first of two enforcement tests.
 //!
 //! **This test proves what is listening, not what is allowed through**, and the distinction is not a
 //! quibble to skip over. Every connection here is made from the machine being scanned to its own
 //! address, so none of them crosses the firewall: a machine with the web port open and everything
 //! else blocked, and a machine with no firewall at all, pass this identically.
 //!
-//! What it *does* prove is the promise T74's first real run found broken — that sharing one site
-//! does not put the rest of what MixEngine runs on the network. That defect was found with `netstat`
-//! and not with a firewall, which is exactly the half this suite covers. The rule half is
-//! `mixengine-core`'s `tests/firewall.rs` and the manual run recorded in the T76 design.
+//! What it *does* prove is the promise LAN sharing's first real run found broken — that sharing one
+//! site does not put the rest of what MixEngine runs on the network. That defect was found with
+//! `netstat` and not with a firewall, which is exactly the half this suite covers. The rule half is
+//! `mixengine-core`'s `tests/firewall.rs` and the manual run recorded in
+//! `docs/specs/2026-08-31-t76-revoking-by-itself-design.md`.
 //!
 //! **`#[ignore]`d rather than skipped**, on `caddy.rs`' reasoning: a test that quietly returns when
 //! it cannot find a front end is a green suite that proved nothing. Only a running server can be
@@ -65,10 +66,9 @@ fn stops_accepting(address: Ipv4Addr, port: u16) -> bool {
 /// An interface this machine can share on, by name.
 ///
 /// **Named rather than left to the daemon's default, and read rather than guessed.** `site.share`
-/// refuses to choose where more than one interface is up — the T74 design, D5 — and a CI runner with
-/// virtual adapters is exactly that machine. The name comes from the same enumeration the daemon
-/// will make, so this suite is about what gets bound rather than about how many adapters the runner
-/// happens to have.
+/// refuses to choose where more than one interface is up, and a CI runner with virtual adapters is
+/// exactly that machine. The name comes from the same enumeration the daemon will make, so this
+/// suite is about what gets bound rather than about how many adapters the runner happens to have.
 ///
 /// **And [`None`] is a real answer rather than a broken machine.** A machine with only loopback
 /// cannot share at all, by design — CI's Linux leg runs its whole test job inside exactly such a
@@ -178,9 +178,9 @@ async fn a_shared_home_listens_on_the_web_port_and_nothing_else() {
         home.daemon_log()
     );
 
-    // **The site answers at the address, by the address.** T74's first real run found the empty 200
-    // that happens when a block is bound to an address it does not also answer *for*, so the request
-    // carries the address as its `Host` — which is what a phone sends.
+    // **The site answers at the address, by the address.** LAN sharing's first real run found the
+    // empty 200 that happens when a block is bound to an address it does not also answer *for*, so
+    // the request carries the address as its `Host` — which is what a phone sends.
     let answered = frontend::request_at(address, site_port, "/", &format!("{address}:{site_port}"))
         .unwrap_or_else(|| {
             panic!(
@@ -201,7 +201,7 @@ async fn a_shared_home_listens_on_the_web_port_and_nothing_else() {
     );
 
     // **And the listener goes away with the share**, which is the half `mix site unshare` owns and
-    // the precondition for everything T76 does automatically.
+    // the precondition for everything revoking a share on a network change does automatically.
     home.mix(&["site", "unshare", "blog.test"]);
 
     assert!(

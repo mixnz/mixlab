@@ -1,4 +1,4 @@
-//! MixEngine in the tray or the menu bar — T168.
+//! MixEngine in the tray or the menu bar.
 //!
 //! The icon and a second webview window, label [`PANEL`], that draws the same React code as the
 //! Dashboard (`src/tray.tsx`). The design, including why Linux gets a menu in front of the panel
@@ -372,7 +372,7 @@ fn create_icon(app: &AppHandle) -> Result<(), AppError> {
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| on_icon_event(tray.app_handle(), event));
 
-    // Linux tells an application nothing about clicks: every click opens the menu (T168 D1).
+    // Linux tells an application nothing about clicks: every click opens the menu.
     #[cfg(target_os = "linux")]
     let builder = builder.show_menu_on_left_click(true);
 

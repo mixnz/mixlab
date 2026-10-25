@@ -12,9 +12,9 @@ use mixengine_core::UpdateError;
 use super::{Quiet, Updates, host, install_command, only_file_in, read};
 
 impl Updates {
-    /// `update.hand_over` — download and verify the next `.pkg`, open it in Installer.app, and write
-    /// the handover down (T88f, D4 and D5). **Nothing is stopped at any point**: a person who
-    /// cancels the installer has lost nothing.
+    /// `update.hand_over` — download and verify the next `.pkg`, open it in Installer.app, and
+    /// write the handover down. **Nothing is stopped at any point**: a person who cancels the
+    /// installer has lost nothing.
     ///
     /// # Errors
     ///
@@ -58,11 +58,11 @@ impl Updates {
         let package = self.fetch_package(version, installer).await?;
 
         // The platform's error keeps its own code; the hint is the line that installs the verified
-        // file without a window, which is also what over SSH somebody would need (D5, M4).
+        // file without a window, which is also what over SSH somebody would need (measured on a
+        // Mac).
         //
-        // **No installer to open is not a failure** — T182b, D5. A Linux machine with no desktop
-        // session has the verified package and the command that installs it, which is the whole
-        // handover there.
+        // **No installer to open is not a failure.** A Linux machine with no desktop session has
+        // the verified package and the command that installs it, which is the whole handover there.
         let opened = match self.host.installers().open(&package) {
             Ok(()) => true,
             Err(mixengine_platform::Error::UnsupportedPlatform { reason, .. }) => {
@@ -146,7 +146,7 @@ impl Updates {
     }
 
     /// The version on disk, while a handover is recorded and the binary there says it is that
-    /// version — T88f, D6. [`None`] otherwise, including for a different version somebody installed.
+    /// version. [`None`] otherwise, including for a different version somebody installed.
     pub(super) async fn installed_version(&self) -> Option<String> {
         let handed: updates::records::HandedOver =
             read(&self.store, updates::records::HANDED_OVER).await?;
@@ -174,7 +174,7 @@ impl Updates {
         on_disk.filter(|version| *version == handed.version)
     }
 
-    /// Forget a handover that no longer applies — T88f, D6's last paragraph.
+    /// Forget a handover that no longer applies.
     ///
     /// Two ways: this daemon already is the version handed over (somebody installed and restarted
     /// another way), or the feed now offers a different release than the one handed over.
@@ -193,7 +193,7 @@ impl Updates {
         }
     }
 
-    /// The version `update.finish` may finish, or why not — T88f, D6.
+    /// The version `update.finish` may finish, or why not.
     ///
     /// # Errors
     ///

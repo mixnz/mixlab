@@ -20,7 +20,7 @@ pub(crate) fn absent_store(source: &KeyringError) -> Option<&'static str> {
     )
 }
 
-/// The keys under `service` — T186.
+/// The keys under `service`.
 ///
 /// **Attributes only, never data**, so the Keychain has nothing to ask about: listing is not
 /// reading a secret, whatever program does it.
@@ -48,7 +48,7 @@ pub(crate) fn keys(service: &str) -> Result<Vec<String>, KeyringError> {
     }
 }
 
-/// Forget `service`/`account` — roadmap task **T182a**'s walk.
+/// Forget `service`/`account`.
 ///
 /// **By query, never by reading first.** `keyring`'s delete finds the item together with its secret
 /// before it deletes, which runs the Keychain's access control: an item another build of this
@@ -57,11 +57,12 @@ pub(crate) fn keys(service: &str) -> Result<Vec<String>, KeyringError> {
 /// of the secret, so nothing prompts and nothing refuses. Not there is already forgotten.
 pub(crate) fn forget(service: &str, account: &str) -> Result<(), KeyringError> {
     match security_framework::passwords::delete_generic_password(service, account) {
-        // **What another program wrote, Apple's own tool deletes** — the T182a walk. The Keychain
-        // refuses a delete from a program that is not in the item's access list, and to it every
-        // release of this program, and the window, is another program: `errSecInvalidOwnerEdit`
-        // (-25244), or `errSecAuthFailed` (-25293) on an older system. `security` is let through,
-        // and it deletes by service and account exactly as the call above would have.
+        // **What another program wrote, Apple's own tool deletes** — found by walking a macOS
+        // uninstall. The Keychain refuses a delete from a program that is not in the item's access
+        // list, and to it every release of this program, and the window, is another program:
+        // `errSecInvalidOwnerEdit` (-25244), or `errSecAuthFailed` (-25293) on an older system.
+        // `security` is let through, and it deletes by service and account exactly as the call
+        // above would have.
         Err(error) if the_owner_refused(&error) => {
             let output = std::process::Command::new(SECURITY)
                 .args(["delete-generic-password", "-s", service, "-a", account])
@@ -167,11 +168,12 @@ mod tests {
         ));
     }
 
-    /// **Deleted by query, never by reading first** — the T182a walk. `keyring`'s delete finds the
-    /// item *with its secret* before deleting, which runs the Keychain's access control: an item
-    /// another build of this program wrote (every release is one) was refused, and the uninstall
-    /// left it. `SecItemDelete` by service and account asks nothing of the secret. Ignored because
-    /// it writes the login Keychain of whoever runs it; run by hand with `--ignored`.
+    /// **Deleted by query, never by reading first** — found by walking a macOS uninstall.
+    /// `keyring`'s delete finds the item *with its secret* before deleting, which runs the
+    /// Keychain's access control: an item another build of this program wrote (every release is
+    /// one) was refused, and the uninstall left it. `SecItemDelete` by service and account asks
+    /// nothing of the secret. Ignored because it writes the login Keychain of whoever runs it; run
+    /// by hand with `--ignored`.
     #[test]
     #[ignore = "writes and removes an item in this user's login Keychain"]
     fn a_flat_item_is_forgotten_by_query() {

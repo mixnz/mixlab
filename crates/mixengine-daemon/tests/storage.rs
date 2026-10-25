@@ -1,4 +1,4 @@
-//! The four relocation flags, against real `mixengined` processes — roadmap task **T144**.
+//! The four relocation flags, against real `mixengined` processes.
 //!
 //! These cannot be written any other way. What the flags claim is about a **start**: that a value
 //! reaches `config.toml` and then reaches `Paths`, that repeating it changes nothing, and that a
@@ -192,7 +192,7 @@ async fn a_move_after_an_install_stops_the_start_and_names_what_is_there() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// `--storage`, the read that creates nothing — roadmap task T145.
+// `--storage`, the read that creates nothing.
 // ---------------------------------------------------------------------------------------------
 
 /// What `mixengined --storage` printed, parsed.

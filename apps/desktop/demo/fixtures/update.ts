@@ -1,7 +1,7 @@
 import type { UpdateStatus } from "../../src/shell/update/api";
 import { returns, type Handlers } from "../ipc/dispatch";
 
-/** MixLab's own updater (T187), read by the workspace at launch. Up to date and nothing offered:
+/** MixLab's own updater, read by the workspace at launch. Up to date and nothing offered:
  *  a demo draws no dot on the Settings button and no update notice. */
 const upToDate: UpdateStatus = {
   current: "0.0.8",

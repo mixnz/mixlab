@@ -9,15 +9,16 @@ use super::{
 impl PrivilegedOp {
     /// What this operation will literally change, for a person about to allow it.
     ///
-    /// **Derived from the operation rather than stored beside it** — the T40b design, D7. The
-    /// alternative is a `summary` written by whoever enqueued the operation and kept in its row,
-    /// which is a description that can disagree with what will be applied and would preserve that
-    /// disagreement across a restart, on the one screen whose whole job is to tell the truth before
-    /// somebody clicks Allow.
+    /// **Derived from the operation rather than stored beside it**
+    /// (`docs/specs/2026-08-23-t40b-elevation-queue-design.md`, D7). The alternative is a `summary`
+    /// written by whoever enqueued the operation and kept in its row, which is a description that
+    /// can disagree with what will be applied and would preserve that disagreement across a
+    /// restart, on the one screen whose whole job is to tell the truth before somebody clicks
+    /// Allow.
     ///
     /// [`String`] and not `&'static str`: the operations that matter carry data — `HostsApply`'s
-    /// description is its domains (T41) — and a constant would be a shape the next operation has to
-    /// break immediately.
+    /// description is its domains — and a constant would be a shape the next operation has to break
+    /// immediately.
     #[must_use]
     pub fn describe(&self) -> String {
         match self {
@@ -111,8 +112,9 @@ fn describe_hosts(home: Option<&str>, entries: &[HostEntry]) -> String {
 
 /// What a port-access grant will literally do, for a person about to allow it.
 ///
-/// The binary's whole path, never its file name: T42's D11 leaves exactly one control against a
-/// compromised daemon pointing the grant at a program of its own choosing, and this is it.
+/// The binary's whole path, never its file name: `docs/specs/2026-08-23-t42-port-access-design.md`,
+/// D11, leaves exactly one control against a compromised daemon pointing the grant at a program of
+/// its own choosing, and this is it.
 fn describe_grant(plan: &PortAccessPlan) -> String {
     match plan {
         PortAccessPlan::Capability { binary, ports } => format!(

@@ -12,7 +12,7 @@
 //! and is unaffected. `mixengine-elevate` takes `default-features = false, features = ["elevated"]`
 //! because it runs as root: `tokio`, `keyring` and `directories` have no business in that binary,
 //! and CI diffs its dependency closure against a committed list rather than trusting that they stay
-//! out. See the T40 design, D8.
+//! out.
 
 #![warn(missing_docs)]
 
@@ -24,15 +24,15 @@ use std::sync::Arc;
 // reasoned about: `cargo doc` refused it.
 #[cfg(feature = "elevated")]
 pub mod elevated;
-// What a crash report needs from the running executable: its base, its range, its build id and
-// the calling thread's return addresses — T91a. The daemon's alone, so `host`.
+// What a crash report needs from the running executable: its base, its range, its build id and the
+// calling thread's return addresses. The daemon's alone, so `host`.
 #[cfg(feature = "host")]
 pub mod crash_image;
 // Documented by its own `//!` header. Under both features: the daemon reads the block and the
 // helper writes it, and neither is worth a second implementation.
-/// The listener an activator holds, so a stopped service can be started by the connection
-/// that needed it — roadmap task T70. Beside `ipc` because it is the same shape and emphatically
-/// not the same thing: see the module note.
+/// The listener an activator holds, so a stopped service can be started by the connection that
+/// needed it. Beside `ipc` because it is the same shape and emphatically not the same thing: see
+/// the module note.
 #[cfg(feature = "ipc")]
 pub mod activation;
 // Documented by its own `//!` header. `host` only: the helper never chooses a home.
@@ -40,13 +40,13 @@ pub mod activation;
 pub mod home;
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub mod hosts;
-// Documented by its own `//!` header. Under both features because it is the one question both
-// sides of the privilege boundary ask: the daemon asks where the installed helper is so it can run
-// it, and the helper asks the same function where to put itself — T85.
+// Documented by its own `//!` header. Under both features because it is the one question both sides
+// of the privilege boundary ask: the daemon asks where the installed helper is so it can run it,
+// and the helper asks the same function where to put itself.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub mod install;
-// What a package database says owns a file, as text — roadmap task **T88e**. Compiled on all
-// three systems so its tests run on every one; the call itself is in `sys::install`.
+// What a package database says owns a file, as text. Compiled on all three systems so its tests run
+// on every one; the call itself is in `sys::install`.
 #[cfg(feature = "ipc")]
 pub mod ipc;
 // Documented by its own `//!` header. Under `elevated`, where the audit directory is named.
@@ -67,7 +67,7 @@ pub(crate) mod metrics;
 #[cfg(feature = "host")]
 pub mod mock;
 // Documented by its own `//!` header. `host` only, on `metrics`' reasoning: the daemon asks it
-// before an uninstall, and `mixengine-elevate` has no business enumerating processes (T182).
+// before an uninstall, and `mixengine-elevate` has no business enumerating processes.
 #[cfg(feature = "host")]
 pub mod occupants;
 pub mod paths;
@@ -86,20 +86,20 @@ pub mod resolver;
 // whether this machine already trusts the authority and the helper is what makes it.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub mod trust;
-// The databases Firefox and Chrome read *instead of* that store — T49b. `host` only, and that is
-// the line T49 was split on: the system stores need root and ride in the first-run elevation batch,
-// while these belong to the user and are never asked of the helper.
+// The databases Firefox and Chrome read *instead of* that store. `host` only, and that is the line
+// between the two: the system stores need root and ride in the first-run elevation batch, while
+// these belong to the user and are never asked of the helper.
 #[cfg(feature = "host")]
 pub mod browsers;
 // Documented by its own `//!` header. Under both features for `hosts`' reason — except that only
 // the helper ever calls the write: the daemon has no firewall trait, because it never reads a rule
-// set back. T74.
+// set back.
 #[cfg(any(feature = "host", feature = "elevated"))]
 pub mod firewall;
-// Which networks this machine could share a site on — T74. One implementation for all three
-// systems rather than a per-OS module, because the crate behind it already is per-OS; see the
-// module. `host` only: `mixengine-elevate` opens the firewall rule and never asks what interfaces
-// exist, and its dependency closure is a security decision CI diffs.
+// Which networks this machine could share a site on. One implementation for all three systems
+// rather than a per-OS module, because the crate behind it already is per-OS; see the module.
+// `host` only: `mixengine-elevate` opens the firewall rule and never asks what interfaces exist,
+// and its dependency closure is a security decision CI diffs.
 #[cfg(feature = "host")]
 mod network;
 
@@ -121,23 +121,23 @@ mod private_file;
 // documentation for why that is a different split rather than a hole in this one.
 #[cfg(feature = "host")]
 mod secrets;
-// Finding this install's window and starting it, shared by all three systems — the T83 design's D9
-// and D11, and T165.
+// Finding this install's window and starting it, shared by all three systems: one reaper thread for
+// every launch, and a launched window inherits the daemon's environment.
 #[cfg(feature = "host")]
 pub(crate) mod desktop;
 #[cfg(feature = "signal")]
 pub mod signal;
-// Documented by its own `//!` header. Under no feature: it is `std::fs` only, and `mix` reads it
-// as well as the daemon (T182).
+// Documented by its own `//!` header. Under no feature: it is `std::fs` only, and `mix` reads it as
+// well as the daemon.
 pub mod tombstone;
 #[cfg(feature = "host")]
 mod traits;
-// Documented by its own `//!` header: a runtime's bindir, heard changing (T185b). `host` only,
-// since `mixengine-elevate` never waits on a directory.
+// Documented by its own `//!` header: a runtime's bindir, heard changing. `host` only, since
+// `mixengine-elevate` never waits on a directory.
 #[cfg(feature = "host")]
 pub mod watch;
 // Documented by its own `//!` header: the MixLab window's own folders, which an uninstall removes
-// with the home (T182b). Not a `Host` capability, because nothing here changes the machine.
+// with the home. Not a `Host` capability, because nothing here changes the machine.
 #[cfg(feature = "host")]
 pub mod window_data;
 
@@ -217,7 +217,7 @@ compile_error!(
 /// one is used.
 pub const RELEASE: bool = option_env!("MIXENGINE_RELEASE").is_some();
 
-/// Where a [`Host`]'s [`keyring`](Host::keyring) keeps credentials — roadmap task **T184**.
+/// Where a [`Host`]'s [`keyring`](Host::keyring) keeps credentials.
 ///
 /// [`Os`](Self::Os) is the machine's own store and what every release uses. [`File`](Self::File)
 /// is one private file, which is what `mixengined` uses when it is not a release (ADR 0052): an
@@ -351,7 +351,7 @@ pub enum Error {
         source: std::io::Error,
     },
 
-    /// A file MixEngine was about to run did not prove what it is — roadmap task **T150**.
+    /// A file MixEngine was about to run did not prove what it is.
     ///
     /// Its own variant, because nothing about it is an I/O failure: the file was read, and what it
     /// said about itself was not good enough to run it with administrator rights.
@@ -392,7 +392,7 @@ pub enum Error {
     ///
     /// Its own variant rather than an [`Error::Io`] carrying `AddrInUse`, because it is the normal
     /// answer to "is a daemon already running for this home?" — the question the single-instance
-    /// check asks (roadmap task T9), and one whose answer is not a failure at all.
+    /// check asks, and one whose answer is not a failure at all.
     #[error("another process is already listening on {address}")]
     EndpointInUse {
         /// The endpoint that is taken.

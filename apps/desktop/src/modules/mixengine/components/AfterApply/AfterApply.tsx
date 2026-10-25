@@ -26,20 +26,19 @@ interface Props {
   /**
    * The result of the apply that just finished.
    *
-   * **A whole result rather than just the project name** — T125. This block used to take a single
-   * string, so it had no way to know which step the apply had just failed and said "ready" for
-   * every apply whose job did not throw. A `[scaffold]` with a non-zero exit is a
-   * `StepResult::Failed` *inside* a successful job (`api/apply.rs` on purpose: a broken
-   * post-install script is not worth tearing down the whole project), so "job done" and "apply
-   * fine" are two different statements and only the second is worth inviting people to click into
-   * the site.
+   * **A whole result rather than just the project name.** This block used to take a single string,
+   * so it had no way to know which step the apply had just failed and said "ready" for every apply
+   * whose job did not throw. A `[scaffold]` with a non-zero exit is a `StepResult::Failed` *inside*
+   * a successful job (`api/apply.rs` on purpose: a broken post-install script is not worth tearing
+   * down the whole project), so "job done" and "apply fine" are two different statements and only
+   * the second is worth inviting people to click into the site.
    */
   applied: BlueprintApplied;
 
   /** The user closes this block. `url` is the address found, or `null` if there is no site. */
   onFinished: (url: string | null) => void;
 
-  /** Whether this window draws the Terminal module, for the steps panel's buttons — T205. */
+  /** Whether this window draws the Terminal module, for the steps panel's buttons. */
   terminalVisible: boolean;
 }
 
@@ -57,11 +56,11 @@ interface Props {
  * standing still because a side question could not be asked is worse than a running site whose
  * name does not resolve yet.
  *
- * **"Start" means what this project needs** — T125, and the wording says exactly that. That set is
- * still not the client's: `service.start` takes a `project` scope, and the daemon is what reads
- * `site_service_links`, the php-fpm pool the site names, and the home's front end. Before T125 this
- * sent an empty target — *every service this home declares* — so bringing up a Laravel site on a
- * machine with four PHP versions and three databases started all eight.
+ * **"Start" means what this project needs**, and the wording says exactly that. That set is still
+ * not the client's: `service.start` takes a `project` scope, and the daemon is what reads
+ * `site_service_links`, the php-fpm pool the site names, and the home's front end. Before the
+ * project scope this sent an empty target — *every service this home declares* — so bringing up a
+ * Laravel site on a machine with four PHP versions and three databases started all eight.
  *
  * **An apply with a failed step must not invite people to click into the site.** A `[scaffold]`
  * with a non-zero exit arrives here inside a *successful* job, so this block used to say "ready"
@@ -78,11 +77,11 @@ interface Props {
  * `Modal` listens for Escape at `window` level: with two stacked, one Escape closes both. So
  * `ApplyDialog` closes first, then the screen that called it brings this component up in its place.
  *
- * **The browser opens by itself when the site works** — T205, D7. Applying a blueprint is asking
- * for a site that works, so a site that answers is the end of that request, and making people find
- * the button to see it is one click too many. It does not open when a step failed, or when the
- * blueprint says a step is still needed (a dev server to start, an install to run): then the steps
- * panel below says what is left, and the address is there for when it is done.
+ * **The browser opens by itself when the site works.** Applying a blueprint is asking for a site
+ * that works, so a site that answers is the end of that request, and making people find the button
+ * to see it is one click too many. It does not open when a step failed, or when the blueprint says
+ * a step is still needed (a dev server to start, an install to run): then the steps panel below
+ * says what is left, and the address is there for when it is done.
  */
 export default function AfterApply({ applied, onFinished, terminalVisible }: Props) {
   const project = applied.project;
@@ -94,7 +93,7 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
   const openedByItself = useRef(false);
   const nextSteps = applied.next_steps ?? null;
 
-  // The project just made is the one the Projects screen opens on next, with its steps — T205.
+  // The project just made is the one the Projects screen opens on next, with its steps.
   useEffect(() => {
     if (phase.kind === "ready") requestProjectDetail(applied.project);
   }, [phase.kind, applied.project]);
@@ -103,7 +102,7 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
     if (phase.kind !== "ready" || phase.url === null || openedByItself.current) return;
     if (!opensByItself(applied)) return;
     openedByItself.current = true;
-    // An `open` step names its own site when the blueprint has several (T204a, D5).
+    // An `open` step names its own site when the blueprint has several.
     const steps = nextSteps?.steps ?? [];
     const firstOpen = steps.find((step) => step.kind === "open");
     const base = (firstOpen && phase.addresses && addressFor(phase.addresses, firstOpen)) || phase.url;
@@ -144,8 +143,8 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
       try {
         await api.serviceStartProject(project);
         const listed = await api.sites(project);
-        // **The blueprint's first site, not the list's** — T204a: `site.list` is ordered by the
-        // daemon, and with several sites its first row is not the one the blueprint led with.
+        // **The blueprint's first site, not the list's**: `site.list` is ordered by the daemon, and
+        // with several sites its first row is not the one the blueprint led with.
         const addresses = siteAddresses(listed.sites, firstSiteDomain(applied.steps.map((one) => one.action)));
         if (!live) return;
         setPhase({ kind: "ready", url: addresses.first, addresses });
@@ -244,7 +243,7 @@ export default function AfterApply({ applied, onFinished, terminalVisible }: Pro
                     </Button>
                   </>
                 )}
-                {/* T204a: a blueprint with several sites made several addresses, and each is worth
+                {/* A blueprint with several sites made several addresses, and each is worth
                     a click from here rather than a trip to the Sites screen. */}
                 {phase.addresses && Object.keys(phase.addresses.byDomain).length > 1 && (
                   <div className={styles.sites}>

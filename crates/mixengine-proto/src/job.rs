@@ -11,11 +11,11 @@
 //! one value — persisted by `mixengine-core` and published by the daemon from that same value, so
 //! the `jobs` row and the event cannot disagree about what happened.
 //!
-//! **What is deliberately absent is a list of job kinds.** [`JobKind`] is a validated string and not
-//! an enum, for the reason `packages.name` is not `CHECK`ed in the first migration: the set grows
-//! with every phase that has something long to do — and, from T80, with every extension that ships
-//! one — so a closed vocabulary here would be a schema change per feature and a wire break per
-//! extension. What keeps it honest instead is that a kind *is* the method that produced it.
+//! **What is deliberately absent is a list of job kinds.** [`JobKind`] is a validated string and
+//! not an enum, for the reason `packages.name` is not `CHECK`ed in the first migration: the set
+//! grows with every phase that has something long to do — and with every extension that ships one —
+//! so a closed vocabulary here would be a schema change per feature and a wire break per extension.
+//! What keeps it honest instead is that a kind *is* the method that produced it.
 
 use crate::{Error, Timestamp};
 
@@ -120,9 +120,9 @@ impl<'de> serde::Deserialize<'de> for JobKind {
 /// **There is no `Cancelling`, and that is a decision rather than an omission.** Cancellation here
 /// is cooperative: `job.cancel` cancels the token the work is watching, and the work ends when it
 /// next looks. A state between the asking and the ending would have to be written by every producer
-/// of a job — and this build has none yet, so the only thing that could justify it is a guess about
-/// what T21's download will need. `Running` with a cancellation already requested is what a client
-/// sees, which is the truth: the work is still going.
+/// of a job — and when this was written there were none, so the only thing that could justify it
+/// was a guess about what a download would need. `Running` with a cancellation already requested is
+/// what a client sees, which is the truth: the work is still going.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]

@@ -93,7 +93,7 @@ describe("needsRiskyTldConsent", () => {
 });
 
 describe("siteDraftFromDetail", () => {
-  it("reads a site from a daemon older than T98 and T135", () => {
+  it("reads a site from a daemon that sends no redirect and no routes", () => {
     const detail = {
       site: {
         domain: "blog.test",

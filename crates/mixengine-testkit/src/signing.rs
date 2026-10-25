@@ -1,4 +1,4 @@
-//! A key pair a test owns, and detached signatures made with it — roadmap task **T78a**.
+//! A key pair a test owns, and detached signatures made with it.
 //!
 //! **The signing half lives here and can live nowhere else**, which is the same sentence
 //! [`MockRegistry`](crate::MockRegistry) is built on: a shipped binary holding a signing key would
@@ -53,7 +53,7 @@ impl Signer {
     /// A detached signature whose **trusted comment** is `trusted_comment`.
     ///
     /// minisign's global signature covers that comment, which is what makes it the one place a fact
-    /// about a signed artifact can travel without being taken on trust — roadmap task **T88a**, and
+    /// about a signed artifact can travel without being taken on trust;
     /// `mixengine_proto::privileged::HelperStamp` is what reads it back.
     #[must_use]
     pub fn sign_with_comment(&self, document: &[u8], trusted_comment: &str) -> String {

@@ -1,11 +1,11 @@
 //! Windows: one Name Resolution Policy rule, read and written as registry values.
 //!
-//! **Never `Add-DnsClientNrptRule`** — the T45 design, D11. `mixengine-elevate` never runs
-//! arbitrary commands, and a fixed cmdlet with validated arguments is still a scripting host
-//! started by a process holding an administrative token. What makes the alternative available is
-//! the measurement: a rule written to exactly the values in [`crate::resolver::nrpt`] **is read
-//! back by `Get-DnsClientNrptRule`**, so what MixEngine writes is what Windows' own tooling sees
-//! and what a user can remove without MixEngine's help.
+//! **Never `Add-DnsClientNrptRule`.** `mixengine-elevate` never runs arbitrary commands, and a
+//! fixed cmdlet with validated arguments is still a scripting host started by a process holding an
+//! administrative token. What makes the alternative available is the measurement: a rule written to
+//! exactly the values in [`crate::resolver::nrpt`] **is read back by `Get-DnsClientNrptRule`**, so
+//! what MixEngine writes is what Windows' own tooling sees and what a user can remove without
+//! MixEngine's help.
 //!
 //! The read half needs no privilege: `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet` is readable by
 //! any account, which is what lets the daemon ask on every start.
@@ -50,10 +50,10 @@ impl ResolverConfig for Resolver {
     }
 
     fn probe(&self, tlds: &[&str], _port: u16) -> Result<ResolverState> {
-        // The port is not asked about, and cannot be: NRPT has no field for one, which is why T44
-        // puts the server on 53 on this system. Two homes on one machine therefore cannot be told
-        // apart here — the known limitation the design records for all three systems, in the one
-        // shape where the port cannot resolve it.
+        // The port is not asked about, and cannot be: NRPT has no field for one, which is why the
+        // DNS server listens on 53 on this system. Two homes on one machine therefore cannot be
+        // told apart here — the known limitation the design records for all three systems, in the
+        // one shape where the port cannot resolve it.
         let present = read()?;
         let wired = nrpt::wired_from(present.as_ref(), tlds);
 

@@ -1,7 +1,7 @@
 //! Linux' two `systemd-networkd` files, as text.
 //!
 //! **A link of our own is the only mechanism that works**, and every alternative the feature spec
-//! and the roadmap named was measured out — the T45 design, D10:
+//! and the roadmap named was measured out:
 //!
 //! - a `resolved.conf.d` drop-in with a global routing domain redirects the **whole machine**:
 //!   after it, `getent hosts github.com` answered `127.0.0.1`;

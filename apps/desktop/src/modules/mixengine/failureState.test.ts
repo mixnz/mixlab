@@ -56,7 +56,7 @@ describe("serviceFailure", () => {
 describe("failureMayHaveChanged", () => {
   const moved = (to: string) => JSON.stringify({ type: "service_state_changed", service: "x", to });
 
-  /* T200b, D6: a screen showing failures reads the listing again when one may have started or
+  /* A screen showing failures reads the listing again when one may have started or
      ended — a move into `failed`, or out of it into `running`. */
   it("is a move into failed or into running", () => {
     expect(failureMayHaveChanged(moved("failed"))).toBe(true);

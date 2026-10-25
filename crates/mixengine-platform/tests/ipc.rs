@@ -105,7 +105,7 @@ async fn clients_that_arrive_before_the_daemon_accepts_wait_in_the_backlog() {
     // The daemon binds its endpoint long before it reaches its accept loop. On Windows a bound pipe
     // with nobody accepting has exactly one instance, so every client after the first was refused
     // with `ERROR_PIPE_BUSY` once its one second of retries ran out — which a parallel test run on
-    // a loaded machine did, dozens of times (T170). The backlog is what a Unix socket's listen queue
+    // a loaded machine did, dozens of times. The backlog is what a Unix socket's listen queue
     // already was: a client that arrives early waits, it is not turned away.
     let run = run_dir();
     let endpoint = Endpoint::in_run_dir(run.path()).unwrap();

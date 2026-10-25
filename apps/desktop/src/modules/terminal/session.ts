@@ -72,13 +72,13 @@ export function openingKeystrokes(text: string | null | undefined, press = true)
     .map((line) => line.trim())
     .filter((line) => line !== "");
   if (lines.length === 0) return null;
-  // Without `press`, the last line is typed and left for the person's Enter — T205, D10.
+  // Without `press`, the last line is typed and left for the person's Enter.
   const typed = lines.join("\r");
   return press ? `${typed}\r` : typed;
 }
 
 /**
- * What a saved target's opening sends, by its *When this target opens* choice — T205, D10.
+ * What a saved target's opening sends, by its *When this target opens* choice.
  *
  * Every opening reads it: the Open button, a double click in the list, and a tab MixLab restores.
  * The first version read it only on a restore, so *Just open* and *Type them* still ran the lines

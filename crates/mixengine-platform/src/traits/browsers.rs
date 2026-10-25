@@ -1,4 +1,6 @@
 //! Whether the browsers on this machine trust MixEngine's own certificate authority.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-25-t49b-nss-databases-design.md`.
 
 use crate::Result;
 
@@ -24,9 +26,9 @@ pub struct DatabaseState {
 /// What this machine's browsers say about one certificate.
 ///
 /// **Three states where [`TrustState`](crate::TrustState) has a `bool`, and the arity is the whole
-/// reason this is a second trait** — the T49b design, D1. NSS is N databases, orthogonal to the
-/// system store: a machine can hold the authority in `/etc/ssl/certs` and in none of its browsers,
-/// which is an ordinary state rather than a contradiction.
+/// reason this is a second trait.** NSS is N databases, orthogonal to the system store: a machine
+/// can hold the authority in `/etc/ssl/certs` and in none of its browsers, which is an ordinary
+/// state rather than a contradiction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BrowserSurvey {
     /// The tool is here, and this is what each database found says.
@@ -85,15 +87,15 @@ pub struct BrowserChange {
     pub refused: Vec<String>,
 }
 
-/// Whether Firefox and Chrome trust MixEngine's own certificate authority — roadmap task **T49b**.
+/// Whether Firefox and Chrome trust MixEngine's own certificate authority.
 ///
 /// **Needs no privilege, in either direction.** These databases belong to the user, which is the
-/// line T49 was split on: the system stores need root and ride in the first-run elevation batch,
-/// and nothing here goes through `mixengine-elevate` at all.
+/// line between this trait and [`TrustStore`](crate::TrustStore): the system stores need root and
+/// ride in the first-run elevation batch, and nothing here goes through `mixengine-elevate` at all.
 ///
 /// **This answers "is the authority in the database", not "does the browser accept it".** A browser
 /// already running holds its database open and may not re-read it until restarted, and the honest
-/// end-to-end check is a live handshake — `mix cert status`, T53. The same distinction
+/// end-to-end check is a live handshake — `mix cert status`. The same distinction
 /// [`TrustStore::probe`](crate::TrustStore::probe) draws for the system store.
 pub trait BrowserTrust: std::fmt::Debug + Send + Sync {
     /// What this machine's browsers say about `der`.
@@ -123,14 +125,13 @@ pub trait BrowserTrust: std::fmt::Debug + Send + Sync {
 
     /// Take the authority `key_id` names back out of every database that holds it.
     ///
-    /// **Names an authority and never a certificate** — T49a's D5, and the check is run twice here
-    /// as it is there: what sits under the nickname is read back and must pass
-    /// [`trust::ours`](crate::trust::ours) before it is deleted, because a certificate wearing a
-    /// MixEngine-shaped nickname is not proof that MixEngine put it there.
+    /// **Names an authority and never a certificate**, as the system store's removal does, and the
+    /// check is run twice here as it is there: what sits under the nickname is read back and must
+    /// pass [`trust::ours`](crate::trust::ours) before it is deleted, because a certificate wearing
+    /// a MixEngine-shaped nickname is not proof that MixEngine put it there.
     ///
-    /// **Nothing in T49b calls this.** T54 (`ca_rotate` / `ca_uninstall`) and T87 are the
-    /// producers, on T42's D12 and T45's D13: it exists and is tested now so that they have a value
-    /// to build against rather than a mechanism to invent against code written phases earlier.
+    /// **Never asked at a start.** `cert.ca_rotate`, `cert.ca_uninstall` and `mix uninstall` are
+    /// what call it.
     ///
     /// # Errors
     ///

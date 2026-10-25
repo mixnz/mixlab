@@ -1,11 +1,11 @@
 //! `package.*`: what the index offers of the servers this build can run, what this machine has, and
 //! the job that turns one into the other.
 //!
-//! Roadmap task **T31a**. [`crate::runtimes`] one namespace across, and deliberately built out of
-//! the same pieces — the same [`Fetcher`], the same [`Jobs`], the same install-then-record ordering.
-//! What is *not* repeated is the reasoning: why an install returns a job, why an install already
-//! running is answered with its job rather than started twice, and why the row is written after the
-//! rename are all written next door and are true here for the same reasons.
+//! [`crate::runtimes`] one namespace across, and deliberately built out of the same pieces — the
+//! same [`Fetcher`], the same [`Jobs`], the same install-then-record ordering. What is *not*
+//! repeated is the reasoning: why an install returns a job, why an install already running is
+//! answered with its job rather than started twice, and why the row is written after the rename are
+//! all written next door and are true here for the same reasons.
 //!
 //! # Only what this build can run is offered
 //!
@@ -15,8 +15,8 @@
 //! refused before a byte is spent rather than at `service.create`, where the disk is already gone.
 //!
 //! Two MixEngine versions reading one index therefore answer differently, which is correct: the
-//! question a person is asking is *what can I run*, and each of T33–T37 unlocks its own kind by
-//! shipping the recipe in the same commit.
+//! question a person is asking is *what can I run*, and each kind of server is unlocked by shipping
+//! its recipe in the same commit.
 //!
 //! # Runtimes are not packages
 //!
@@ -91,7 +91,7 @@ impl Packages {
         })
     }
 
-    /// The install job running for this version, if there is one — T193c.
+    /// The install job running for this version, if there is one.
     pub(crate) async fn installing(
         &self,
         package: &str,
@@ -138,7 +138,7 @@ impl Packages {
     ) -> Result<PackageCatalogue, Error> {
         let wanted: Vec<String> = match filter.package.as_deref() {
             Some(package) => vec![self.runnable(package)?],
-            // **Toolchains too** — roadmap task **T206a**: installable, never run.
+            // **Toolchains too**: installable, never run.
             None => self.catalogue.installable().map(str::to_owned).collect(),
         };
 
@@ -151,8 +151,8 @@ impl Packages {
         let installed = packages::records(&self.store, filter.package.as_deref())
             .await
             .map_err(|error| error.to_wire())?;
-        // **A version whose folder is gone is not installed here** — roadmap task **T206d**, D2: it is
-        // offered again, which is how it is put back, and it is the base of no update.
+        // **A version whose folder is gone is not installed here**: it is offered again, which is
+        // how it is put back, and it is the base of no update.
         let installed: Vec<_> = installed
             .into_iter()
             .filter(|have| !have.is_missing())
@@ -204,7 +204,7 @@ impl Packages {
                 versions.push(version);
             }
 
-            // T193a, D1 — `runtimes::list_available`'s reasoning.
+            // One release stands for each line — `runtimes::list_available`'s reasoning.
             let newest = mixengine_core::lines::newest_of_each_line(name, versions.iter());
             for release in offered.iter_mut().filter(|release| release.package == name) {
                 release.newest_in_line = Some(newest.values().any(|n| *n == release.version));
@@ -267,10 +267,9 @@ impl Packages {
 
     /// The newest release the index publishes for this machine that satisfies `wanted`.
     ///
-    /// [`crate::runtimes::Runtimes::newest_satisfying`]'s twin, and there for the same reason
-    /// (roadmap task T78, its design's D9): a plan holds a constraint, and only the index can turn
-    /// one into a release. [`None`] takes the newest published, which is what a blueprint naming a
-    /// package without pinning it asked for.
+    /// [`crate::runtimes::Runtimes::newest_satisfying`]'s twin, and there for the same reason: a
+    /// plan holds a constraint, and only the index can turn one into a release. [`None`] takes the
+    /// newest published, which is what a blueprint naming a package without pinning it asked for.
     ///
     /// # Errors
     ///
@@ -353,7 +352,7 @@ impl Packages {
     /// Four things are decided before a job exists, because all four are answers a caller should
     /// have immediately rather than through a job that fails a moment later: a package this build
     /// cannot run, a version that is already installed, a version this daemon is already
-    /// installing, and — since T149 — a version this machine certainly lacks something for.
+    /// installing, and a version this machine certainly lacks something for.
     ///
     /// # Errors
     ///
@@ -383,8 +382,8 @@ impl Packages {
         }
 
         match packages::record(&self.store, package, &target.version).await {
-            // **A recorded version whose folder is gone is installed again** — roadmap task
-            // **T206d**, D3: the install restores the row it already has.
+            // **A recorded version whose folder is gone is installed again**: the install restores
+            // the row it already has.
             Ok(found) if found.is_missing() => {}
             Ok(_) => {
                 return Err(
@@ -425,7 +424,7 @@ impl Packages {
         let started = self
             .jobs
             .begin(&kind, move |handle| async move {
-                // What the person agreed to happens first, on `runtimes::install`'s reasoning — T150.
+                // What the person agreed to happens first, on `runtimes::install`'s reasoning.
                 let prepared = match prepare {
                     true => {
                         requirements::prepare(
@@ -513,7 +512,7 @@ impl Packages {
             .recipe(package)
             .and_then(|recipe| recipe.smoke_test());
 
-        // Before the install, because the marker it leaves in the directory is this row (T182f).
+        // Before the install, because the marker it leaves in the directory is this row.
         let installation = packages::Installation {
             package: package.to_owned(),
             version: version.clone(),
@@ -525,8 +524,8 @@ impl Packages {
         };
         let marker = mixengine_core::adopt::marker::Marker::package(&installation).encode();
 
-        // **Restore or record** — roadmap task **T206d**, D3: decided before the download, because an
-        // install whose row already exists writes over it rather than beside it.
+        // **Restore or record**, decided before the download, because an install whose row already
+        // exists writes over it rather than beside it.
         let restoring = matches!(
             packages::record(&self.store, package, version).await,
             Ok(found) if found.is_missing()
@@ -561,7 +560,7 @@ impl Packages {
                 );
             }
 
-            // **T182f, D2**, on `runtimes::perform`'s reasoning: an earlier home installed it.
+            // On `runtimes::perform`'s reasoning: an earlier home installed it.
             Err(mixengine_core::Error::Runtime(RuntimeError::AlreadyInstalled { path })) => {
                 let found = mixengine_core::adopt::walk::Found {
                     subject: mixengine_core::adopt::Subject::Package {
@@ -624,9 +623,9 @@ impl Packages {
         self.after_recorded(&summary)
     }
 
-    /// What a newly recorded package answers — shared by an install, an adopt and the start walk
-    /// (T182f). A package needs nothing more once its row exists: an instance of it is
-    /// `service.create`, which a person asks for.
+    /// What a newly recorded package answers — shared by an install, an adopt and the start walk. A
+    /// package needs nothing more once its row exists: an instance of it is `service.create`, which
+    /// a person asks for.
     ///
     /// # Errors
     ///
@@ -643,8 +642,8 @@ impl Packages {
         })
     }
 
-    /// `package.found` — every package directory on disk with no row, and why — roadmap task
-    /// **T182i**. Offline: no index, and nothing recorded.
+    /// `package.found` — every package directory on disk with no row, and why. Offline: no index,
+    /// and nothing recorded.
     ///
     /// # Errors
     ///
@@ -672,7 +671,7 @@ impl Packages {
         })
     }
 
-    /// `package.adopt` — record a version that is on disk without a row — roadmap task **T182f**.
+    /// `package.adopt` — record a version that is on disk without a row.
     ///
     /// A version already recorded answers its row, so asking twice is not an error.
     ///
@@ -746,7 +745,7 @@ impl Packages {
             .await
             .map_err(|error| error.to_wire())?;
 
-        // **And the package's own folder with its last version** — roadmap task **T206c**.
+        // **And the package's own folder with its last version.**
         if let Some(parent) = Path::new(&removed.path).parent() {
             mixengine_core::paths::remove_if_empty(parent);
         }
@@ -780,11 +779,11 @@ impl Packages {
     ///
     /// The catalogue's own spelling rather than the caller's string, so that everything downstream
     /// holds the name this build knows rather than one that merely compared equal to it. Owned
-    /// since T81, when a catalogue stopped being made only of literals — an extension's recipe is
-    /// built at run time out of a row.
+    /// since a catalogue stopped being made only of literals — an extension's recipe is built at
+    /// run time out of a row.
     fn runnable(&self, package: &str) -> Result<String, Error> {
-        // **What it installs, not only what it runs** — roadmap task **T206a**: a toolchain is a
-        // package nothing starts, and `service.create` is where that is refused.
+        // **What it installs, not only what it runs**: a toolchain is a package nothing starts, and
+        // `service.create` is where that is refused.
         self.catalogue
             .installable()
             .find(|known| *known == package)

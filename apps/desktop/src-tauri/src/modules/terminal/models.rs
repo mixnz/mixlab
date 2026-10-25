@@ -28,11 +28,10 @@ pub enum TerminalTarget {
         #[serde(default)]
         args: Vec<String>,
         cwd: Option<String>,
-        /// Extra variables for the shell — T205, D9. Generic: this module knows nothing of what
-        /// they mean.
+        /// Extra variables for the shell. Generic: this module knows nothing of what they mean.
         #[serde(default)]
         env: std::collections::BTreeMap<String, String>,
-        /// Directories put ahead of the inherited `PATH` — T205, D9.
+        /// Directories put ahead of the inherited `PATH`.
         #[serde(default, rename = "pathPrepend")]
         path_prepend: Vec<String>,
     },

@@ -1,4 +1,4 @@
-//! `mix domain` — roadmap task **T46**.
+//! `mix domain`: give a site more names, and ask whether its names resolve.
 
 use std::process::ExitCode;
 
@@ -52,7 +52,7 @@ pub(crate) enum DomainCommand {
     },
 }
 
-/// `mix domain` — roadmap task **T46**.
+/// `mix domain`: ask, and render what came back.
 pub(crate) async fn domain(
     command: DomainCommand,
     endpoint: &Endpoint,

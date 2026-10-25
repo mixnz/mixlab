@@ -49,14 +49,15 @@ publish = false
 # shim leaves every fetch out (ADR 0067). A member's own `default-features = false` would be ignored
 # under an entry that left them on.
 mixengine-core = { path = "crates/mixengine-core", default-features = false }
-# The handbook, embedded at compile time — roadmap task T90. It depends on nothing at all: its front
-# matter is parsed by a build script, so what `mix` links is a table of `&'static str`.
+# The handbook, embedded at compile time. It depends on nothing at all: its front matter is parsed
+# by a build script, so what `mix` links is a table of `&'static str`.
 mixengine-docs = { path = "crates/mixengine-docs" }
-# `default-features = false` here rather than in the one crate that wants a lean slice: cargo refuses
-# a member's `default-features = false` on an inherited dependency whose workspace entry leaves the
-# defaults on. So the default is off at the root and every dependent that wants the whole crate says
-# `features = ["default"]` — which is all of them but `mixengine-elevate`, the binary that runs as
-# root and takes `["elevated"]` alone. See the T40 design, D8.
+# `default-features = false` here rather than in the one crate that wants a lean slice: cargo
+# refuses a member's `default-features = false` on an inherited dependency whose workspace entry
+# leaves the defaults on. So the default is off at the root and every dependent that wants the whole
+# crate says `features = ["default"]` — which is all of them but `mixengine-elevate`, the binary
+# that runs as root and takes `["elevated"]` alone. See
+# `docs/specs/2026-08-22-t40-elevate-design.md`, D8.
 mixengine-platform = { path = "crates/mixengine-platform", default-features = false }
 mixengine-proto = { path = "crates/mixengine-proto" }
 mixengine-supervisor = { path = "crates/mixengine-supervisor" }
@@ -105,27 +106,26 @@ flate2 = "1.1.9"
 getrandom = "0.4.3"
 # The DNS server of ../standards/rust.md's table, and only the server half: `hickory-resolver` is
 # deliberately absent, because this daemon answers for the TLDs it manages and REFUSES everything
-# else rather than forwarding — the T44 design, D1. `hickory-server` has **no default features**, so
-# what is taken here is the bare UDP/TCP server: no `resolver`, no `recursor`, no `__tls`/`__quic`,
-# no `__dnssec`, and no `sqlite`, which would put a second SQLite in a tree that already has one
-# through `sqlx`.
+# else rather than forwarding. `hickory-server` has **no default features**, so what is taken here
+# is the bare UDP/TCP server: no `resolver`, no `recursor`, no `__tls`/`__quic`, no `__dnssec`, and
+# no `sqlite`, which would put a second SQLite in a tree that already has one through `sqlx`.
 hickory-server = { version = "0.26.1", default-features = false }
 # The message types the server hands over and the answers it writes back. A direct edge rather than
 # a reach through `hickory-server`'s re-export, because the whole of the answering policy is written
-# against these types and the tests build messages without a server at all — the T44 design, D5.
+# against these types and the tests build messages without a server at all.
 hickory-proto = { version = "0.26.1", default-features = false, features = ["std"] }
 # The JSON-RPC transport, per ../standards/rust.md. Features are chosen per crate: the daemon takes
 # `server`, its tests take `client`.
 http-body-util = "0.1.4"
 hyper = { version = "1.11.0", default-features = false }
 hyper-util = { version = "0.1.20", default-features = false }
-# Which network interfaces this machine has, for LAN sharing (T74). One crate rather than three
+# Which network interfaces this machine has, for LAN sharing. One crate rather than three
 # per-OS modules: `getifaddrs` and `GetAdaptersAddresses` already sit behind it, and the filter that
 # turns its answer into a shareable interface is the same on all three systems.
 #
-# **Shared with `mdns-sd` deliberately** — roadmap task T75. That crate depends on this one, and a
-# version this workspace pinned lower produced two `if-addrs` in the lock file, which `cargo deny`
-# refuses as a duplicate. The two have to move together.
+# **Shared with `mdns-sd` deliberately.** That crate depends on this one, and a version this
+# workspace pinned lower produced two `if-addrs` in the lock file, which `cargo deny` refuses as a
+# duplicate. The two have to move together.
 if-addrs = "0.15.0"
 # The OS credential store, per ../standards/rust.md, and the only way a password reaches a managed
 # process at all (ADR 0006). `default-features = false` is not a trim here but a requirement: with no
@@ -136,11 +136,11 @@ keyring = { version = "3.6.3", default-features = false }
 # Unix only, and only in `mixengine-platform`: `getuid` for the peer check, and `sockaddr_un` for
 # the one length limit that differs between Linux and macOS.
 libc = "0.2.189"
-# The mDNS responder of T75, and the responder half alone: a shared site is *advertised* here and
-# nothing in this workspace browses for services. Pure Rust and cross-platform, so it lives in the
-# daemon beside `hickory-server` rather than behind a platform trait -- it makes no OS-specific call,
-# and the platform rule exists to keep `#[cfg]` out of logic rather than to route every socket
-# through a trait.
+# The mDNS responder LAN sharing advertises with, and the responder half alone: a shared site is
+# *advertised* here and nothing in this workspace browses for services. Pure Rust and
+# cross-platform, so it lives in the daemon beside `hickory-server` rather than behind a platform
+# trait -- it makes no OS-specific call, and the platform rule exists to keep `#[cfg]` out of logic
+# rather than to route every socket through a trait.
 #
 # **Coexisting with the responder a desktop already runs is measured, not assumed.** On Windows on
 # 2026-08-31 `svchost` (dnscache) and `msedge` both held UDP 5353 before this bound alongside them,
@@ -182,23 +182,22 @@ minisign-verify = "0.2.5"
 #
 # `crates/mixengine-supervisor/src/ready.rs` asserts this set compiles the syntax a spec may use, so
 # a future trim is a test that fails rather than a service that hangs for its whole timeout.
-# The only outbound HTTP in this workspace: fetching the package index and, from T21, the artifacts
-# it names. `hyper` serves the local IPC socket and answers loopback health checks; neither wants a
-# TLS stack, and `mixengine-supervisor` says so where it refuses an `https://` check.
+# The only outbound HTTP in this workspace: fetching the package index and the artifacts it names.
+# `hyper` serves the local IPC socket and answers loopback health checks; neither wants a TLS stack,
+# and `mixengine-supervisor` says so where it refuses an `https://` check.
 #
 # The certificate generator of ../standards/rust.md's table, and the whole of what lets an internal
 # CA exist without shelling out to `openssl`. **Default features plus `x509-parser`**: the default
 # backend is `ring`, and `ring` is here for this edge and no other — `rustls` in this tree runs on
 # `aws-lc-rs`, argued below, so `rcgen` is what puts `ring` in. That is a new package and not merely
 # a new edge, taken knowingly: `rcgen`'s `aws_lc_rs` feature would unify the two backends, but it
-# also enables `aws-lc-rs/aws-lc-sys`, and which provider signs a certificate is a decision this file
-# is not the place to change. `x509-parser` unlocks `Issuer::from_ca_cert_pem`, which is how a
-# *stored* CA signs a leaf (T50), and brings the parser T48 already needs — at the version rcgen
+# also enables `aws-lc-rs/aws-lc-sys`, and which provider signs a certificate is a decision this
+# file is not the place to change. `x509-parser` unlocks `Issuer::from_ca_cert_pem`, which is how a
+# *stored* CA signs a leaf, and brings the parser the authority already needs — at the version rcgen
 # pins, so the tree carries one copy and not two.
 rcgen = { version = "0.14.9", features = ["x509-parser"] }
-# The TLS client `mix cert status` uses to ask this home's own front end what it is serving —
-# roadmap task T53, and the first thing in this workspace that measures a padlock rather than
-# inferring one from a file.
+# The TLS client `mix cert status` uses to ask this home's own front end what it is serving, and the
+# first thing in this workspace that measures a padlock rather than inferring one from a file.
 #
 # **A new edge and not a new package.** `cargo tree -p mixengine-daemon -i aws-lc-rs` already shows
 # `rustls` reaching the daemon through `mixengine-core` -> `reqwest`, and `tokio-rustls` with it, so
@@ -219,9 +218,9 @@ rcgen = { version = "0.14.9", features = ["x509-parser"] }
 # refuse. It reaches this tree through `reqwest` rather than through the line below.
 rustls = "0.23.45"
 # Every root this machine already trusts, read the way each operating system keeps them — the
-# Windows `ROOT` store, macOS's trust settings, Linux's `ca-certificates` file. Roadmap task
-# **T132**: MixEngine writes a bundle holding those and its own authority, and hands it to the
-# runtimes whose own mechanism *replaces* a trust store rather than adding to it.
+# Windows `ROOT` store, macOS's trust settings, Linux's `ca-certificates` file. MixEngine writes a
+# bundle holding those and its own authority, and hands it to the runtimes whose own mechanism
+# *replaces* a trust store rather than adding to it.
 #
 # **A new edge and not a new package**, on `rustls`' reasoning above: it is already in the tree
 # through `rustls-platform-verifier`, and is pinned at the version that was already resolved so the
@@ -233,17 +232,16 @@ tokio-rustls = "0.26.4"
 # one: reading a certificate off disk means decoding the same envelope rcgen wrote.
 pem = "3.0.2"
 
-# Rendering the handbook to HTML — roadmap task T90. A **dev**-dependency of `mixengine-docs` and of
-# nothing else: the site generator is an example in that crate, so no Markdown renderer is linked
-# into `mix`, which prints the Markdown itself. Raw-HTML passthrough is switched off where it is
-# used, which is how "the site carries no JavaScript" is held by the generator rather than by a
-# reviewer.
+# Rendering the handbook to HTML. A **dev**-dependency of `mixengine-docs` and of nothing else: the
+# site generator is an example in that crate, so no Markdown renderer is linked into `mix`, which
+# prints the Markdown itself. Raw-HTML passthrough is switched off where it is used, which is how
+# "the site carries no JavaScript" is held by the generator rather than by a reviewer.
 #
 # `default-features = false` drops `getopts`, which is there for the crate's own example binary;
 # `html` is the renderer itself and is the whole reason for the edge.
 pulldown-cmark = { version = "0.13.0", default-features = false, features = ["html"] }
 
-# The QR code `mix site share` prints — T74. `default-features = false` drops the `image` and `svg`
+# The QR code `mix site share` prints. `default-features = false` drops the `image` and `svg`
 # renderers with everything under them: what this needs is the matrix and the two-block-per-row
 # rendering it already has, into a terminal. A phone camera is the only reader, and it reads the
 # same matrix whichever renderer drew it.
@@ -272,7 +270,7 @@ regex = { version = "1.13.1", default-features = false, features = [
 # `minisign-verify`/`minisign` uses one layer up, with the same benefit — what the product reads is
 # proved against what a *different* implementation wrote.
 ruzstd = "0.9.0"
-# T186: listing the macOS Keychain, which `keyring` cannot do. The major `keyring`'s `apple-native`
+# Listing the macOS Keychain, which `keyring` cannot do. The major `keyring`'s `apple-native`
 # and `rustls-native-certs` already use on macOS, so the tree gains no second copy (`cargo deny`).
 security-framework = "3.7.0"
 serde = { version = "1.0.229", features = ["derive"] }
@@ -299,16 +297,16 @@ sqlx = { version = "0.9.0", default-features = false, features = [
     "tls-none",
 ] }
 # Being told when a runtime's bindir changes, so a tool installed with `npm install -g` becomes a
-# command without anything polling for it — roadmap task T185b, ADR 0057. The kernel's own
-# notification on each system (ReadDirectoryChangesW, FSEvents, inotify): an idle machine pays
-# nothing, where the two-second `stat` loop it replaces woke the daemon for as long as it ran.
+# command without anything polling for it — ADR 0057. The kernel's own notification on each system
+# (ReadDirectoryChangesW, FSEvents, inotify): an idle machine pays nothing, where the two-second
+# `stat` loop it replaces woke the daemon for as long as it ran.
 notify = "8.2.0"
-# Per-process CPU and RSS — the reading T71's sampler takes, and the crate `docs/standards/rust.md`
-# already names for "process/system info". `default-features = false` with `system` alone: this
-# workspace never asks about disks, networks, components or logged-in users, and every one of those
-# is a syscall surface compiled in for nothing. `multithread` is deliberately left off — a refresh
-# that spawns a thread pool to read a few dozen processes costs more than it saves, and this one runs
-# on a timer for as long as the daemon does.
+# Per-process CPU and RSS — the reading the metrics sampler takes, and the crate
+# `docs/standards/rust.md` already names for "process/system info". `default-features = false` with
+# `system` alone: this workspace never asks about disks, networks, components or logged-in users,
+# and every one of those is a syscall surface compiled in for nothing. `multithread` is deliberately
+# left off — a refresh that spawns a thread pool to read a few dozen processes costs more than it
+# saves, and this one runs on a timer for as long as the daemon does.
 sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }
 # The container inside every `.tar.zst` and `.tar.gz`. Unpacking is where an archive gets to choose
 # where its bytes land, so the crate that resolves an entry's path matters more than its size:
@@ -324,18 +322,18 @@ tokio = "1.53.1"
 # no feature, so `default-features = false` leaves the codec, io and net helpers out of the build.
 tokio-util = { version = "0.7.18", default-features = false }
 toml = "1.1.4"
-# Writing `mixengine.toml` back (T39). `toml` cannot: a `Value` carries no formatting, so
-# serialising a fresh document over the user's file would take their comments, their key order and
-# the `[site]` block they wrote by hand with it — to the one file whose entire purpose is to be
-# read by a person. Already in `Cargo.lock` at this version underneath `toml` itself, so this is a
-# new *direct* edge rather than a new subtree.
+# Writing `mixengine.toml` back. `toml` cannot: a `Value` carries no formatting, so serialising a
+# fresh document over the user's file would take their comments, their key order and the `[site]`
+# block they wrote by hand with it — to the one file whose entire purpose is to be read by a person.
+# Already in `Cargo.lock` at this version underneath `toml` itself, so this is a new *direct* edge
+# rather than a new subtree.
 toml_edit = "0.25.13"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
-# The published API contract — roadmap task T56, and the crate ../standards/rust.md's table already
-# names for TS bindings. **Optional, and off by default**: `mixengine-proto` is in every binary this
-# project ships, `mixengine-elevate` included, and its manifest's first sentence is that it is
-# serde-only. Nothing a user runs compiles this, which the elevated helper's dependency budget in
+# The published API contract, and the crate ../standards/rust.md's table already names for TS
+# bindings. **Optional, and off by default**: `mixengine-proto` is in every binary this project
+# ships, `mixengine-elevate` included, and its manifest's first sentence is that it is serde-only.
+# Nothing a user runs compiles this, which the elevated helper's dependency budget in
 # `.github/elevate-dependencies.txt` keeps true rather than merely stated.
 #
 # `serde-compat` is the default and the whole reason it works — the wire shape is written in
@@ -406,14 +404,14 @@ codegen-units = 1
 lto = "thin"
 # Debug info goes, symbol names stay in what cargo writes. For `mixengined` they stay only until
 # `packaging/symbols.sh` has copied them into the release's symbol archive and stripped the shipped
-# binary (T91a): its crash reports record offsets, and `scripts/symbolize.mjs` turns them back into
-# the function names "copy diagnostics" (T66) needs. Cargo's own `strip = "symbols"` would remove
-# them before a copy could be made. The binaries that read no symbols of their own drop them below.
+# binary: its crash reports record offsets, and `scripts/symbolize.mjs` turns them back into
+# function names. Cargo's own `strip = "symbols"` would remove them before a copy could be made. The
+# binaries that read no symbols of their own drop them below.
 strip = "debuginfo"
 # `panic = "abort"` must never be set: the RPC layer catches a panic per request and returns
 # `internal` instead of taking every managed service down with it.
 
-# **T185: the one binary built for size.** `<root>/bin` holds a copy of it per command name on
+# **The one binary built for size.** `<root>/bin` holds a copy of it per command name on
 # Windows, so a byte here is paid dozens of times. A package override cannot set `lto` or `panic`,
 # and `[profile.release]` keeps `panic = "unwind"` for the daemon's sake — this is what is left.
 [profile.release.package.mixengine-trampoline]
@@ -423,10 +421,10 @@ codegen-units = 1
 
 # **`mix`, the shim and the helper ship without symbols.** None of them installs a panic hook or
 # reads a backtrace — `mixengined`'s `crash.rs` is the only one in `crates/` — and on Linux and
-# macOS the table was 17–22% of each file; Windows keeps it in a `.pdb` already. `strip` acts when the
-# binary is linked, so an override on its own package is enough. The helper's version does not move
-# for this: `helper-lock` fingerprints its sources and dependencies, not the profile (T182b's D1).
-# See docs/specs/2026-10-01-mixengine-binaries-built-for-size-design.md, D1.
+# macOS the table was 17–22% of each file; Windows keeps it in a `.pdb` already. `strip` acts when
+# the binary is linked, so an override on its own package is enough. The helper's version does not
+# move for this: `helper-lock` fingerprints its sources and dependencies, not the profile. See
+# docs/specs/2026-10-01-mixengine-binaries-built-for-size-design.md, D1.
 [profile.release.package.mixengine-cli]
 strip = "symbols"
 [profile.release.package.mixengine-shim]
@@ -434,7 +432,7 @@ strip = "symbols"
 [profile.release.package.mixengine-elevate]
 strip = "symbols"
 
-# **The compressors and the hash run optimised even in a debug build (T170c).** The real-server
+# **The compressors and the hash run optimised even in a debug build.** The real-server
 # suites pack a distribution of several hundred megabytes into an archive, and the daemon unpacks and
 # hashes it again; at opt-level 0 that was most of what those suites did — MySQL spent 88 s before
 # its first install on Windows, against 14 s on macOS (run 35430523430). None of these crates is ever

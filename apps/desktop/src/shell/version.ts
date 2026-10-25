@@ -1,7 +1,7 @@
 /**
  * What version this is, and where a release can be downloaded by hand.
  *
- * MixLab updates itself since T187 (ADR 0056): the updater is `src/shell/update/` and
+ * MixLab updates itself (ADR 0056): the updater is `src/shell/update/` and
  * `src-tauri/src/updater/`. What is left here is the running version and the release page, for a
  * copy the updater cannot replace (a development build, or one something else installed).
  */
@@ -25,7 +25,7 @@ export function openReleasesPage(): Promise<void> {
  * The running version, empty until the bundle has answered.
  *
  * Taken from the bundle rather than from `package.json` so it is the one the installed app actually
- * reports — which, since T104, is the workspace's.
+ * reports — which is the workspace's.
  */
 export function useAppVersion(): string {
   const [version, setVersion] = useState("");

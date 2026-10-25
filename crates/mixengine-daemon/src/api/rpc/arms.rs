@@ -10,7 +10,7 @@ use serde_json::Value;
 use crate::api::test_daemon::{call, daemon, undeclared};
 use crate::services::fixture;
 
-/// The three `path.*` methods over the dispatcher — roadmap task **T26**.
+/// The three `path.*` methods over the dispatcher.
 ///
 /// Against `mock::Host`, which is what makes this runnable at all: the real implementations
 /// write a registry value or a file in the person's own home, and a suite that exercised them
@@ -30,7 +30,7 @@ async fn the_path_is_reported_then_taken_and_then_given_back() {
     let installed: PathReport = daemon.expect(rpc::method::PATH_INSTALL, Value::Null).await;
     assert!(installed.on_path);
     assert!(installed.places.iter().all(|place| place.changed));
-    // T185b: this home has no runtime installed, so `bin/` fronts none of the compiled names —
+    // This home has no runtime installed, so `bin/` fronts none of the compiled names —
     // a `node` there would hide a Node the person installed themselves.
     assert!(installed.commands.is_empty(), "{installed:?}");
     assert!(installed.stale.is_empty());
@@ -56,7 +56,7 @@ async fn the_path_is_reported_then_taken_and_then_given_back() {
     daemon.quiet().await;
 }
 
-/// The three `autostart.*` methods over the dispatcher — roadmap task **T85b**.
+/// The three `autostart.*` methods over the dispatcher.
 ///
 /// Against `mock::Host`, for the `path.*` test's reason one step louder: the real
 /// implementations register a logon task, a LaunchAgent or a systemd user unit for the account
@@ -140,11 +140,11 @@ async fn an_autostart_call_with_parameters_is_refused() {
     assert_eq!(answer["error"]["data"]["code"], "invalid_argument");
 }
 
-/// A service with no database vocabulary is told so **in those words** — roadmap task T77a.
+/// A service with no database vocabulary is told so **in those words**.
 ///
 /// Deliberately not `unsupported`: that code means *this operating system cannot*, and every
 /// system this ships to runs the fixture service perfectly well. What has no databases is the
-/// package. The same distinction T77 drew for `blueprint.apply`.
+/// package. The same distinction the first planner drew for `blueprint.apply`.
 #[tokio::test]
 async fn creating_a_database_on_a_service_that_has_none_is_refused_by_name() {
     let daemon = daemon(
@@ -197,7 +197,7 @@ async fn creating_a_database_on_a_service_nothing_declares_is_not_found() {
 }
 
 /// `database.client`, `database.open` and `database.credentials` reach their handler, and a
-/// service nothing declares is the same miss to all three — roadmap tasks **T83** and **T77b**.
+/// service nothing declares is the same miss to all three.
 /// What the methods *do* is proved beside them, in `crate::databases`, on a mock host that
 /// records what it was asked to start.
 #[tokio::test]

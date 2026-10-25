@@ -1,4 +1,4 @@
-# T197: the Windows install script's choices, checked without an installer. Runs on Windows
+# The Windows install script's choices, checked without an installer. Runs on Windows
 # PowerShell 5.1 and on PowerShell 7, including pwsh on Linux for the parts that are not Windows'.
 # Helper names use approved verbs, because PSScriptAnalyzer checks this file too.
 $ErrorActionPreference = 'Stop'

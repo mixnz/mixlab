@@ -43,7 +43,7 @@ function activeFrontEnd(services: ServiceSummary[]): FrontEndServer | null | und
 }
 
 /**
- * "Default web server" — `service.set_front_end`, T97 / ADR 0026.
+ * "Default web server" — `service.set_front_end`, ADR 0026.
  *
  * **Read from `ServiceSummary.role`; there is no separate read method.** The row with
  * `role: front_end` also carries `server`, exactly the value `FrontEndSwitch.server` takes — MixLab
@@ -59,10 +59,10 @@ function activeFrontEnd(services: ServiceSummary[]): FrontEndServer | null | und
  *
  * - `switched`/`unchanged` → reread; show `not_carried` (overrides that could not be carried over
  *   — this field exists so they are not silently swallowed) and `kept_data`.
- * - `not_granted` → the same T64 flow as everywhere in the app: read `elevation.status`, open
- *   `ElevationDialog`. When the dialog closes, read the queue again: empty (granted) means calling
- *   switch again by itself — the daemon says "allowing it and asking again works"; something still
- *   waiting (the user only closed it) stops at one sentence, with no endless loop.
+ * - `not_granted` → the same two passes as every elevation in the app: read `elevation.status`,
+ *   open `ElevationDialog`. When the dialog closes, read the queue again: empty (granted) means
+ *   calling switch again by itself — the daemon says "allowing it and asking again works";
+ *   something still waiting (the user only closed it) stops at one sentence, with no endless loop.
  * - `rolled_back`/`failed` → `because` in red, and the choice returns to the active server.
  *
  * No `version` is passed: the daemon takes the newest installed version, exactly as the contract
@@ -153,7 +153,7 @@ export default function FrontEndSection({
     const result = summary.outcome.result as FrontEndReport;
     setReport(result);
     if (result.outcome.outcome === "not_granted") {
-      // Operations waiting in the elevation queue — show them first, then ask, T64.
+      // Operations waiting in the elevation queue — show them first, then ask.
       try {
         const queue = await api.elevationStatus();
         if (!live.current) return;
@@ -209,7 +209,8 @@ export default function FrontEndSection({
 
   if (services === null) return loaded ? null : <SectionLoading title={t("mixengine.settings.frontEnd.title")} />;
 
-  // A daemon built before T97: keep this row visible with a reason, instead of disappearing.
+  // A daemon built before the front end could be switched: keep this row visible with a reason,
+  // instead of disappearing.
   if (current === undefined) {
     return (
       <section className={styles.section}>

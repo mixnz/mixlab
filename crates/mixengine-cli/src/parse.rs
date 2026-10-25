@@ -88,7 +88,7 @@ pub(crate) fn pin(value: &str) -> Result<(RuntimeKind, VersionConstraint), Strin
     Ok((runtime_kind(kind)?, version_constraint(constraint)?))
 }
 
-/// `2h` as a number of seconds, for `--for` — roadmap task **T76**.
+/// `2h` as a number of seconds, for `--for`.
 ///
 /// **Hand-written rather than a dependency.** Four suffixes and a bare number of seconds is the
 /// whole grammar this flag needs, and every entry in this workspace's `Cargo.toml` carries a

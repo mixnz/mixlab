@@ -19,6 +19,9 @@
 //!
 //! **The engine moves ciphertext only** — sealing and opening stay with whoever calls it, so the
 //! keyring and a module's plaintext never reach the socket.
+//!
+//! The D-numbers in this module are those of
+//! `docs/specs/2026-09-20-t177-a-copy-only-you-can-read-design.md`.
 
 pub mod account;
 pub mod chunk;

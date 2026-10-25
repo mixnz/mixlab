@@ -20,9 +20,9 @@ fn postgres_declares_the_one_credential_its_ritual_needs() {
     assert!(ritual.secrets[0].length >= 32, "{:?}", ritual.secrets);
 }
 
-/// **The superuser is readable from a provisioning, because a refusal has to be attributed** —
-/// roadmap task **T127a**. A server's log says who was refused, and this is what tells a line
-/// about *this home's* superuser apart from one about somebody's application account.
+/// **The superuser is readable from a provisioning, because a refusal has to be attributed** — a
+/// server's log says who was refused, and this is what tells a line about *this home's* superuser
+/// apart from one about somebody's application account.
 #[test]
 fn a_provisioning_says_which_account_its_superuser_is() {
     let context = context("{}");
@@ -59,8 +59,7 @@ fn the_spec_and_the_ritual_name_one_credential() {
             if key == &context.secret_address(SUPERUSER)),
         "{named:?}"
     );
-    // The home is in front of the service — roadmap task **T126**, and MariaDB's own test
-    // says why.
+    // The home is in front of the service, and MariaDB's own test says why.
     assert_eq!(
         context.secret_address(SUPERUSER),
         format!(
@@ -255,7 +254,7 @@ fn a_first_run_is_measured_before_its_credentials_exist() {
     );
 }
 
-/// **A reset sets the password and never creates a cluster** — roadmap task **T127**.
+/// **A reset sets the password and never creates a cluster.**
 ///
 /// `--single` is the assertion beside the negative one: the repair has to reach the cluster
 /// through a backend that opens no port and no socket, for the reason
@@ -325,10 +324,9 @@ fn provisioning_sql(found: crate::generate::Found) -> String {
 }
 
 /// **The validator's alphabet is exactly what every accepted character survives being embedded
-/// as** — roadmap task **T77b**. A chosen password containing every printable-ASCII character
-/// the validator accepts must still produce SQL whose `LOGIN PASSWORD '...'` literal (on the
-/// `ALTER ROLE` line, the plain one and not the `\gexec`-wrapped `CREATE ROLE`) closes where it
-/// should.
+/// as.** A chosen password containing every printable-ASCII character the validator accepts must
+/// still produce SQL whose `LOGIN PASSWORD '...'` literal (on the `ALTER ROLE` line, the plain one
+/// and not the `\gexec`-wrapped `CREATE ROLE`) closes where it should.
 #[test]
 fn every_accepted_password_character_survives_the_login_password_literal() {
     let chosen =

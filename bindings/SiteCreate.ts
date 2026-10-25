@@ -9,7 +9,7 @@ import type { SiteRoute } from "./SiteRoute";
  *
  * Every field but the project falls through — the argument, then `[site]` in the project's
  * manifest, then a default — which is what makes `site.create { project }` the import (spec D7),
- * and `site.create { project, from }` the import of one of several (roadmap task **T204**).
+ * and `site.create { project, from }` the import of one of several.
  */
 export type SiteCreate = { 
 /**
@@ -17,9 +17,8 @@ export type SiteCreate = {
  */
 project: ProjectRef, 
 /**
- * Which of the manifest's sites to fall through to, by any of its names — roadmap task
- * **T204**, spec D5. Needed when the file declares more than one and the request names no
- * domain that picks one.
+ * Which of the manifest's sites to fall through to, by any of its names. Needed when the file
+ * declares more than one and the request names no domain that picks one.
  */
 from?: string | null, 
 /**
@@ -40,8 +39,8 @@ kind?: SiteKind | null,
  */
 services?: Array<ServiceId> | null, 
 /**
- * The routes it declares, **replacing** the list rather than merging into it — roadmap task
- * **T135**. Falls through to `[[site.routes]]`, then to none.
+ * The routes it declares, **replacing** the list rather than merging into it. Falls through to
+ * `[[site.routes]]`, then to none.
  */
 routes?: Array<SiteRoute> | null, 
 /**
@@ -49,7 +48,7 @@ routes?: Array<SiteRoute> | null,
  */
 https?: boolean | null, 
 /**
- * Whether the plaintext address should redirect to the HTTPS one — roadmap task **T98**.
+ * Whether the plaintext address should redirect to the HTTPS one.
  *
  * Refused when `true` beside an `https` that resolves to `false`, whether that is this same
  * request's own `https: Some(false)` or a `https` left unset on a site created plaintext-only.

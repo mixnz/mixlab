@@ -24,11 +24,11 @@ zip.workspace = true
 # signature above already established is ours, so this is what carries that trust the rest of the
 # way to the bytes on disk.
 sha2.workspace = true
-# The internal certificate authority (T48) and, from T50, the leaves it signs. `rcgen` makes them
-# and `x509-parser` reads back what is on disk — the second is not redundant with the first: a
-# status reports what the *file* says rather than what this process just wrote, which is the only
-# way a home restored from a backup reports itself honestly. `pem` is the envelope both speak, taken
-# from the same version rcgen pins.
+# The internal certificate authority and the leaves it signs. `rcgen` makes them and `x509-parser`
+# reads back what is on disk — the second is not redundant with the first: a status reports what the
+# *file* says rather than what this process just wrote, which is the only way a home restored from a
+# backup reports itself honestly. `pem` is the envelope both speak, taken from the same version
+# rcgen pins.
 rcgen.workspace = true
 x509-parser.workspace = true
 pem.workspace = true
@@ -52,10 +52,10 @@ serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
-# T21 is the first task in this crate with work long enough to need the runtime rather than only the
-# `async` keyword. `rt` is `spawn_blocking`, which hashing and unpacking an eighty-megabyte archive
-# both go through — doing either inline would stall every other request the daemon is serving. `fs`
-# and `io-util` write the download without blocking between chunks, `process` runs the post-install
+# The download pipeline is work long enough to need the runtime rather than only the `async`
+# keyword. `rt` is `spawn_blocking`, which hashing and unpacking an eighty-megabyte archive both go
+# through — doing either inline would stall every other request the daemon is serving. `fs` and
+# `io-util` write the download without blocking between chunks, `process` runs the post-install
 # check, and `time` bounds it. Everything above this line was reachable with none of them, which is
 # why the dependency arrives now rather than at the top of the file's history.
 tokio = { workspace = true, features = ["fs", "io-util", "process", "rt", "time"] }

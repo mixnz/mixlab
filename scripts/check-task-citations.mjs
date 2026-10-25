@@ -1,30 +1,24 @@
 #!/usr/bin/env node
-// Keep roadmap task numbers (`T182f`, "roadmap task T32") out of source files: no file that cites
-// none starts to, and none that already does cites more.
+// Keep roadmap task numbers (`T182f`, "roadmap task T32") out of source files and the build's
+// configuration.
 //
-//   node scripts/check-task-citations.mjs            check
-//   node scripts/check-task-citations.mjs --shrink   lower or remove the baseline entries the tree
-//                                                    has outgrown, then check
+//   node scripts/check-task-citations.mjs
 //
 // A number in a comment sends the reader to another file, and goes wrong when the task is split,
-// lettered or moved; the rule is in docs/standards/rust.md, *Comments*. The citations that predate
-// it are not rewritten in bulk. They go when the code around them next changes, and --shrink writes
-// that down in scripts/task-citation-baseline.json, so a citation one commit removed cannot be
-// spent again by the next. Nothing here raises an entry: citing more is a hand edit to the JSON,
-// and that line in the diff is the question for review.
+// lettered or moved; the rule is in docs/standards/rust.md, *Comments*. Every one fails the check,
+// printed as `file:line: T182f`, and the way out is to say the reason itself.
 //
 // Every occurrence in the file is counted, not only those in comments: a task number in a test's
 // name is the same pointer elsewhere, and telling a comment from a string in five languages is a
 // parser this check does not need.
 //
-// Run by scripts/gate.sh and CI's `lint` job; tested by check-task-citations.test.mjs.
+// Run by scripts/gate.sh, .githooks/pre-commit and CI's `lint` job; tested by
+// check-task-citations.test.mjs.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { isCounted } from './check-file-sizes.mjs';
-
-export const BASELINE = 'scripts/task-citation-baseline.json';
 
 // The scripts whose job is to read the roadmap, where a task number is data and not a citation.
 const READERS_OF_THE_ROADMAP = new Set([
@@ -34,79 +28,48 @@ const READERS_OF_THE_ROADMAP = new Set([
   'scripts/check-task-citations.test.mjs',
 ]);
 
+// Beyond the source files `check-file-sizes.mjs` counts: the build's own configuration, every
+// TOML manifest and the whole of `.github/`, where a number goes stale the same way. Not the TOML
+// that is data: fixtures, the frozen templates the upgrade test compares, and the gallery, which
+// is published elsewhere as signed bytes.
+const CONFIGURATION = /(\.toml$|^\.github\/)/;
+const DATA = [
+  /(^|\/)fixtures\//,
+  /^crates\/mixengine-core\/tests\/released-templates\//,
+  /^crates\/mixengine-core\/src\/blueprints\/gallery\//,
+];
+
 // `T` and a number, with the letters a split task takes: T32, T182f, T4 of "T4.4".
 const CITATION = /\bT\d+[a-z]*\b/g;
 
-const SHRINK = 'run node scripts/check-task-citations.mjs --shrink';
-
 export function isChecked(file) {
-  return isCounted(file) && !READERS_OF_THE_ROADMAP.has(file);
+  if (READERS_OF_THE_ROADMAP.has(file)) return false;
+  const configuration = CONFIGURATION.test(file) && !DATA.some((pattern) => pattern.test(file));
+  return isCounted(file) || configuration;
 }
 
-export function countCitations(text) {
-  return text.match(CITATION)?.length ?? 0;
+/** Every citation in `text`, in order, with the line (from 1) it sits on. */
+export function findCitations(text) {
+  return text.split('\n').flatMap((content, index) =>
+    [...content.matchAll(CITATION)].map(([token]) => ({ line: index + 1, token })));
 }
 
-const total = (files) => Object.values(files).reduce((sum, count) => sum + count, 0);
-const number = (value) => value.toLocaleString('en-US');
-const citations = (count) => `${number(count)} task citation${count === 1 ? '' : 's'}`;
-
-/** Every way `counts` breaks `baseline`, one sentence each, sorted. */
-export function judge(counts, baseline) {
-  const { files } = baseline;
-  const errors = [];
-  for (const [file, count] of counts) {
-    if (count > 0 && !(file in files)) {
-      errors.push(`${file}: has ${citations(count)} and the baseline allows none — say the reason itself, or link the ADR or spec (docs/standards/rust.md, *Comments*)`);
-    }
-  }
-  for (const [file, allowed] of Object.entries(files)) {
-    const count = counts.get(file) ?? 0;
-    if (count > allowed) {
-      errors.push(`${file}: has ${citations(count)}; the baseline allows ${number(allowed)} — it may not grow`);
-    } else if (count < allowed) {
-      errors.push(`${file}: has ${citations(count)}; the baseline still says ${number(allowed)} — ${SHRINK}`);
-    }
-  }
-  return errors.sort();
-}
-
-/** `baseline` with every entry lowered to its file's count, and the files that cite nothing gone. */
-export function shrunk(counts, baseline) {
-  const files = {};
-  for (const [file, allowed] of Object.entries(baseline.files)) {
-    const count = Math.min(counts.get(file) ?? 0, allowed);
-    if (count > 0) files[file] = count;
-  }
-  return { files };
-}
-
-export function renderBaseline(baseline) {
-  const files = Object.fromEntries(Object.keys(baseline.files).sort().map((file) => [file, baseline.files[file]]));
-  return `${JSON.stringify({ files }, null, 2)}\n`;
-}
-
-function main(argv) {
+function main() {
   process.chdir(execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim());
   const files = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8', maxBuffer: 256 << 20 })
     .split('\0')
     .filter((file) => file && isChecked(file) && existsSync(file));
-  const counts = new Map(files.map((file) => [file, countCitations(readFileSync(file, 'utf8'))]));
-  let baseline = JSON.parse(readFileSync(BASELINE, 'utf8'));
-  if (argv.includes('--shrink')) {
-    baseline = shrunk(counts, baseline);
-    writeFileSync(BASELINE, renderBaseline(baseline));
-  }
-  const errors = judge(counts, baseline);
-  if (errors.length === 0) {
-    const entries = Object.keys(baseline.files).length;
-    console.log(`task citations: ok (${number(total(baseline.files))} in ${number(entries)} files, none grown)`);
+  const findings = files.flatMap((file) =>
+    findCitations(readFileSync(file, 'utf8')).map(({ line, token }) => `${file}:${line}: ${token}`));
+  if (findings.length === 0) {
+    console.log('task citations: ok');
     return;
   }
-  console.error(errors.join('\n'));
-  console.error(`\ntask citations: ${errors.length} problem(s)`);
+  console.error(findings.join('\n'));
+  console.error('\nsay the reason itself, or link the ADR or spec (docs/standards/rust.md, *Comments*)');
+  console.error(`task citations: ${findings.length.toLocaleString('en-US')} found`);
   process.exitCode = 1;
 }
 
 // By basename, as check-docs.mjs does: a drive letter's case can differ on Windows.
-if (path.basename(process.argv[1] ?? '') === 'check-task-citations.mjs') main(process.argv.slice(2));
+if (path.basename(process.argv[1] ?? '') === 'check-task-citations.mjs') main();

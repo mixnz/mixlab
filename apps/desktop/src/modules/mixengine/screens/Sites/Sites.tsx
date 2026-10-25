@@ -103,12 +103,12 @@ export default function Sites({
   onOpenProject,
 }: {
   active: boolean;
-  /** Over to the Projects screen with this project's row open — its steps live there (T205). */
+  /** Over to the Projects screen with this project's row open — its steps live there. */
   onOpenProject: (project: string) => void;
 }) {
 
   const [rows, setRows] = useState<SiteRow[]>([]);
-  /** Every service, for why a site's pool could not start — T200b, D6. */
+  /** Every service, for why a site's pool could not start. */
   const [services, setServices] = useState<ServiceSummary[]>([]);
   /** False until the first read has answered — until then an empty `rows` means "not known yet",
    *  not "no sites". A later read under another filter keeps the old rows up, as every reread does. */
@@ -205,7 +205,7 @@ export default function Sites({
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
       setRows((current) => applySharingChange(current, raw));
-      // A pool that has just failed, or come back: its line under the domain follows (T200b, D6).
+      // A pool that has just failed, or come back: its line under the domain follows.
       if (failureMayHaveChanged(raw)) {
         void api.services().then(
           (listed) => setServices(listed.services),
@@ -223,7 +223,7 @@ export default function Sites({
     }
   }
 
-  /** Why this site's pool could not start, and the way to try again — T200b, D6. This is where
+  /** Why this site's pool could not start, and the way to try again. This is where
    *  MixEngine's starting page sends a person. */
   function failureLine(row: SiteRow) {
     const failure = siteFailure(row, services);
@@ -371,7 +371,7 @@ export default function Sites({
             </thead>
             <tbody>
               {rows.map((row) => {
-                const routes = (row.routes ?? []).length; // T135. `?? []` for a daemon from before the field.
+                const routes = (row.routes ?? []).length; // `?? []` for a daemon without routes.
                 return (
                   <tr key={row.domain}>
                     <td>
@@ -420,8 +420,8 @@ export default function Sites({
                       <span className={row.https ? styles.httpsOn : styles.none}>
                         {row.https ? t("mixengine.sites.httpsOn") : t("mixengine.sites.httpsOff")}
                       </span>
-                      {/* T98: the site forces HTTPS — `?? false` for a daemon built before this
-                          field existed. */}
+                      {/* The site forces HTTPS — `?? false` for a daemon built before this field
+                          existed. */}
                       {row.https && (row.https_redirect ?? false) && (
                         <span className={styles.redirect}> {t("mixengine.sites.redirect")}</span>
                       )}
@@ -492,7 +492,7 @@ export default function Sites({
             {menuRow.state === "enabled" ? t("mixengine.sites.stop") : t("mixengine.sites.start")}
           </button>
 
-          {/* What the site's project says is left to run, from its blueprint — T205, D8. */}
+          {/* What the site's project says is left to run, from its blueprint. */}
           {menuRow.owner.type === "project" && (
             <button
               type="button"
@@ -513,7 +513,7 @@ export default function Sites({
             type="button"
             className="context-menu-delete"
             // An extension's site is the daemon's to refuse, as it refuses an edit. A shared one is
-            // deleted with its share withdrawn (T199a).
+            // deleted with its share withdrawn.
             disabled={!canEditSite(menuRow.owner)}
             title={canEditSite(menuRow.owner) ? undefined : t("mixengine.sites.editDisabledHint")}
             onClick={() => {

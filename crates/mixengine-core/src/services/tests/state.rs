@@ -94,7 +94,7 @@ async fn a_transition_is_written_and_handed_back() {
     );
 }
 
-/// **T200b, D5.** A move into `failed` keeps the sentence; a move into `running` forgets it.
+/// A move into `failed` keeps the sentence; a move into `running` forgets it.
 #[tokio::test]
 async fn a_failure_is_noted_with_its_sentence_and_forgotten_once_running() {
     let (_home, store) = store().await;
@@ -136,8 +136,8 @@ async fn a_failure_is_noted_with_its_sentence_and_forgotten_once_running() {
     );
 }
 
-/// **T200b, D5.** With no sentence, the reason's own words are the note — a client never
-/// translates a `StateReason`.
+/// With no sentence, the reason's own words are the note — a client never translates a
+/// `StateReason`.
 #[tokio::test]
 async fn a_failure_without_a_sentence_is_noted_in_the_reasons_words() {
     let (_home, store) = store().await;
@@ -166,7 +166,7 @@ async fn a_failure_without_a_sentence_is_noted_in_the_reasons_words() {
     );
 }
 
-/// **T200b, Review Focus 3.** A note this build cannot read is no note, not an error.
+/// A note this build cannot read is no note, not an error.
 #[tokio::test]
 async fn an_unreadable_failure_note_reads_as_none() {
     let (_home, store) = store().await;
@@ -202,7 +202,7 @@ async fn down(store: &Store, id: &ServiceId, reason: StateReason) {
         .expect("a stopping service can stop");
 }
 
-/// **A stop somebody asked for is theirs** — the design's D8, which T123 does not touch.
+/// **A stop somebody asked for is theirs.**
 ///
 /// `mix service stop mariadb@main` followed by the next connection starting it again is the tool
 /// overruling its user, and this is the word that forbids it.
@@ -219,7 +219,7 @@ async fn a_stop_somebody_asked_for_is_recorded_as_theirs() {
     );
 }
 
-/// **A shutdown is not one of those** — roadmap task **T123**.
+/// **A shutdown is not one of those.**
 ///
 /// `daemon.shutdown` and `service.stop` walk the same `Registry::stop`, so this row is the only
 /// place the difference can survive to the next boot — and on-demand activation is what reads it
@@ -238,7 +238,7 @@ async fn a_stop_the_daemon_made_on_its_way_out_is_not_recorded_as_a_person_s() {
     );
 }
 
-/// **Nor is a process that went away under the daemon** — roadmap task **T123**.
+/// **Nor is a process that went away under the daemon.**
 ///
 /// What a restarted machine leaves: rows claiming to be running, reconciled to `stopped` by a
 /// daemon that finds no process behind them. Nobody decided this, so nothing about it may keep a
@@ -256,7 +256,7 @@ async fn a_process_that_vanished_is_nobody_s_stop() {
     );
 }
 
-/// **And a service that is not stopped is nobody's stop at all** — roadmap task **T123**.
+/// **And a service that is not stopped is nobody's stop at all.**
 ///
 /// The column is written on the way out of `stopped` as well as into it, so a row can never
 /// answer with a stop that is over. A reader that asks while the service is running gets the
@@ -283,7 +283,7 @@ async fn leaving_stopped_takes_the_stop_with_it() {
     );
 }
 
-/// **A row that has never run has never been stopped** — roadmap task **T123**.
+/// **A row that has never run has never been stopped.**
 ///
 /// `service.create` writes `stopped`, because there is nowhere else for a service to begin. The
 /// column's default is what keeps that from reading as a decision somebody made.
@@ -361,7 +361,8 @@ async fn the_column_accepts_every_state_and_nothing_else() {
     );
 }
 
-/// The pair, and the clearing of it, are one round trip: what T18 adopts is what T19 wrote.
+/// The pair, and the clearing of it, are one round trip: what crash recovery adopts is what the
+/// runner wrote.
 #[tokio::test]
 async fn the_process_a_service_is_running_as_is_written_and_then_cleared() {
     let (_home, store) = store().await;

@@ -20,7 +20,7 @@ impl ServiceSpec {
     /// disagreeing about what a usable spec is.
     ///
     /// What is checked is what one spec can know on its own. Cycles across several specs belong to
-    /// whoever assembles them (roadmap task T17), and whether `program` exists on disk belongs to the
+    /// whoever assembles them into a graph, and whether `program` exists on disk belongs to the
     /// supervisor, which is the only layer allowed to look.
     ///
     /// # Errors

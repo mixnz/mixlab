@@ -19,7 +19,7 @@ export function useTabRequests({ enabled, onEnabledChange, openTab, setEnabledFo
      can listen once and still read `enabled` as it is when the batch arrives, and call the
      `openTab` of that render. */
   const openRequested = useEffectEvent((requests: TabRequest[], ids: string[]) => {
-    /* A module this window is not drawing is turned on for the tab that arrived — T110's D1.
+    /* A module this window is not drawing is turned on for the tab that arrived.
        One union across the whole batch and one call: two requests for two hidden modules would
        otherwise each compute their next set from the same stale `enabled`, and the second would
        undo the first.

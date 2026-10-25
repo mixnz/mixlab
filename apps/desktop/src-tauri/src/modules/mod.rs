@@ -31,7 +31,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         crate::modules::tunnel::commands::tunnel_list,
         crate::import::import_happened,
         crate::relaunch::relaunch_app,
-        // ── updates (T187) ──
+        // ── updates ──
         crate::updater::commands::update_status,
         crate::updater::commands::update_check,
         crate::updater::commands::update_set_automatic,

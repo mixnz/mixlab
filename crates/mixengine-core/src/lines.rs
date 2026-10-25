@@ -1,5 +1,5 @@
-//! What a *line* of versions is, and which release represents one — roadmap task **T193a**, the
-//! design's D1 (`docs/specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md`).
+//! What a *line* of versions is, and which release represents one — D1 of
+//! `docs/specs/2026-09-29-t193-a-line-shows-its-newest-and-updates-in-place-design.md`.
 //!
 //! **Here and nowhere else.** The daemon composes every answer about lines out of these functions,
 //! and no client computes one: two clients comparing versions their own way would be two clients

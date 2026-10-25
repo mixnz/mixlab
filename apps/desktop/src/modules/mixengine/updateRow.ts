@@ -1,5 +1,5 @@
 /**
- * What the row under an installed version shows — T193, drawn by `components/UpdateRow`.
+ * What the row under an installed version shows, drawn by `components/UpdateRow`.
  *
  * A running job wins over the button: the row is how the person follows the update they started,
  * and it keeps saying so until the list is read again after the job ends.

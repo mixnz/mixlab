@@ -1,10 +1,10 @@
 //! Putting this binary where only an administrator can rewrite it.
 //!
-//! **The source is this process's own image and the destination is a compiled-in constant** — the
-//! T85 design, D2. There is nothing here for a caller to aim: the operation carries no field, so a
-//! compromised daemon gains no *copy this file as root* primitive from this existing. That is the
-//! same reasoning `docs/architecture/security-model.md` refuses `Exec { cmd }` with, applied to
-//! an operation whose whole job is a file copy.
+//! **The source is this process's own image and the destination is a compiled-in constant.** There
+//! is nothing here for a caller to aim: the operation carries no field, so a compromised daemon
+//! gains no *copy this file as root* primitive from this existing. That is the same reasoning
+//! `docs/architecture/security-model.md` refuses `Exec { cmd }` with, applied to an operation whose
+//! whole job is a file copy.
 //!
 //! **The directory is checked before it is used**, on the rule the whole binary follows.
 //! [`create_root_owned_directory`] re-asserts the owner and the permissions on every call, so a
@@ -17,10 +17,9 @@
 //! thing being checked. On a machine with nothing installed that is the only candidate there is,
 //! and `docs/architecture/security-model.md` states the residual plainly rather than hiding it.
 //!
-//! **[`replace`] is the one that decides** — roadmap task **T88a**. It runs only as the
-//! *installed* copy, in a directory an ordinary account cannot write, and it checks a detached
-//! minisign signature over the candidate against a key compiled into itself. See
-//! `crate::candidate`.
+//! **[`replace`] is the one that decides.** It runs only as the *installed* copy, in a directory an
+//! ordinary account cannot write, and it checks a detached minisign signature over the candidate
+//! against a key compiled into itself. See `crate::candidate`.
 
 use std::path::{Path, PathBuf};
 
@@ -106,7 +105,7 @@ pub(crate) fn install() -> OpOutcome {
     }
 }
 
-/// Take this helper off the machine — roadmap task **T87**.
+/// Take this helper off the machine.
 ///
 /// The mirror of [`install`], and the reversal
 /// [ADR 0015](../../../docs/decisions/0015-the-helper-installs-itself.md) owed uninstall: the
@@ -120,10 +119,10 @@ pub(crate) fn install() -> OpOutcome {
 /// *also* `Applied`, with [`AT_NEXT_RESTART`] in the detail: the daemon reads that word and reports
 /// the file as scheduled rather than as gone, because it is still on disk.
 pub(crate) fn remove() -> OpOutcome {
-    // The way back a replacement kept — roadmap task T88a. Removed here so that "nothing is left
-    // behind" keeps meaning what T87 says it means: this file sits beside the helper, in the same
-    // root-owned directory, and no unprivileged path can reach it. By now the process that renamed
-    // itself has exited, so its image is unmapped and even Windows will unlink it.
+    // The way back a replacement kept. Removed here so that "nothing is left behind" keeps meaning
+    // what an uninstall promises: this file sits beside the helper, in the same root-owned
+    // directory, and no unprivileged path can reach it. By now the process that renamed itself has
+    // exited, so its image is unmapped and even Windows will unlink it.
     if let Ok(destination) = helper_path() {
         let _ = std::fs::remove_file(with_old_suffix(&destination));
     }
@@ -274,15 +273,14 @@ fn identical(source: &Path, destination: &Path) -> std::io::Result<bool> {
     Ok(std::fs::read(source)? == std::fs::read(destination)?)
 }
 
-/// Replace this helper with the candidate MixEngine staged, if it deserved the prompt — roadmap
-/// task **T88a**.
+/// Replace this helper with the candidate MixEngine staged, if it deserved the prompt.
 ///
 /// **Only the installed copy may do this**, and the refusal is the first thing here rather than a
-/// consequence of something later. The value of the whole task is that the *trusted* copy — root's,
-/// in a directory an ordinary account cannot write — is the one checking the signature; a helper
-/// running out of the user's own directory checking one proves nothing, because whoever could
-/// replace the helper could replace the check. On a machine with nothing installed the operation to
-/// ask for is [`install`].
+/// consequence of something later. The value of the whole update path is that the *trusted* copy —
+/// root's, in a directory an ordinary account cannot write — is the one checking the signature; a
+/// helper running out of the user's own directory checking one proves nothing, because whoever
+/// could replace the helper could replace the check. On a machine with nothing installed the
+/// operation to ask for is [`install`].
 ///
 /// **Rename, then write, then rename back on failure.** A file whose image is mapped cannot be
 /// unlinked or written on Windows and this process *is* that file, so the destination is renamed
@@ -465,7 +463,7 @@ mod tests {
         assert!(!same_file(&one, &directory.path().join("absent")));
     }
 
-    /// **A source that cannot be read is reported as a source** — roadmap task **T147**.
+    /// **A source that cannot be read is reported as a source.**
     ///
     /// `fs::copy` reads one file and writes another and fails with a single error, so the message
     /// here named the destination whatever went wrong. That cost eight granted prompts on

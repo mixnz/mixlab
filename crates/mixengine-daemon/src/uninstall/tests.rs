@@ -9,8 +9,8 @@ fn row(id: ResidueId, location: &str, outcome: Removal) -> Residue {
     }
 }
 
-/// **T182h.** A copy of the state goes into each relocated folder that is kept, and only there:
-/// not a relocated folder that goes, and not the home.
+/// A copy of the state goes into each relocated folder that is kept, and only there: not a
+/// relocated folder that goes, and not the home.
 #[test]
 fn a_copy_goes_into_each_kept_relocated_folder_only() {
     let kept = || Removal::Kept {
@@ -72,7 +72,7 @@ fn a_home_that_stays_keeps_its_passwords() {
     );
 }
 
-/// T185a: the files are removed, and what is reported is read back off the disk.
+/// The files are removed, and what is reported is read back off the disk.
 #[test]
 fn removing_what_the_install_added_reads_the_disk_back() {
     let directory = tempfile::tempdir().expect("a directory");
@@ -149,7 +149,7 @@ fn a_row_that_was_never_granted_is_still_waiting() {
 }
 
 /// And one the machine no longer holds is a removal, whatever was attempted: the second reading
-/// decides, not the helper's own account of itself (the T87 design, D3).
+/// decides, not the helper's own account of itself.
 #[test]
 fn a_row_the_machine_no_longer_holds_is_a_removal() {
     let mut gone = planned();
@@ -163,9 +163,9 @@ fn a_row_the_machine_no_longer_holds_is_a_removal() {
     );
 }
 
-/// T182b, D7. A row that was absent before the act and is present after it is something the
-/// act left on the machine — put back by a grant that carried more than it should, or by
-/// anything else — and it is a failure, never the `Planned` the second reading spells it as.
+/// A row that was absent before the act and is present after it is something the act left on the
+/// machine — put back by a grant that carried more than it should, or by anything else — and it is
+/// a failure, never the `Planned` the second reading spells it as.
 #[test]
 fn a_row_absent_before_and_present_after_is_a_failure() {
     let mut absent = planned();
@@ -181,8 +181,8 @@ fn a_row_absent_before_and_present_after_is_a_failure() {
     }
 }
 
-/// T182a: a package row whose operation is still in the queue is waiting for permission, which
-/// is a different sentence from one the helper applied and left behind.
+/// A package row whose operation is still in the queue is waiting for permission, which is a
+/// different sentence from one the helper applied and left behind.
 #[test]
 fn a_package_row_whose_removal_is_still_queued_says_so() {
     let package = Residue {
@@ -221,8 +221,8 @@ fn planned() -> Residue {
     }
 }
 
-/// **A kept helper asks the helper for nothing** — the T88e design, D3. Only a `Planned` row
-/// becomes an operation, so the batch carries no `helper-remove`.
+/// **A kept helper asks the helper for nothing.** Only a `Planned` row becomes an operation, so the
+/// batch carries no `helper-remove`.
 #[test]
 fn a_kept_helper_is_not_a_row_to_act_on() {
     let kept = Residue {

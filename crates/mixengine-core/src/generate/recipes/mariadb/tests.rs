@@ -73,7 +73,7 @@ fn rendered(overrides: &str) -> String {
         .to_owned()
 }
 
-/// **A database is woken at the addresses it listens on itself** — T70a's D4.
+/// **A database is woken at the addresses it listens on itself.**
 ///
 /// There is no front end in front of MariaDB to name a fallback in, so the activator binds the
 /// service's own address while it is stopped. On a system with Unix sockets that is *two*
@@ -81,8 +81,8 @@ fn rendered(overrides: &str) -> String {
 /// a generated `.env` names `127.0.0.1`, and `mariadb` typed with no host at all names the
 /// socket. Waking on only one of them leaves the other client hanging against an address
 /// nothing holds.
-/// **Health is asked in the server's own protocol** — roadmap task T190b, D4. Readiness, which
-/// runs once per start, still asks the client program.
+/// **Health is asked in the server's own protocol.** Readiness, which runs once per start, still
+/// asks the client program.
 #[test]
 fn health_is_asked_in_the_protocol_and_readiness_is_still_the_client() {
     let spec = Mariadb
@@ -134,8 +134,8 @@ fn mariadb_is_named_because_a_home_may_have_two() {
 
 /// Every path in the rendered file is quoted and forward-slashed.
 ///
-/// **Both halves are one measurement, made in T33a against a real server**: MariaDB's option
-/// parser treats `\` as an escape and everything after an unquoted `#` as a comment, so
+/// **Both halves are one measurement, made against a real server**: MariaDB's option parser treats
+/// `\` as an escape and everything after an unquoted `#` as a comment, so
 /// `C:\Users\Nguyen Hai Quang` breaks a naive rendering in two different ways at once — and a
 /// user whose home has a space in it is a real user on all three systems.
 #[test]
@@ -194,7 +194,7 @@ fn the_configuration_says_what_the_overrides_said() {
     );
 }
 
-/// **A development machine's defaults, which are not the server's** — roadmap task **T73**.
+/// **A development machine's defaults, which are not the server's.**
 ///
 /// MyISAM's key cache is allocated at startup and held whether or not one MyISAM table exists,
 /// and the log flush is what every commit otherwise waits for. Both exist in 10.6, the oldest
@@ -214,9 +214,8 @@ fn the_configuration_is_tuned_for_a_laptop_rather_than_for_a_server() {
     );
 }
 
-/// **With a certificate on the context, the file names both halves and the fingerprint** —
-/// roadmap task **T99**, the design's D5. Backslashes in, forward slashes out, for T33a's
-/// reason: MariaDB's option parser treats `\` as an escape.
+/// **With a certificate on the context, the file names both halves and the fingerprint.**
+/// Backslashes in, forward slashes out: MariaDB's option parser treats `\` as an escape.
 #[test]
 fn with_a_certificate_the_file_names_both_halves_and_the_fingerprint() {
     let rendered = recipe::render(
@@ -247,8 +246,8 @@ fn with_a_certificate_the_file_names_both_halves_and_the_fingerprint() {
     );
 }
 
-/// **Without one, the file says nothing about TLS** — the design's D4: the server then does
-/// what it did before T99, and a start is never refused for want of a certificate.
+/// **Without one, the file says nothing about TLS**: the server then does what it does with no
+/// certificate named, and a start is never refused for want of a certificate.
 #[test]
 fn without_a_certificate_the_file_says_nothing_about_tls() {
     let rendered = rendered("{}");
@@ -296,9 +295,9 @@ fn the_recipe_asks_for_localhost_and_its_bind_address() {
 
 /// **The relaxed flush is the log's, and the page barriers are untouched.**
 ///
-/// What T73 spends is the last second of committed transactions; what it must never spend is a
-/// data directory that will not open, and `innodb_doublewrite` is what keeps a torn page
-/// recoverable.
+/// What the development defaults spend is the last second of committed transactions; what they must
+/// never spend is a data directory that will not open, and `innodb_doublewrite` is what keeps a
+/// torn page recoverable.
 #[test]
 fn the_barriers_that_make_a_page_recoverable_are_left_alone() {
     let rendered = rendered("{}");
@@ -351,7 +350,7 @@ fn the_file_and_the_readiness_check_name_one_port() {
     assert!(rendered.contains("port = 3306"), "{rendered}");
 }
 
-/// What a failed start is diagnosed against — roadmap task **T38**.
+/// What a failed start is diagnosed against.
 ///
 /// The row's port and nothing else: the socket is a path and cannot be in conflict with a
 /// program that has no `services` row, which is what this declaration is read for.
@@ -471,7 +470,7 @@ fn a_first_run_is_measured_before_its_credentials_exist() {
     );
 }
 
-/// **A reset builds steps for a directory that already exists** — roadmap task **T127**.
+/// **A reset builds steps for a directory that already exists.**
 ///
 /// The assertion is the negative: not one of them creates a data directory. A reset that ran
 /// `mariadb-install-db` over a live database is the failure this whole task exists to avoid,
@@ -516,7 +515,7 @@ fn initialised(secret: &str) -> Context {
 }
 
 /// **Every step of the ritual, and the file, name one scratch directory of this instance's
-/// own** — roadmap task **T33c**, measured in [`crate::generate::recipes::scratch_dir`]'s note.
+/// own**, measured in [`crate::generate::recipes::scratch_dir`]'s note.
 ///
 /// In the environment rather than as an argument, and on every step rather than on the two
 /// that start a server: `TMPDIR` reaches the server whichever of upstream's programs spawned
@@ -580,16 +579,16 @@ fn the_spec_and_the_ritual_name_one_credential() {
             if key == &context.secret_address(ROOT)),
         "{named:?}"
     );
-    // **The home is in front of the service** — roadmap task **T126**. Without it every
-    // MIXENGINE_HOME on one machine writes to this one entry, and the last to bootstrap takes
-    // the root password of every server that was already running.
+    // **The home is in front of the service.** Without it every MIXENGINE_HOME on one machine
+    // writes to this one entry, and the last to bootstrap takes the root password of every server
+    // that was already running.
     assert_eq!(
         context.secret_address(ROOT),
         format!("{}/mariadb@main/root", crate::generate::context::TEST_HOME)
     );
 
-    // **And it is the shared composition, not a second one that agrees today** — roadmap task
-    // **T84**. This address is published to MixLab, which reads the entry MixEngine wrote.
+    // **And it is the shared composition, not a second one that agrees today.** This address is
+    // published to MixLab, which reads the entry MixEngine wrote.
     assert_eq!(
         context.secret_address(ROOT),
         crate::services::handoff::secret_key(
@@ -783,11 +782,10 @@ fn provisioning_puts_no_credential_in_an_argument() {
 }
 
 /// **The validator's alphabet is exactly what every accepted character survives being embedded
-/// as** — roadmap task **T77b**. A chosen password containing every printable-ASCII character
-/// the validator accepts must still produce SQL whose `IDENTIFIED BY '...'` literal closes
-/// where it should: an unescaped literal that swallowed a later character would shift where
-/// the string appears to end, and the assertion below would then fail to find the exact
-/// literal.
+/// as.** A chosen password containing every printable-ASCII character the validator accepts must
+/// still produce SQL whose `IDENTIFIED BY '...'` literal closes where it should: an unescaped
+/// literal that swallowed a later character would shift where the string appears to end, and the
+/// assertion below would then fail to find the exact literal.
 #[test]
 fn every_accepted_password_character_survives_the_identified_by_literal() {
     let chosen =
@@ -845,8 +843,8 @@ fn the_superuser_password_travels_in_the_environment() {
     );
 }
 
-/// **No `CHARACTER SET`, on purpose** — the T77a design, D7. The instance is already configured
-/// with one, and a second place deciding it is one that silently wins.
+/// **No `CHARACTER SET`, on purpose.** The instance is already configured with one, and a second
+/// place deciding it is one that silently wins.
 #[test]
 fn creating_a_database_names_no_character_set() {
     let statements = provisioning_sql(crate::generate::Found::default());
@@ -866,7 +864,7 @@ fn creating_a_database_names_no_character_set() {
 }
 
 /// Three hosts, because `skip-name-resolve` means a TCP client is `127.0.0.1` and never
-/// `localhost` — T33's finding about the root account, just as true of this one.
+/// `localhost` — the recipe's finding about the root account, just as true of this one.
 #[test]
 fn the_account_is_made_for_every_host_a_local_client_arrives_as() {
     let statements = provisioning_sql(crate::generate::Found::default());

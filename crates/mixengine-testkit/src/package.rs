@@ -421,7 +421,7 @@ impl FakePackage {
 }
 
 impl Packed {
-    /// An artifact that is **not** an archive — roadmap task **T82**, the design's D3.
+    /// An artifact that is **not** an archive.
     ///
     /// Adminer's distribution is one PHP file, and an [`Installer`] told
     /// `NotAnArchive::OneFile` copies it in under the name its URL ends with rather than looking for

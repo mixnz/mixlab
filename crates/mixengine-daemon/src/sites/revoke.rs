@@ -1,12 +1,12 @@
-//! Ending a share nobody ended — roadmap task **T76**.
+//! Ending a share nobody ended.
 //!
 //! Two things end a share on their own: the network it was shared on stopped being the network this
-//! machine is on, and a `--for` deadline passed. Both take the road T74 built —
+//! machine is on, and a `--for` deadline passed. Both take the road a person's unshare takes —
 //! [`Sites::unshare`](super::Sites::unshare) — because the order that road moves in (the firewall
 //! rule, then the listener, then the certificate) is a security property, and a background caller
 //! with its own spelling of it is a second place for it to be wrong.
 //!
-//! **What is compared is the interface and its address, and nothing else** — the T76 design, D3.
+//! **What is compared is the interface and its address, and nothing else** (D3).
 //! Two networks that hand one adapter the same address are indistinguishable to this module; that
 //! is written down as a limitation of this build in `docs/features/lan-sharing.md` rather than
 //! guessed at with an SSID this workspace would have to read three different ways.
@@ -20,6 +20,8 @@
 //! **The debounce covers the reading and not the decision.** An expiry is computed from a row and a
 //! clock, with no flaky reading anywhere in it, so it acts on the first pass: waiting for a second
 //! would delay something a person deliberately asked for and protect nothing.
+//!
+//! The D-numbers here are those of `docs/specs/2026-08-31-t76-revoking-by-itself-design.md`.
 
 use std::collections::BTreeMap;
 use std::net::Ipv4Addr;
@@ -45,7 +47,7 @@ pub(crate) enum Ending {
 }
 
 impl Ending {
-    /// The same finding in the words the event stream speaks — the T76 design, D7.
+    /// The same finding in the words the event stream speaks (D7).
     pub(crate) fn announced(&self) -> SharingChange {
         match self {
             Self::Expired => SharingChange::Expired {},
@@ -113,7 +115,7 @@ fn ending(sharing: &sites::Sharing, interfaces: &[Interface], now: Timestamp) ->
     }
 }
 
-/// What has looked wrong twice running, and `previous` updated to this pass — the T76 design, D2.
+/// What has looked wrong twice running, and `previous` updated to this pass (D2).
 ///
 /// The shape [`crate::certs::renewal`]'s `newly` established, turned around: there a set decides
 /// what to *announce* once, here it decides what to act on only after a second reading agrees.
@@ -138,7 +140,7 @@ pub(crate) fn confirmed(
     acting
 }
 
-/// End the shares that should end, every `every`, until `shutdown` — roadmap task **T76**.
+/// End the shares that should end, every `every`, until `shutdown`.
 ///
 /// **The first tick is thrown away**, as [`crate::certs::renewal::start`] throws its away: a daemon
 /// that has just started has already reconciled its shares, and keeping it would make every start do
@@ -177,10 +179,10 @@ pub(crate) fn start(
 
 /// One pass: look, confirm, and end what two readings agreed about.
 ///
-/// **An enumeration that fails is not a network change** — the T76 design, D2. A machine that cannot
-/// be asked about its own interfaces has not said that its network moved, so the pass keeps what it
-/// believed and does nothing. That is a decision rather than a failure to make one, which is why it
-/// is `Ok` here and not an error.
+/// **An enumeration that fails is not a network change** (D2). A machine that cannot be asked about
+/// its own interfaces has not said that its network moved, so the pass keeps what it believed and
+/// does nothing. That is a decision rather than a failure to make one, which is why it is `Ok` here
+/// and not an error.
 ///
 /// # Errors
 ///

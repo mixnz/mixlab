@@ -22,8 +22,8 @@ export const pluginHandlers: Handlers = {
   "plugin:path|resolve_directory": returns("/Users/ada/Library/Application Support/MixLab"),
   launch_take_requests: returns([]),
   import_happened: returns(false),
-  // Every window asks for the tray icon on start (T168); a picture has no tray to put one in.
+  // Every window asks for the tray icon on start; a picture has no tray to put one in.
   tray_configure: returns(null),
-  // Every window sends the Remove MixLab menu item its text (T182a); a picture has no menu bar.
+  // Every window sends the Remove MixLab menu item its text; a picture has no menu bar.
   uninstall_menu_label: returns(null),
 };

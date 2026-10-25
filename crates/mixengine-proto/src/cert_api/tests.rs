@@ -34,7 +34,7 @@ fn a_state_travels_tagged_and_a_reason_travels_as_a_name() {
                 "state": "not_installed",
                 "because": "this machine does not hold MixEngine's authority",
             },
-            // T49b's field, and it is nested for `trust`'s reason: this one spells its reason
+            // The browsers' field, nested for `trust`'s reason: this one spells its reason
             // `because` too, so a third flattened sentence would overwrite one of the first two.
             "browsers": {
                 "state": "not_searched",
@@ -304,8 +304,8 @@ fn nothing_in_a_site_certificate_can_carry_a_private_key() {
     }
 }
 
-/// A misspelled option is refused rather than silently defaulted — the rule T40 established for
-/// every parameterless method since, and it matters most on the two that take something away.
+/// A misspelled option is refused rather than silently defaulted — the rule every parameterless
+/// method follows, and it matters most on the two that take something away.
 #[test]
 fn neither_destructive_method_takes_an_option() {
     serde_json::from_str::<CaRotateQuery>("{}").expect("no options is the only shape");

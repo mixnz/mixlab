@@ -1,4 +1,4 @@
-//! What survives a daemon that was killed — roadmap task **T47a**, reporting what **T13** built.
+//! What survives a daemon that was killed, given the process group every service is started in.
 //!
 //! [ADR 0007](../../../../docs/decisions/0007-supervised-child-owns-a-process-group.md) settled
 //! that this promise is **not the same on the three systems**, and the ADR exists to stop Windows'

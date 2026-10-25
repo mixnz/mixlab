@@ -1,4 +1,4 @@
-//! What `--version` says about the build it came out of — roadmap task **T95**.
+//! What `--version` says about the build it came out of.
 //!
 //! **This is the only thing outside the binary that can tell the two apart**, which is why
 //! `packaging/*/build.sh` reads it: a staged artifact that admits to being a development build is

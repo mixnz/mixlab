@@ -10,10 +10,10 @@
 //! The consequence worth stating twice: **a spec cannot express a secret by value.** See
 //! [`EnvValue`].
 //!
-//! Three fields describe behaviour no code implements yet — [`ServiceSpec::limits`],
-//! [`ServiceSpec::idle`] and [`ServiceSpec::logs`], enforced by roadmap tasks T68, T69 and T16. They
-//! are declared now so those phases add an implementation rather than a field, and so a spec written
-//! today does not have to be revisited to gain one.
+//! Three fields describe behaviour this crate does not implement — [`ServiceSpec::limits`],
+//! [`ServiceSpec::idle`] and [`ServiceSpec::logs`] are enforced by the daemon and the supervisor.
+//! They were declared before anything enforced them, so that enforcement added an implementation
+//! rather than a field, and a spec written then did not have to be revisited to gain one.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -194,13 +194,13 @@ impl<'de> serde::Deserialize<'de> for ServiceId {
 /// The *key* half is where a service tells itself apart from another — `mariadb@main/root`, composed
 /// by `mixengine_core::services::handoff::secret_key`.
 ///
-/// **Published rather than internal, and here rather than in `mixengine-platform`** — roadmap task
-/// **T84**, the design's D6. MixLab reads credentials MixEngine stored, and the only way two
-/// applications agree on a namespace without one of them hardcoding the other's is for the namespace
-/// to be part of the contract. It is the `service` half of every [`EnvValue::Keyring`] this
-/// workspace builds and of every [`SecretAddress`](crate::SecretAddress) it answers with.
-/// `mixengine_platform::KEYRING_SERVICE` re-exports it, so the capability that takes the pair still
-/// names the constant beside the trait.
+/// **Published rather than internal, and here rather than in `mixengine-platform`**
+/// (`docs/specs/2026-09-04-t84-the-window-in-the-registry-and-one-keyring-design.md`, D6). MixLab
+/// reads credentials MixEngine stored, and the only way two applications agree on a namespace
+/// without one of them hardcoding the other's is for the namespace to be part of the contract. It
+/// is the `service` half of every [`EnvValue::Keyring`] this workspace builds and of every
+/// [`SecretAddress`](crate::SecretAddress) it answers with. `mixengine_platform::KEYRING_SERVICE`
+/// re-exports it, so the capability that takes the pair still names the constant beside the trait.
 pub const KEYRING_SERVICE: &str = "mixengine";
 
 /// One environment variable's value.
@@ -362,9 +362,9 @@ impl<'de> serde::de::Visitor<'de> for EnvValueVisitor {
 /// rather than merely intended: a public `program` could be reassigned to a relative path after
 /// `build` refused one, and a public `depends_on` could be pushed onto until it named the service
 /// itself. Nothing needs to mutate a spec — a changed service is a new spec, built and checked the
-/// same way — so the ability to is only the ability to get it wrong. Private fields also leave T16,
-/// T68 and T69 free to grow the struct, which is what `#[non_exhaustive]` would otherwise be here
-/// for.
+/// same way — so the ability to is only the ability to get it wrong. Private fields also leave
+/// limits, idle stopping and log retention free to grow the struct, which is what
+/// `#[non_exhaustive]` would otherwise be here for.
 ///
 /// **Deserialisation does not run those checks.** A spec arriving from SQLite or from an
 /// `extension.toml` is validated by whoever loads it, at the point where a bad one can be reported
@@ -405,10 +405,10 @@ pub struct ServiceSpec {
     /// query names none, and a web server's admin endpoint is not the port its sites are served on.
     /// The recipe wrote the number into the configuration and is the only thing that knows it.
     ///
-    /// What reads this is the diagnosis of a failed start (roadmap task **T38**): the daemon asks
-    /// the OS who is listening on each of these before it decides what to call the failure. Nothing
-    /// reserves a port by declaring it here, and nothing binds one — see `service.create` for where
-    /// a port is *allocated*.
+    /// What reads this is the diagnosis of a failed start: the daemon asks the OS who is listening
+    /// on each of these before it decides what to call the failure. Nothing reserves a port by
+    /// declaring it here, and nothing binds one — see `service.create` for where a port is
+    /// *allocated*.
     #[serde(default)]
     ports: Vec<u16>,
 
@@ -430,15 +430,15 @@ pub struct ServiceSpec {
 
     /// Services that must be ready before this one starts, and that stop after it.
     ///
-    /// The edges of a DAG; a cycle among several specs is caught when they are assembled (roadmap
-    /// task T17). The one case a single spec can see for itself — depending on itself — is rejected
-    /// by [`ServiceSpecBuilder::build`].
+    /// The edges of a DAG; a cycle among several specs is caught when they are assembled into a
+    /// graph. The one case a single spec can see for itself — depending on itself — is rejected by
+    /// [`ServiceSpecBuilder::build`].
     depends_on: Vec<ServiceId>,
 
-    /// CPU and memory ceilings. Enforcement is roadmap task T68.
+    /// CPU and memory ceilings, enforced where the service runs.
     limits: ResourceLimits,
 
-    /// Whether a memory watchdog may restart this service — roadmap task **T71a**.
+    /// Whether a memory watchdog may restart this service.
     ///
     /// **The recipe's answer and not a person's.** Whether a program survives being restarted under
     /// memory pressure is a property of the program: a php-fpm pool loses the requests in flight,
@@ -451,10 +451,10 @@ pub struct ServiceSpec {
     #[serde(default)]
     restart_over_memory: bool,
 
-    /// When to stop it for being unused. Enforcement is roadmap task T69.
+    /// When to stop it for being unused, which the daemon's idle sweep acts on.
     idle: Option<IdlePolicy>,
 
-    /// How much of its output to keep. Enforcement is roadmap task T16.
+    /// How much of its output to keep, which the supervisor's log capture applies.
     logs: LogPolicy,
 }
 
@@ -532,24 +532,24 @@ impl ServiceSpec {
         &self.depends_on
     }
 
-    /// CPU and memory ceilings. Enforcement is roadmap task T68.
+    /// CPU and memory ceilings, enforced where the service runs.
     #[must_use]
     pub fn limits(&self) -> ResourceLimits {
         self.limits
     }
 
-    /// Whether a memory watchdog may restart this service — roadmap task **T71a**. See the field.
+    /// Whether a memory watchdog may restart this service. See the field.
     pub const fn restart_over_memory(&self) -> bool {
         self.restart_over_memory
     }
 
-    /// When to stop it for being unused. Enforcement is roadmap task T69.
+    /// When to stop it for being unused, which the daemon's idle sweep acts on.
     #[must_use]
     pub fn idle(&self) -> Option<&IdlePolicy> {
         self.idle.as_ref()
     }
 
-    /// How much of its output to keep. Enforcement is roadmap task T16.
+    /// How much of its output to keep, which the supervisor's log capture applies.
     #[must_use]
     pub fn logs(&self) -> LogPolicy {
         self.logs
@@ -705,7 +705,7 @@ impl ServiceSpecBuilder {
         self
     }
 
-    /// Let a memory watchdog restart this service when it stays over its ceiling — task **T71a**.
+    /// Let a memory watchdog restart this service when it stays over its ceiling.
     ///
     /// Defaults to `false`. Set from `Recipe::restart_over_memory_default`, which is the only caller
     /// that should have an opinion: this is a fact about the program, not a preference about it.

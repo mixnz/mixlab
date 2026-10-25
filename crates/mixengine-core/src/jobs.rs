@@ -5,9 +5,9 @@
 //! daemon's — the same division [`crate::services`] draws, where this crate persists a transition
 //! and the supervisor is what causes one.
 //!
-//! **Persisted and emitted are one value**, exactly as at T14: [`progress`] and [`finish`] return
-//! the [`JobProgress`] and [`JobFinish`] they wrote, and the daemon publishes *those* as
-//! [`DaemonEvent::JobProgress`](mixengine_proto::DaemonEvent::JobProgress) and
+//! **Persisted and emitted are one value**, exactly as a service's state is: [`progress`] and
+//! [`finish`] return the [`JobProgress`] and [`JobFinish`] they wrote, and the daemon publishes
+//! *those* as [`DaemonEvent::JobProgress`](mixengine_proto::DaemonEvent::JobProgress) and
 //! [`JobFinished`](mixengine_proto::DaemonEvent::JobFinished). A move that did not survive its
 //! transaction cannot be announced.
 //!
@@ -202,7 +202,7 @@ pub async fn finish(
 /// End every job that a daemon which is no longer here was running.
 ///
 /// **A job does not survive the process running it, and that is the difference between this and
-/// [`crate::services`]' crash recovery (T18).** A service is a process of its own: it can outlive
+/// [`crate::services`]' crash recovery.** A service is a process of its own: it can outlive
 /// the daemon that spawned it, so recovery there asks the OS whether it did and adopts what
 /// survived. The work behind a job is a task *inside* the daemon — a download, a verification, an
 /// unpack — and there is nothing to adopt. A row still saying `running` at boot therefore means

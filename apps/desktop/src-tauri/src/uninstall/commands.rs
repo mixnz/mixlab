@@ -1,4 +1,4 @@
-//! The four commands the *Remove MixLab* dialog calls — roadmap task **T182a**, spec D4.
+//! The four commands the *Remove MixLab* dialog calls — spec D4.
 
 use std::time::Duration;
 
@@ -12,7 +12,7 @@ use crate::updater::placement::{self, PKG_RECEIPT};
 use super::menu::UninstallMenu;
 use super::{finished, offered, own_directories, read_back, Outcome};
 
-/// How long a daemon removing its home is given to end: `mix uninstall` allows the same (T182b, D8).
+/// How long a daemon removing its home is given to end: `mix uninstall` allows the same.
 const GONE_WITHIN: Duration = Duration::from_secs(120);
 
 /// Whether this window offers the removal at all.

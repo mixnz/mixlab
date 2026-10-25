@@ -1,15 +1,16 @@
 //! The rows a service has to have before anything can start it, and the one a killed daemon leaves.
 //!
-//! **Scaffolding for a build that cannot create a service yet, and nothing more.** A `services` row
-//! is what `mixengine-core` transitions, what the supervisor writes a pid into and — since roadmap
-//! task **T30** — what the daemon renders into a configuration and a `ServiceSpec`. What is still
-//! missing is Phase 3's `service.create`, so every suite that drives a service through the daemon
-//! has to put the row there itself. This is that, written once.
+//! **What a fixture writes by hand because no method produces it, and nothing more.** A `services`
+//! row is what `mixengine-core` transitions, what the supervisor writes a pid into and what the
+//! daemon renders into a configuration and a `ServiceSpec`. A fixture service itself is made the
+//! way a person makes one, through `service.create` ([`mod@crate::create`]); what is left here is
+//! the rest — the `packages` row of a program no index publishes, installs recorded without a
+//! download, and edits that put a row in a state no call puts it in. This is that, written once.
 //!
 //! [`running`] is the exception that is not scaffolding for a missing feature but for a state no
 //! test can ask a daemon to produce: a daemon that is running clears those columns on its way out,
 //! whichever way it is asked to stop, so the only way to hand a *new* daemon the row a killed one
-//! leaves behind is to write it. Crash recovery (roadmap task **T18**) is what reads it.
+//! leaves behind is to write it. Crash recovery is what reads it.
 //!
 //! # Every row here belongs to `fakeservice`
 //!
@@ -22,8 +23,8 @@
 //! configures a service, where before it described an arbitrary program to run.
 //!
 //! A suite with a **real** server on disk — the Caddy CI fetches — has no business here at all any
-//! more: since T31a it packs that server into an archive, serves it from a `MockRegistry` and
-//! installs it through `package.install`, which is the path a user takes.
+//! more: it packs that server into an archive, serves it from a `MockRegistry` and installs it
+//! through `package.install`, which is the path a user takes.
 //!
 //! **This is the one place in the crate that knows the schema**, which is the exception to the rule
 //! [`crate`] states about restating conventions: there is no way to write a row without knowing the
@@ -100,9 +101,9 @@ impl Service {
 
     /// Take another `mb` megabytes every 50 ms and never let go of any of it.
     ///
-    /// **For walking a service into a memory ceiling** — roadmap task **T68**. The only way to prove
-    /// a cap by *outcome*: a service that dies is a discrete event, where a CPU cap is a rate and
-    /// asserting a rate means timing work on a shared runner.
+    /// **For walking a service into a memory ceiling.** The only way to prove a cap by *outcome*: a
+    /// service that dies is a discrete event, where a CPU cap is a rate and asserting a rate means
+    /// timing work on a shared runner.
     ///
     /// Pick a bite well under the ceiling, so it is reached in steps: a single request larger than
     /// the cap can fail on its own, which would prove the allocator refused a large ask rather than
@@ -226,10 +227,9 @@ pub async fn package(database: &Path) {
 /// inside `install_path`, and a `runtime_installs` row naming it, as the default of its kind.
 ///
 /// For a suite that cannot link `mixengine-core` — the CLI's — and needs a runtime a shim will
-/// resolve: since T185b `bin/` holds a language's commands only while a version of it is installed.
-/// Written by hand for [`package`]'s reason, and restating the columns rather than calling the
-/// product's insert, on this crate's rule that a fixture must not agree with the daemon by
-/// construction.
+/// resolve: `bin/` holds a language's commands only while a version of it is installed. Written by
+/// hand for [`package`]'s reason, and restating the columns rather than calling the product's
+/// insert, on this crate's rule that a fixture must not agree with the daemon by construction.
 ///
 /// # Panics
 ///
@@ -266,7 +266,7 @@ pub async fn runtime(
     pool.close().await;
 }
 
-/// This home's id, as its first migration wrote it — roadmap task **T182d**.
+/// This home's id, as its first migration wrote it.
 ///
 /// What every credential address of the home starts with, for a suite that seeds one the way the
 /// daemon would have written it. Read rather than asked for, because no method answers it: the id is
@@ -288,8 +288,7 @@ pub async fn home_id(database: &Path) -> String {
     serde_json::from_str(&json).unwrap_or_else(|error| panic!("an id spelled as JSON: {error}"))
 }
 
-/// The activation port a service's row holds, or [`None`] where it holds none — roadmap task
-/// **T200**.
+/// The activation port a service's row holds, or [`None`] where it holds none.
 ///
 /// Read rather than asked for, as [`home_id`] is: no method answers it, because an activator's
 /// address is the front end's business and never a client's. What a suite needs it for is to dial
@@ -313,7 +312,7 @@ pub async fn activation_port(database: &Path, service: &str) -> Option<u16> {
     port.map(|port| u16::try_from(port).unwrap_or_else(|_| panic!("{port} is not a port")))
 }
 
-/// [`database`], for a test that has no runtime of its own — roadmap task **T83**.
+/// [`database`], for a test that has no runtime of its own.
 ///
 /// The end-to-end suite of `mix database client` is made of plain `#[test]` functions, as
 /// [`package_blocking`]'s callers are: what it asks is how a service is *named*, and the row this
@@ -361,8 +360,7 @@ pub async fn runtime_with_extensions(database: &Path, version: &str) {
     pool.close().await;
 }
 
-/// A PHP recorded as installed **with the pool `pools::ensure` would have made for it** — roadmap
-/// task **T81b**.
+/// A PHP recorded as installed **with the pool `pools::ensure` would have made for it**.
 ///
 /// A row and not an install, for [`runtime_with_extensions`]' reason. The pool row is written here
 /// rather than left to the daemon's boot-time repair because the tests that need it seed *after*
@@ -440,7 +438,7 @@ pub async fn php_pool(database: &Path, version: &str) {
     pool.close().await;
 }
 
-/// Every executable the three database recipes look for, in one list — roadmap task **T82**.
+/// Every executable the three database recipes look for, in one list.
 ///
 /// A recipe refuses to render a service whose install publishes none of the binaries it names, and
 /// `Generator::declared` renders **every** row before it can serve any site — so a fixture database
@@ -462,8 +460,7 @@ const DATABASE_EXECUTABLES: [&str; 12] = [
     "pg_isready",
 ];
 
-/// A database recorded as installed, with the `services` row that runs out of it — roadmap task
-/// **T82**.
+/// A database recorded as installed, with the `services` row that runs out of it.
 ///
 /// A row and not an install, for [`php_pool`]'s reason: what a `web-app` extension needs from a
 /// database is an id, a package name and a port, and starting a real MariaDB to supply three columns
@@ -633,10 +630,10 @@ pub(crate) async fn open(database: &Path) -> sqlx::SqlitePool {
 /// Record that `id` is running as `pid`, a process that began at `started` — the row a **killed**
 /// daemon leaves behind.
 ///
-/// The subject of roadmap task **T18**, and the one state no test can reach by asking a daemon for
-/// it: a daemon that is running writes this row and then clears it on its way out, whichever way it
-/// is asked to stop. What crash recovery meets is what is left when it is given no way out at all,
-/// and the only way to hand a *new* daemon one of those is to write it here.
+/// What crash recovery is about, and the one state no test can reach by asking a daemon for it: a
+/// daemon that is running writes this row and then clears it on its way out, whichever way it is
+/// asked to stop. What crash recovery meets is what is left when it is given no way out at all, and
+/// the only way to hand a *new* daemon one of those is to write it here.
 ///
 /// `started` is a `mixengine_platform::process::StartTime` as it is stored, and the pair is what
 /// makes the row identifiable: a pid on its own is reused within minutes. A test that wants the

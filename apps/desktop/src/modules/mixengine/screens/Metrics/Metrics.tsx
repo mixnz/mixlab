@@ -20,9 +20,9 @@ import styles from "./Metrics.module.css";
 const HOUR_MS = 3_600_000;
 
 /**
- * 24-hour history per subject — history only, not repeating the "now" figures the Dashboard
- * already draws (Decision D1, Metrics/Settings spec). `metrics.history` is a plain read RPC; no
- * stream needs to be held open.
+ * 24-hour history per subject — history only, not repeating the "now" figures the Dashboard already
+ * draws (D1 of `docs/specs/2026-09-07-mixengine-metrics-settings-design.md`). `metrics.history` is
+ * a plain read RPC; no stream needs to be held open.
  */
 export default function Metrics({ active }: { active: boolean }) {
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -121,7 +121,7 @@ export default function Metrics({ active }: { active: boolean }) {
                 unit={CPU_UNIT}
                 label={t("mixengine.metrics.cpu")}
                 // Rows are stored as a percentage of one core; drawn on the scale Settings names,
-                // the whole machine unless told otherwise (T190c).
+                // the whole machine unless told otherwise.
                 avg={(m) => (m.cpu_avg === null ? null : cpuShare(m.cpu_avg, cores, cpuScale))}
                 peak={(m) => (m.cpu_peak === null ? null : cpuShare(m.cpu_peak, cores, cpuScale))}
                 hue="sky"

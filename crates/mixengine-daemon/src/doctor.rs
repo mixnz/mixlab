@@ -1,12 +1,12 @@
-//! `mix doctor`, which reports and does not repair — roadmap task **T47a**.
+//! `mix doctor`, which reports and does not repair.
 //!
 //! **Nothing here writes.** No row, no file, nothing enqueued, and no elevation prompt can result
 //! from a call — which is what makes it safe to run on a timer, inside `mix status`, and inside
-//! T93's bundle. Repairing what it finds is `daemon.doctor_repair`, and that is T47b's.
+//! `daemon.bundle`. Repairing what it finds is `daemon.doctor_repair`'s.
 //!
-//! Every check is assembled from the reader its subsystem already owns — the hosts block from T41's
-//! comparison, the resolver from T45's probe, the domains from T46's report — rather than from a
-//! second opinion. Two implementations of one question are two answers to it.
+//! Every check is assembled from the reader its subsystem already owns — the hosts block from the
+//! hosts file's own comparison, the resolver from its probe, the domains from `domain.dns_status`
+//! — rather than from a second opinion. Two implementations of one question are two answers to it.
 //!
 //! # Three outcomes that are not failures
 //!
@@ -30,7 +30,7 @@ pub(crate) struct Doctor {
     /// The rows, for the hosts block this home's sites need.
     store: mixengine_core::Store,
 
-    /// The server, and which TLDs this machine routes here — T44 and T45.
+    /// The server, and which TLDs this machine routes here.
     dns: Arc<crate::dns::Dns>,
 
     /// This machine: its hosts file, its resolver, its permissions, its reserved ranges.
@@ -42,32 +42,32 @@ pub(crate) struct Doctor {
     /// The front end's program path, which is what the port-access probe is about.
     services: Arc<crate::services::Registry>,
 
-    /// T46's report, rendered rather than recomputed.
+    /// The domains' report, rendered rather than recomputed.
     domains: Arc<crate::domains::Domains>,
 
     /// The home's own directory, for the permissions check.
     root: std::path::PathBuf,
 
-    /// Where this home's authority lives, for the trust-store check — T49a.
+    /// Where this home's authority lives, for the trust-store check.
     certs: std::path::PathBuf,
 
-    /// Where the generated trust bundle lives, for the check that reads it — T132.
+    /// Where the generated trust bundle lives, for the check that reads it.
     etc: std::path::PathBuf,
 
-    /// `<root>/bin`, for the check that asks what else on this PATH answers to its names — T131.
+    /// `<root>/bin`, for the check that asks what else on this PATH answers to its names.
     bin: std::path::PathBuf,
 
-    /// `<root>/runtimes`, for the check that asks whether `JAVA_HOME` names one of this home's JDKs
-    /// — roadmap task **T27e**.
+    /// `<root>/runtimes`, for the check that asks whether `JAVA_HOME` names one of this home's
+    /// JDKs.
     runtimes: std::path::PathBuf,
 
-    /// The whole layout, for the one check that walks both `runtimes/` and `packages/` — T182f.
+    /// The whole layout, for the one check that walks both `runtimes/` and `packages/`.
     layout: mixengine_core::Paths,
 
     /// What these rows render to, for the drift check — the registry's own generator.
     generator: mixengine_core::generate::Generator,
 
-    /// This home's crash reports, for the eighteenth check — roadmap task **T91**.
+    /// This home's crash reports, for the eighteenth check.
     crashes: crate::crash::Reports,
 }
 
@@ -85,8 +85,8 @@ impl Doctor {
         // **Taken from the queue rather than passed beside it** — the same reasoning as the
         // generator below, one argument along. Every caller was already handing over
         // `elevation.host()`, so the machine and the queue could only ever have disagreed by
-        // somebody's mistake; and a seventh argument here is the last one clippy allows, which T91
-        // is what discovered.
+        // somebody's mistake; and a seventh argument here is the last one clippy allows, which
+        // adding the crash reports is what discovered.
         let host = elevation.host();
 
         // **The home's layout rather than its root and its generator separately.** Both are derived
@@ -203,8 +203,8 @@ impl Doctor {
         }
     }
 
-    /// **2.** A port the operating system chose is a port nothing may be wired to — T45 — so that is
-    /// a `Note` and not a fault. Every test home in this workspace is on one.
+    /// **2.** A port the operating system chose is a port nothing may be wired to, so that is a
+    /// `Note` and not a fault. Every test home in this workspace is on one.
     fn resolver(&self) -> Check {
         let name = "the resolver on this machine".to_owned();
 
@@ -227,10 +227,10 @@ impl Doctor {
         }
     }
 
-    /// **3.** `hosts_only` is a **mode T46a closed as supported**, not a degradation — so it is a
-    /// `Note`. Only a bind that failed is a problem, and that distinction is the whole of this
-    /// check: calling the supported mode a fault would put a permanent problem on every machine
-    /// that never wired a resolver.
+    /// **3.** `hosts_only` is a **supported mode**, not a degradation — so it is a `Note`. Only a
+    /// bind that failed is a problem, and that distinction is the whole of this check: calling the
+    /// supported mode a fault would put a permanent problem on every machine that never wired a
+    /// resolver.
     fn dns_server(&self) -> Check {
         let name = "the built-in DNS server".to_owned();
         let status = self.dns.status();
@@ -297,10 +297,11 @@ impl Doctor {
     }
 
     /// **5.** Something waiting on a person is not a fault of the machine, but it *is* something
-    /// this home asked for and has not got — and T47b's flush is exactly the repair for it.
+    /// this home asked for and has not got — and `daemon.doctor_repair`'s flush is exactly the
+    /// repair for it.
     ///
-    /// Read through `elevation.status`, which is what the client screen T64 built reads, so "what is
-    /// waiting" has one definition rather than two that have to agree.
+    /// Read through `elevation.status`, which is what the window's permissions screen reads, so
+    /// "what is waiting" has one definition rather than two that have to agree.
     async fn pending_permissions(&self) -> Check {
         let name = "operations waiting for permission".to_owned();
 
@@ -335,9 +336,8 @@ impl Doctor {
         }
     }
 
-    /// **6.** T46's report, rendered — **never recomputed**. T46's own roadmap entry asks for that
-    /// in as many words, and the reason is this whole module's: two implementations of one question
-    /// are two answers to it.
+    /// **6.** `domain.dns_status`'s report, rendered — **never recomputed**, and the reason is this
+    /// whole module's: two implementations of one question are two answers to it.
     ///
     /// **One `Problem` naming every unreachable domain**, rather than one per domain. A home with
     /// twelve names that do not resolve has one fault with one cause, and twelve rows would bury the
@@ -381,8 +381,9 @@ impl Doctor {
         }
     }
 
-    /// **7.** `is_restricted_to_owner`'s first caller — and what settles the `icacls` question T3a
-    /// left open, since the whole of what this needs is "inheritance is intact, yes or no".
+    /// **7.** `is_restricted_to_owner`'s first caller — and what settles the `icacls` question the
+    /// owner-only home left open, since the whole of what this needs is "inheritance is intact, yes
+    /// or no".
     fn home_permissions(&self) -> Check {
         let name = "the home is readable only by its owner".to_owned();
 
@@ -413,7 +414,7 @@ impl Doctor {
         }
     }
 
-    /// **8.** Always a `Note`, on every system — the whole of the design's D4, and
+    /// **8.** Always a `Note`, on every system —
     /// [ADR 0007](../../../docs/decisions/0007-supervised-child-owns-a-process-group.md)'s own
     /// table read out loud.
     fn descendants(&self) -> Check {
@@ -425,8 +426,8 @@ impl Doctor {
         }
     }
 
-    /// **A `Note`, never a `Problem`** — roadmap task **T68**, and this is what T47a's distinction
-    /// was built for.
+    /// **A `Note`, never a `Problem`**, and this is what the distinction between the two was built
+    /// for.
     ///
     /// A machine whose session was started without a delegated `cpu` controller is not a broken
     /// machine, and reporting it as a fault would report the way somebody logs in as broken. But
@@ -438,10 +439,9 @@ impl Doctor {
     /// news about this machine — and a report that repeated it on every run would teach people to
     /// skip the report.
     ///
-    /// It gains T47b no repair arm, and could not: there is nothing here MixEngine may fix without
-    /// asking a person to change how their session is started. That is why it is not a
-    /// [`ProblemId`], whose `match` in `daemon.doctor_repair` has no
-    /// wildcard on purpose.
+    /// It gains `daemon.doctor_repair` no arm, and could not: there is nothing here MixEngine may
+    /// fix without asking a person to change how their session is started. That is why it is not a
+    /// [`ProblemId`], whose `match` in `daemon.doctor_repair` has no wildcard on purpose.
     fn resource_limits(&self) -> Check {
         Check {
             name: "what this machine will enforce of a service's limits".to_owned(),
@@ -450,7 +450,7 @@ impl Doctor {
     }
 
     /// **16.** A `Note` for an inbound firewall rule this machine holds for MixEngine's own daemon
-    /// that MixEngine did not write — roadmap task **T76**, the design's D8.
+    /// that MixEngine did not write.
     ///
     /// **The rule is real, it is wide, and it is not ours.** Binding UDP 5353 to advertise a shared
     /// site makes Windows raise its own dialog, and Allow writes an every-port TCP-and-UDP rule for
@@ -545,7 +545,7 @@ impl Doctor {
     }
 
     /// **17.** What this machine will refuse to load, which is not a fault of anything MixEngine
-    /// installed — roadmap task **T94**.
+    /// installed.
     ///
     /// **A check about the machine MixEngine *can* run on, and it says nothing about the one it
     /// cannot.** On a machine that refused `mixengined.exe` itself there is nothing here to ask,
@@ -557,7 +557,7 @@ impl Doctor {
     /// **It names Smart App Control because that is what it read.** An enterprise WDAC policy
     /// refuses image loads through the same subsystem while this value reads `Off`, which is why
     /// the sentence attached to a refused *load* — `APP_CONTROL_REFUSAL` — says "an application
-    /// control policy" and never names the feature (T94 design, D3).
+    /// control policy" and never names the feature.
     fn application_control(&self) -> Check {
         Check {
             name: "this machine's application control policy".to_owned(),
@@ -568,9 +568,9 @@ impl Doctor {
     /// **10.** Is what is installed what these rows render to?
     ///
     /// **Rendered again and compared, never parsed back** — the workspace rule, and the reason this
-    /// check could not be built in T47a: answering the question *is* the first half of the repair.
-    /// [`Generator::drift`](mixengine_core::generate::Generator::drift) builds the rendering in
-    /// memory and installs nothing, so this stays a read.
+    /// check could not be built with the first `mix doctor`: answering the question *is* the first
+    /// half of the repair. [`Generator::drift`](mixengine_core::generate::Generator::drift) builds
+    /// the rendering in memory and installs nothing, so this stays a read.
     ///
     /// **One `Problem` naming every service that drifted**, on the domains check's reasoning: a home
     /// whose rows all moved has one fault with one cause, and a row per service would bury the ten
@@ -706,10 +706,10 @@ fn limit_outcome(support: &mixengine_platform::LimitSupport) -> Outcome {
         .filter_map(|(field, enforcement)| match enforcement {
             Enforcement::Unavailable { why } => Some(format!("{field}: {why}")),
 
-            // **A watchdog with a `why` is still a machine somebody could fix** — roadmap task
-            // T71a. The field does something here, so this is not a problem; it is the same Note
-            // `Unavailable` earns, because the sentence names the same fixable thing. A `why` of
-            // `None` is an operating system with nothing to fix, and gets `Unsupported`'s silence.
+            // **A watchdog with a `why` is still a machine somebody could fix.** The field does
+            // something here, so this is not a problem; it is the same Note `Unavailable` earns,
+            // because the sentence names the same fixable thing. A `why` of `None` is an operating
+            // system with nothing to fix, and gets `Unsupported`'s silence.
             Enforcement::Advisory { why: Some(why) } => Some(format!("{field}: {why}")),
 
             // `Hard` needs no comment, and `Unsupported` deliberately gets none — see the method.

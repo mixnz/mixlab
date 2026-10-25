@@ -45,7 +45,7 @@
   gap: 8px;
 }
 
-/* A row opens in place under itself (T205): the whole row is the control, its *Details* button
+/* A row opens in place under itself: the whole row is the control, its *Details* button
    says so, and the open row and its detail read as one block. */
 .row {
   cursor: pointer;

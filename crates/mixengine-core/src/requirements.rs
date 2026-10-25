@@ -1,12 +1,10 @@
-//! What an artifact asks of the machine, judged against what the machine has — roadmap task
-//! **T148**.
+//! What an artifact asks of the machine, judged against what the machine has.
 //!
-//! **Only a certain lack refuses** (T148 design, D2). A fact the machine could not report, a year
-//! this build has no row for, a version that is not dotted numbers, `vcredist` 2010 and 2013 whose
-//! keys nobody has read on a machine that has them, a `cpu` feature other than AVX, and `tzdata`:
-//! none of them is ever a lack, and `install::SmokeTest` decides them exactly as it did before this
-//! module existed. AVX is judged since **T153**, the task that made MongoDB — the one kind that
-//! states it — installable.
+//! **Only a certain lack refuses.** A fact the machine could not report, a year this build has no
+//! row for, a version that is not dotted numbers, `vcredist` 2010 and 2013 whose keys nobody has
+//! read on a machine that has them, a `cpu` feature other than AVX, and `tzdata`: none of them is
+//! ever a lack, and `install::SmokeTest` decides them exactly as it did before this module existed.
+//! AVX is judged, which is what made MongoDB — the one kind that states it — installable.
 //!
 //! Pure: no OS call, no network, so every rule here is tested without a machine to test it on.
 
@@ -52,7 +50,7 @@ pub fn unmet(requires: &Requires, arch: Arch, facts: &MachineFacts) -> Vec<Need>
         unmet.push(need);
     }
 
-    // **Only AVX, only an x86_64 artifact, and only a certain absence** — roadmap task **T153**.
+    // **Only AVX, only an x86_64 artifact, and only a certain absence.**
     // The index states `avx` on MongoDB's ARM64 cells too, where it means nothing, and a feature
     // word this build has no probe for is a could-not-tell like any other.
     if requires.cpu.as_deref() == Some("avx") && arch == Arch::X86_64 && facts.avx == Probe::Absent
@@ -62,9 +60,9 @@ pub fn unmet(requires: &Requires, arch: Arch, facts: &MachineFacts) -> Vec<Need>
         });
     }
 
-    // **A warning, never a refusal** — roadmap task **T27e**, its design's D15. Only a certain
-    // absence, as everything above: a machine whose loader cache could not be read lacks nothing
-    // here, and one that lists a soname has it whatever else is true.
+    // **A warning, never a refusal.** Only a certain absence, as everything above: a machine whose
+    // loader cache could not be read lacks nothing here, and one that lists a soname has it
+    // whatever else is true.
     if let Probe::Present(listed) = &facts.shared_libraries {
         for soname in &requires.libraries {
             if !listed.contains(soname) {
@@ -107,8 +105,8 @@ pub fn judge(
                 let remedy = match &need {
                     Need::VisualCpp { arch, .. } => Remedy::InstallVisualCpp { arch: *arch },
 
-                    // **Never `ChooseVersion`** (T27e, D15): every Linux release of a line links the
-                    // same libraries, so offering another one would be offering the same warning.
+                    // **Never `ChooseVersion`**: every Linux release of a line links the same
+                    // libraries, so offering another one would be offering the same warning.
                     Need::SharedLibrary { .. } => Remedy::InstallFromDistribution,
                     _ => match alternative
                         .get_or_insert_with(|| newest_met(index, target, kind, version, facts))
@@ -135,8 +133,8 @@ pub fn needs_consent(requirements: &[Requirement]) -> bool {
 
 /// Whether any of these is something no installer MixEngine runs can fix.
 ///
-/// **An advisory is not one** — roadmap task **T27e**: a library the distribution provides is said
-/// and stands in nobody's way, which is the whole of what [`is_advisory`] marks.
+/// **An advisory is not one**: a library the distribution provides is said and stands in nobody's
+/// way, which is the whole of what [`is_advisory`] marks.
 #[must_use]
 pub fn blocks(requirements: &[Requirement]) -> bool {
     requirements.iter().any(|requirement| {
@@ -144,7 +142,7 @@ pub fn blocks(requirements: &[Requirement]) -> bool {
     })
 }
 
-/// Whether this requirement only warns — roadmap task **T27e**, its design's D15.
+/// Whether this requirement only warns.
 #[must_use]
 pub fn is_advisory(requirement: &Requirement) -> bool {
     matches!(requirement.remedy, Remedy::InstallFromDistribution)
@@ -177,7 +175,7 @@ pub fn redistributables(requirements: &[Requirement]) -> Vec<RedistributableArch
 
 /// Several judgements as one list, each distinct requirement once, in the order first met.
 ///
-/// A blueprint installing three PHPs that each need the same runtime asks about it once (D7).
+/// A blueprint installing three PHPs that each need the same runtime asks about it once.
 #[must_use]
 pub fn merged(requirements: impl IntoIterator<Item = Requirement>) -> Vec<Requirement> {
     let mut merged: Vec<Requirement> = Vec::new();
@@ -251,9 +249,8 @@ fn visual_cpp(year: &str, arch: Arch, facts: &MachineFacts) -> Option<Need> {
 /// The newest stable release of `kind`, other than `asked`, whose artifact this machine lacks
 /// nothing for.
 ///
-/// **A warning is not a lack here** — roadmap task **T27e**: every Linux release of a JDK line links
-/// the same libraries, so counting one would leave a machine short of glibc with nothing to be
-/// offered at all.
+/// **A warning is not a lack here**: every Linux release of a JDK line links the same libraries, so
+/// counting one would leave a machine short of glibc with nothing to be offered at all.
 fn newest_met(
     index: &Index,
     target: Target,
@@ -469,7 +466,7 @@ mod tests {
         assert!(!needs_consent(&judged));
     }
 
-    /// A machine that lists what a build links, and one that does not — roadmap task **T27e**.
+    /// A machine that lists what a build links, and one that does not.
     fn linux_listing(sonames: &[&str]) -> MachineFacts {
         MachineFacts {
             glibc: Probe::Present("2.39".to_owned()),
@@ -488,7 +485,7 @@ mod tests {
         )
     }
 
-    /// **Only a certain absence**, which is T148's D2 applied to one more field.
+    /// **Only a certain absence**, which is this module's first rule applied to one more field.
     #[test]
     fn a_library_the_loader_lists_is_not_a_lack_and_one_it_does_not_is_a_warning() {
         let wanted = requires(r#"{"libraries": ["libz.so.1", "libasound.so.2"]}"#);
@@ -513,7 +510,7 @@ mod tests {
         );
     }
 
-    /// **A warning refuses nothing and asks nothing** — roadmap task **T27e**, its design's D15.
+    /// **A warning refuses nothing and asks nothing.**
     #[test]
     fn a_missing_library_refuses_nothing_and_asks_nothing() {
         let index = index(&java("21.0.12.1", r#"{"libraries": ["libasound.so.2"]}"#));
@@ -651,7 +648,7 @@ mod tests {
         }
     }
 
-    /// Roadmap task **T153**: MongoDB 5.0 and later refuse to start on an x86_64 without AVX.
+    /// MongoDB 5.0 and later refuse to start on an x86_64 without AVX.
     #[test]
     fn an_x86_64_artifact_that_needs_avx_is_refused_on_a_processor_without_it() {
         assert_eq!(

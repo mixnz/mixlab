@@ -164,7 +164,7 @@ pub enum HealthProbe {
         expect_status: u16,
     },
 
-    /// A MySQL or MariaDB server still greets a new connection — roadmap task **T190b**, D4.
+    /// A MySQL or MariaDB server still greets a new connection.
     ///
     /// **The server's first packet, read without logging in.** The connection handler writes it,
     /// so it proves more than a TCP accept, and it is what `mysqladmin ping` rests on: that
@@ -177,7 +177,7 @@ pub enum HealthProbe {
         addr: SocketAddr,
     },
 
-    /// A Redis server still answers `PING` — roadmap task **T190b**, D4.
+    /// A Redis server still answers `PING`.
     ///
     /// `+PONG` is healthy, and so is any error reply but `-LOADING`: `-NOAUTH` is a server that
     /// answered. `-LOADING` is a server that will not serve reads yet, and is not healthy.
@@ -361,7 +361,7 @@ pub enum ReloadBehaviour {
         patience: Millis,
     },
 
-    /// Send a signal to the running process — php-fpm's `SIGUSR2` — roadmap task **T32**.
+    /// Send a signal to the running process — php-fpm's `SIGUSR2`.
     ///
     /// **There is nothing to run.** php-fpm's reload is a signal to the master, which finishes the
     /// requests its workers are serving and replaces them with workers that read the new file; the
@@ -439,10 +439,10 @@ pub enum Priority {
 /// Per-service CPU and memory caps.
 ///
 /// Applied through the platform layer, which cannot honour all of it everywhere: Windows has Job
-/// Objects and Linux has cgroup v2, but **macOS has no hard memory cap**, so a limit there becomes a
-/// watchdog rather than a wall. That asymmetry is a fact the GUI must show rather than hide — see
-/// `docs/features/resource-isolation.md`. Enforcement is roadmap task T68; the fields exist now
-/// so a spec written before it does not have to be revisited.
+/// Objects and Linux has cgroup v2, but **macOS has no hard memory cap**, so a limit there becomes
+/// a watchdog rather than a wall. That asymmetry is a fact the GUI must show rather than hide — see
+/// `docs/features/resource-isolation.md`. The fields were declared before anything enforced them,
+/// so a spec written then did not have to be revisited.
 #[derive(
     Debug,
     Clone,
@@ -482,7 +482,7 @@ impl ResourceLimits {
     /// than 100% of one core per core the machine has — is measured against a property of the
     /// *machine*, and this crate is the shared vocabulary: it has no host to ask and must not grow
     /// one. That refusal belongs to the daemon, in `service.set_limits`, where the core count is
-    /// already being read to answer with. Roadmap task **T68**.
+    /// already being read to answer with.
     ///
     /// Called by [`ServiceSpecBuilder::build`], so a spec that exists is one that was checked, and
     /// separately by the method that writes `services.limits_json`, which does not go through a
@@ -530,8 +530,7 @@ pub enum IdleProbe {
         field: String,
     },
 
-    /// Ask php-fpm's own status page, over FastCGI, on the socket the pool listens on — roadmap
-    /// task **T72a**.
+    /// Ask php-fpm's own status page, over FastCGI, on the socket the pool listens on.
     ///
     /// **A socket and not an address of either shape**, because this exists for the system where a
     /// pool has no port at all. Windows runs `php-cgi.exe -b`, which is not php-fpm and publishes
@@ -558,7 +557,7 @@ pub enum IdleProbe {
 ///
 /// The product's central promise is that idle costs nothing, and this is the mechanism. `None` on a
 /// [`ServiceSpec`] means never idle-stop — correct for the front-end web server, which is the thing
-/// that starts everything else back up. Enforcement is roadmap task T69.
+/// that starts everything else back up. The daemon's idle sweep is what acts on it.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct IdlePolicy {
@@ -581,8 +580,8 @@ pub struct IdlePolicy {
 pub enum IdleSource {
     /// The column is null and the recipe supplies the duration.
     ///
-    /// Reached only while the home saves resources (**T167b**, ADR 0041): no recipe supplies one
-    /// otherwise, and the duration is then the recipe's saving number.
+    /// Reached only while the home saves resources (ADR 0041): no recipe supplies one otherwise,
+    /// and the duration is then the recipe's saving number.
     Recipe,
 
     /// The column holds a duration, and it is the one in force.
@@ -657,7 +656,7 @@ pub enum IdleExemption {
 /// How much of a service's output to keep, and where the ceiling is.
 ///
 /// Rotation is the supervisor's own job rather than an external logrotate's, because the supervisor
-/// is the process holding the file handle. Enforcement is roadmap task T16.
+/// is the process holding the file handle.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]

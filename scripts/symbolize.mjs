@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Turn a crash report's offsets back into function names — roadmap task T91a.
+// Turn a crash report's offsets back into function names.
 //
 //   node scripts/symbolize.mjs <crash-….json | crashes.json> [--symbols <dir | .sym.tar.gz>]
 //
@@ -501,9 +501,9 @@ export function pdbIdOf(pdb) {
 
 /** A `.pdb`'s functions. **The procedures each module records, when there are any**: they are every
  *  function, private ones included, with their sizes, and they are there because `stage.sh` builds
- *  Windows releases with line tables (T91a). The public symbols are the fallback, and they are only
- *  the functions that stayed external, which after LTO is a minority: measured on 2026-10-01, a
- *  release daemon read through its publics alone put most frames in the wrong function. */
+ *  Windows releases with line tables. The public symbols are the fallback, and they are only the
+ *  functions that stayed external, which after LTO is a minority: measured on 2026-10-01, a release
+ *  daemon read through its publics alone put most frames in the wrong function. */
 function pdbSymbols(pdb, sections) {
   if (!pdb) throw new Error('a Windows executable is read with its .pdb');
   const streams = msfStreams(pdb);

@@ -1,7 +1,7 @@
-//! Installing an extension, from a directory and from a signed registry — roadmap task **T81**.
+//! Installing an extension, from a directory and from a signed registry.
 //!
-//! What these hold to is the order the design's D2 argues for: everything a person could refuse is
-//! decided before anything is fetched, and what is fetched lands whole or not at all.
+//! What these hold to is the order an install follows: everything a person could refuse is decided
+//! before anything is fetched, and what is fetched lands whole or not at all.
 
 // Every test here fetches over a socket, which `network` carries (ADR 0067).
 #![cfg(feature = "network")]
@@ -60,7 +60,7 @@ async fn plan_for(store: &Store, paths: &Paths, manifest: &ExtensionManifest) ->
         .expect("a plan")
 }
 
-/// **A plan is answerable before anything is fetched** — the design's D2.
+/// **A plan is answerable before anything is fetched.**
 ///
 /// It carries the permissions and the ports, which is what a person is agreeing to, and it names
 /// both directories so the answer is about this machine rather than about a manifest in the
@@ -137,7 +137,7 @@ async fn a_path_install_lands_unsigned() {
     assert_eq!(service.as_deref(), Some("mailpit"));
 }
 
-/// **The service's port is the one its readiness check names** — the design's D8.
+/// **The service's port is the one its readiness check names.**
 #[tokio::test]
 async fn the_service_row_holds_the_port_ready_watches() {
     let (_home, paths, store) = home().await;
@@ -171,12 +171,11 @@ async fn the_service_row_holds_the_port_ready_watches() {
     );
 }
 
-/// **A `[recipe] front_end` fragment is planned rather than refused by name** — roadmap task
-/// **T81c**.
+/// **A `[recipe] front_end` fragment is planned rather than refused by name.**
 ///
-/// T81's D10 refused one here, because nothing rendered it and a manifest whose stated effect does
-/// not happen is worse than one that was turned away. T81c wired the field, so there is nothing left
-/// for `plan` to refuse *by name*: what stands in that place now is a judgement —
+/// This once refused one here, because nothing rendered it and a manifest whose stated effect does
+/// not happen is worse than one that was turned away. The field is wired now, so there is nothing
+/// left for `plan` to refuse *by name*: what stands in that place now is a judgement —
 /// `Generator::would_serve` renders this home's front end with the fragment in it and shows the
 /// result to `caddy validate` or `nginx -t`, before anything is downloaded.
 ///
@@ -297,9 +296,8 @@ fn stamp() -> mixengine_proto::Timestamp {
     mixengine_proto::Timestamp::parse_rfc3339("2026-09-02T09:00:00Z").expect("a timestamp")
 }
 
-/// A PHP recorded as installed, with the pool `pools::ensure` would have made for it — roadmap
-/// task **T81b**. Over an empty folder beside the database: since T206d a row whose folder is gone
-/// resolves to nothing.
+/// A PHP recorded as installed, with the pool `pools::ensure` would have made for it. Over an empty
+/// folder beside the database, because a row whose folder is gone resolves to nothing.
 async fn php(store: &Store, version: &str) {
     let folder = store
         .file()
@@ -336,10 +334,10 @@ async fn php(store: &Store, version: &str) {
 }
 
 /// The directory the phpMyAdmin archive unpacks to — the manifest's `[web-app].root`, and therefore
-/// the site's `doc_root` — roadmap task **T82**.
+/// the site's `doc_root`.
 const PHPMYADMIN_ROOT: &str = "phpMyAdmin-5.2.3-all-languages";
 
-/// A database recorded as installed, for a `web-app` that declares one — roadmap task **T82**.
+/// A database recorded as installed, for a `web-app` that declares one.
 ///
 /// A row and nothing else: what `[web-app.database]` needs from a server is an id, a package name
 /// and a port, and `extensions::database` reads exactly those three columns.
@@ -385,12 +383,12 @@ fn web_app_directory() -> (TempDir, PathBuf) {
     (directory, path)
 }
 
-/// **T81b, D4 and D5.** The plan names the domain and the PHP it would run on — the newest inside
-/// `requires`, never the default — and changes nothing.
+/// The plan names the domain and the PHP it would run on — the newest inside `requires`, never the
+/// default — and changes nothing.
 ///
-/// **The pool it names is the extension's own** — roadmap task **T82a**, that design's D1. The
-/// version chosen is still the one this asserts, and it is now carried by `runtime` rather than
-/// spelled into the pool id, because the pool a `web-app` runs on is created by the install.
+/// **The pool it names is the extension's own.** The version chosen is still the one this asserts,
+/// and it is now carried by `runtime` rather than spelled into the pool id, because the pool a
+/// `web-app` runs on is created by the install.
 #[tokio::test]
 async fn a_web_app_plan_names_its_site_and_the_newest_matching_pool() {
     let (_home, paths, store) = home().await;
@@ -406,7 +404,7 @@ async fn a_web_app_plan_names_its_site_and_the_newest_matching_pool() {
     assert_eq!(site.pool.as_str(), "php-fpm@phpmyadmin");
     assert_eq!(site.runtime.as_str(), "8.3.34");
     assert_eq!(site.doc_root, PHPMYADMIN_ROOT);
-    // **T82, D4.** The database is frozen at plan time beside the pool, and shown before consent.
+    // The database is frozen at plan time beside the pool, and shown before consent.
     assert_eq!(
         site.database
             .as_ref()
@@ -422,8 +420,8 @@ async fn a_web_app_plan_names_its_site_and_the_newest_matching_pool() {
     );
 }
 
-/// **T81b, D5.** Nothing installed satisfies `^8.1`: refused, naming the extension as what asked,
-/// and nothing on disk.
+/// Nothing installed satisfies `^8.1`: refused, naming the extension as what asked, and nothing on
+/// disk.
 #[tokio::test]
 async fn a_web_app_with_no_matching_php_is_refused_before_anything_is_fetched() {
     let (_home, paths, store) = home().await;
@@ -442,8 +440,7 @@ async fn a_web_app_with_no_matching_php_is_refused_before_anything_is_fetched() 
     assert!(!paths.extensions().join("phpmyadmin").exists());
 }
 
-/// **T81b, D4.** The name is already somebody's: refused naming the holder, before anything is
-/// fetched.
+/// The name is already somebody's: refused naming the holder, before anything is fetched.
 #[tokio::test]
 async fn a_web_app_whose_domain_is_taken_is_refused_naming_the_holder() {
     let (home, paths, store) = home().await;
@@ -487,8 +484,8 @@ async fn a_web_app_whose_domain_is_taken_is_refused_naming_the_holder() {
     );
 }
 
-/// **T81b, D7.** The install writes the site where a `service` would have written its row: owned
-/// by the extension, on the frozen pool, HTTPS on, rooted under the install directory.
+/// The install writes the site where a `service` would have written its row: owned by the
+/// extension, on the frozen pool, HTTPS on, rooted under the install directory.
 #[tokio::test]
 async fn installing_a_web_app_writes_its_site() {
     let (_home, paths, store) = home().await;
@@ -530,7 +527,7 @@ async fn installing_a_web_app_writes_its_site() {
         "{:?}",
         site.kind
     );
-    // **T82, D4.** The link is the row, and writing it is what arms `service.delete`'s refusal —
+    // The link is the row, and writing it is what arms `service.delete`'s refusal —
     // `sites::declaring` reads `site_service_links`, so there is no second refusal to keep in step.
     assert_eq!(
         site.services
@@ -557,12 +554,11 @@ async fn installing_a_web_app_writes_its_site() {
     assert_eq!(
         services, 0,
         "a web-app is served rather than run: its pool's parent is the PHP it runs out of, not the \
-         extension — roadmap task T82a"
+         extension"
     );
 }
 
-/// **A `web-app` runs on a pool of its own, and the shared one is left exactly as it was** —
-/// roadmap task **T82a**, that design's D1.
+/// **A `web-app` runs on a pool of its own, and the shared one is left exactly as it was.**
 ///
 /// The second half is the assertion that matters: an administrative interface onto every database
 /// on this machine must not be in the process every project site is served from.
@@ -613,7 +609,7 @@ async fn a_web_app_is_given_a_pool_of_its_own() {
     assert_eq!(parents.len(), 1, "{parents:?}");
 }
 
-/// And the pool goes with the extension, leaving the shared one alone — roadmap task **T82a**.
+/// And the pool goes with the extension, leaving the shared one alone.
 #[tokio::test]
 async fn uninstalling_a_web_app_takes_its_pool() {
     let (_home, paths, store) = home().await;
@@ -675,8 +671,8 @@ async fn uninstalling_a_web_app_takes_its_pool() {
     );
 }
 
-/// **T81b, D8.** Uninstalling a web-app takes its site and its domain row, names the domain it
-/// released, and keeps the data directory like every other uninstall.
+/// Uninstalling a web-app takes its site and its domain row, names the domain it released, and
+/// keeps the data directory like every other uninstall.
 #[tokio::test]
 async fn uninstalling_a_web_app_takes_its_site_and_says_so() {
     let (_home, paths, store) = home().await;

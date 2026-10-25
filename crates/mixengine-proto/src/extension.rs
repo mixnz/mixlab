@@ -1,12 +1,15 @@
-//! What an `extension.toml` says about itself, as every client renders it — roadmap task **T80**.
+//! What an `extension.toml` says about itself, as every client renders it.
 //!
 //! **Not to be confused with [`crate::runtime_api`]'s `Extension*` types**, which are about a *PHP*
 //! extension being switched on for one installed runtime. These are MixEngine's own extensions:
 //! Mailpit, phpMyAdmin, Adminer. The two vocabularies never meet, and the older one keeps its names
-//! because renaming four public types serves nothing this task is for (the T80 design, D11).
+//! because renaming four public types serves nothing extensions need
+//! (`docs/specs/2026-09-02-t80-extension-model-design.md`, D11; the D-numbers below are that
+//! design's).
 //!
-//! The manifest itself lives in `mixengine-core::extensions::manifest`, for T77's reason: what
-//! travels on the wire is the *answer*, and what parses a file belongs beside the file.
+//! The manifest itself lives in `mixengine-core::extensions::manifest`, for the reason a blueprint
+//! manifest lives in core: what travels on the wire is the *answer*, and what parses a file belongs
+//! beside the file.
 //!
 //! **None of these enums is `#[non_exhaustive]`, deliberately.** Every other enum in this crate is,
 //! because the supervisor's vocabulary grows with the phases; these four are the whole of what
@@ -93,9 +96,9 @@ pub enum ExtensionKind {
 
     /// Configuration only, merged into what MixEngine generates.
     ///
-    /// **`[recipe]` is not exclusive to this kind** (the T80 design, D7): Mailpit is a service
-    /// *and* a `sendmail_path` recipe, and two extensions for one product would be two things to
-    /// install and uninstall in step. This kind means an extension that is *only* that.
+    /// **`[recipe]` is not exclusive to this kind** (D7): Mailpit is a service *and* a
+    /// `sendmail_path` recipe, and two extensions for one product would be two things to install
+    /// and uninstall in step. This kind means an extension that is *only* that.
     Recipe,
 }
 
@@ -136,16 +139,16 @@ pub enum NetworkReach {
 impl NetworkReach {
     /// The address `{listen}` renders to.
     ///
-    /// **This function is the enforcement** (the T80 design, D2). A manifest cannot write an
-    /// address at all, so an extension that declared [`Loopback`](Self::Loopback) has no way to
-    /// spell one that is not this: there is no check anywhere that a later feature could forget to
-    /// consult, because there is nothing to check.
+    /// **This function is the enforcement** (D2). A manifest cannot write an address at all, so an
+    /// extension that declared [`Loopback`](Self::Loopback) has no way to spell one that is not
+    /// this: there is no check anywhere that a later feature could forget to consult, because there
+    /// is nothing to check.
     ///
     /// [`Lan`](Self::Lan) is `0.0.0.0` rather than the machine's current LAN address, because a
     /// specific address changes with the network and would mean re-rendering the spec and
-    /// restarting the process on every DHCP renewal and every wake from sleep — the cost T76
-    /// measured for a far cheaper reaction. Which address a person should *type* is a question
-    /// about a URL, and T74 already answers it.
+    /// restarting the process on every DHCP renewal and every wake from sleep — the cost measured
+    /// for a far cheaper reaction when a share follows the network. Which address a person should
+    /// *type* is a question about a URL, and sharing a site already answers it.
     #[must_use]
     pub const fn listen_address(self) -> IpAddr {
         match self {
@@ -163,13 +166,13 @@ impl NetworkReach {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub enum FilesystemReach {
     /// Its own installation and data directories — which is every path the placeholder vocabulary
-    /// can produce, and so is the whole of what this permission *is* (the T80 design, D4).
+    /// can produce, and so is the whole of what this permission *is* (D4).
     OwnData,
 
-    /// **Grants nothing today** (the T80 design, D5). No placeholder yields a project path, and an
-    /// extension is per-home rather than per-project, so there is no single root to hand it. It is
-    /// parsed and displayed as a disclosure; the day it grants something, that is a task with a
-    /// consumer rather than a field.
+    /// **Grants nothing today** (D5). No placeholder yields a project path, and an extension is
+    /// per-home rather than per-project, so there is no single root to hand it. It is parsed and
+    /// displayed as a disclosure; the day it grants something, that is a task with a consumer
+    /// rather than a field.
     #[serde(rename = "project-roots:read")]
     ProjectRootsRead,
 }
@@ -212,7 +215,7 @@ pub struct ExtensionPermissions {
     pub filesystem: BTreeSet<FilesystemReach>,
 }
 
-/// Which front end a `[[recipe.front_end]]` fragment is written for — roadmap task **T81c**.
+/// Which front end a `[[recipe.front_end]]` fragment is written for.
 ///
 /// **It names a configuration language rather than merely selecting a file.** A Caddyfile and an
 /// `nginx.conf` are two syntaxes, and they spell a path differently as well: `ngx_conf_read_token`

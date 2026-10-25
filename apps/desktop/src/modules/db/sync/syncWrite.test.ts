@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /* A writer names what `read` will not return as it was sent, so sync never agrees on it: agreed
-   and then left out, it would be pushed as a deletion (T178a, L4). */
+   and then left out, it would be pushed as a deletion. */
 vi.mock(import("../saved/savedConnections"), async (original) => ({
   ...(await original()),
   loadSavedConnections: vi.fn(async () => []),

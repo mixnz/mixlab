@@ -1,10 +1,9 @@
 //! Windows: the `Root` store under `LocalMachine`, through the certificate-store API.
 //!
-//! **Through the API rather than `certutil.exe`** — the T49a design, D6. `docs/features/tls.md`
-//! names CryptoAPI first with `certutil` as a fallback; the fallback is not built. This crate
-//! already reaches Windows through `windows-sys` for the resolver's registry work and the named
-//! pipe's DACL, and a process spawned from a context holding an administrative token is a larger
-//! surface than four API calls.
+//! **Through the API rather than `certutil.exe`.** `docs/features/tls.md` names CryptoAPI first
+//! with `certutil` as a fallback; the fallback is not built. This crate already reaches Windows
+//! through `windows-sys` for the resolver's registry work and the named pipe's DACL, and a process
+//! spawned from a context holding an administrative token is a larger surface than four API calls.
 //!
 //! **Opening the store to read needs no administrative token**, which is what makes it affordable
 //! for the producer to ask on every daemon start and for `mix doctor` to ask whenever somebody does.
@@ -12,6 +11,8 @@
 //!
 //! Features on `windows-sys` add modules and not crates, so `Win32_Security_Cryptography` does not
 //! move `mixengine-elevate`'s dependency budget.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-24-t49a-system-trust-store-design.md`.
 
 #[cfg(feature = "elevated")]
 use crate::trust::Change;

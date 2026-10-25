@@ -70,7 +70,7 @@ struct Args {
     #[arg(long = "fpm-config", value_name = "PATH")]
     fpm_config: Option<PathBuf>,
 
-    /// Hold a TCP listener on this address for as long as the process lives — roadmap task **T200**.
+    /// Hold a TCP listener on this address for as long as the process lives.
     ///
     /// An extension's `[service]` has to say when it is ready by an address answering (`tcp`,
     /// `http` or a socket); a log line is not in its vocabulary. This is what lets a suite install
@@ -145,11 +145,11 @@ struct Args {
 
     /// A script this program was asked to run.
     ///
-    /// **What makes this fixture usable as the PHP behind `composer`** — roadmap task **T27c**. A
-    /// shim fronting a `.phar` starts the resolved PHP with the phar as its first argument, so a
-    /// stand-in PHP has to accept a positional it never asked for. It is recorded into `--dump-env`
-    /// as `FAKESERVICE_SCRIPT` and otherwise ignored. Not `trailing_var_arg`: the recording flags
-    /// arrive *after* the positional and have to keep being parsed as flags.
+    /// **What makes this fixture usable as the PHP behind `composer`.** A shim fronting a `.phar`
+    /// starts the resolved PHP with the phar as its first argument, so a stand-in PHP has to accept
+    /// a positional it never asked for. It is recorded into `--dump-env` as `FAKESERVICE_SCRIPT`
+    /// and otherwise ignored. Not `trailing_var_arg`: the recording flags arrive *after* the
+    /// positional and have to keep being parsed as flags.
     #[arg(value_name = "SCRIPT", num_args = 0..)]
     script: Vec<std::ffi::OsString>,
 
@@ -191,10 +191,9 @@ struct Args {
 
     /// Take another bite of memory this big, this often, and never let go of any of it.
     ///
-    /// **For proving that a memory ceiling binds** — roadmap task **T68**, whose acceptance criterion
-    /// asks for "an integration test that allocates past it". A service walking into a real cap is
-    /// the only thing that proves the cap by *outcome* rather than by reading a number back out of
-    /// the mechanism it was written into.
+    /// **For proving that a memory ceiling binds**, by an integration test that allocates past it.
+    /// A service walking into a real cap is the only thing that proves the cap by *outcome* rather
+    /// than by reading a number back out of the mechanism it was written into.
     ///
     /// **Every byte is written, not merely reserved**, and that is what makes it work: a large `Vec`
     /// that is only allocated may cost no physical pages at all, so a cgroup counting charged pages
@@ -211,11 +210,11 @@ struct Args {
 /// The flag whose value is a file of further flags, one per line.
 ///
 /// **This is what makes a generated configuration load-bearing in a supervision test.** The
-/// daemon's fixture recipe (roadmap task T30) renders a service's overrides into
-/// `etc/<service-id>/fakeservice.args` and passes that path here, so a test that changes an override
-/// and starts the service again has exercised the whole chain — the row, the merge, the template,
-/// the diff, the install — and can see the difference in what the process *does*. A recipe that put
-/// the same flags straight onto the command line would render a file nothing reads.
+/// daemon's fixture recipe renders a service's overrides into `etc/<service-id>/fakeservice.args`
+/// and passes that path here, so a test that changes an override and starts the service again has
+/// exercised the whole chain — the row, the merge, the template, the diff, the install — and can
+/// see the difference in what the process *does*. A recipe that put the same flags straight onto
+/// the command line would render a file nothing reads.
 const ARGS_FILE: &str = "--args-file";
 
 /// This process's command line, with any [`ARGS_FILE`] replaced by what is inside it.
@@ -519,10 +518,10 @@ fn emit(line: &str, also_stderr: bool) {
 /// Start a detached copy of this program and record its pid, then forget about it.
 ///
 /// `spawn_detached` rather than a plain `Command`, and that is the part worth spelling out: a child
-/// holding a copy of this process's stdout keeps the pipe open after this process is gone, so a test
-/// reading it to end-of-file would wait for the orphan rather than for the service. That is the same
-/// hazard `mixengined --detach` met (roadmap tasks T9 and T10), and it is fixed here by using the
-/// same code rather than by a second answer to it.
+/// holding a copy of this process's stdout keeps the pipe open after this process is gone, so a
+/// test reading it to end-of-file would wait for the orphan rather than for the service. That is
+/// the same hazard `mixengined --detach` met, and it is fixed here by using the same code rather
+/// than by a second answer to it.
 ///
 /// The pid is written by *this* process rather than by the child, so it is on disk by the time this
 /// function returns and a test never has to race a child's first write.
@@ -554,10 +553,10 @@ fn leave_an_orphan(pid_file: &Path) {
 ///
 /// **The beacon the supervision tests read.** A pid says whether a *number* is in use and, on Unix,
 /// goes on saying yes for a process that has exited and not been reaped; a lock is released by the
-/// kernel when the process really ends, and by nothing else. So "the lock at this path can be taken"
-/// is the one statement outside a process that means it is gone — which is exactly the claim
-/// roadmap task T13 has to make about a supervised child, and the reason `try_stop` could not make
-/// it.
+/// kernel when the process really ends, and by nothing else. So "the lock at this path can be
+/// taken" is the one statement outside a process that means it is gone — which is exactly the claim
+/// the process-group tests have to make about a supervised child, and the reason `try_stop` could
+/// not make it.
 ///
 /// The lock file records the holder's pid on the way in, so a test can find this process without a
 /// second flag and a second file.

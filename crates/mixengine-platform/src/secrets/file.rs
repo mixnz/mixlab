@@ -1,4 +1,4 @@
-//! A credential store that is one file in a home — roadmap task **T184**, ADR 0052.
+//! A credential store that is one file in a home — ADR 0052.
 //!
 //! **The development build's, and only its.** A daemon out of `target/debug` is unsigned, so the
 //! macOS Keychain treats every rebuild as a program it has never seen and asks for the login

@@ -17,13 +17,12 @@ pub(crate) fn blueprint_captured(summary: &BlueprintSummary) -> String {
 
 /// `mix blueprint import` — what was taken in, and whether anything vouched for it.
 ///
-/// **The trust is said on the way in**, roadmap task **T78a**: it is decided here once and never
-/// again, so this line is the only moment a person is told what they now have.
+/// **The trust is said on the way in**: it is decided here once and never again, so this line is
+/// the only moment a person is told what they now have.
 ///
-/// **And which kind of untrusted it is** — roadmap task **T79b**. A file that came with nothing and
-/// a file whose signature did not verify are both untrusted and are not the same event: only the
-/// second is what the gallery key exists to catch, and it used to arrive here as the first one's
-/// sentence.
+/// **And which kind of untrusted it is.** A file that came with nothing and a file whose signature
+/// did not verify are both untrusted and are not the same event: only the second is what the
+/// gallery key exists to catch, and it used to arrive here as the first one's sentence.
 pub(crate) fn blueprint_imported(summary: &BlueprintSummary) -> String {
     let vouched = match (summary.trusted, summary.signature) {
         (true, _) => "signed by the gallery key",
@@ -39,8 +38,8 @@ pub(crate) fn blueprint_imported(summary: &BlueprintSummary) -> String {
             "untrusted: nothing came with it to vouch for it, and nothing will"
         }
 
-        // A row written before T79b, or one whose reason this build cannot read: the sentence this
-        // line has always had, which says the true half of what is known.
+        // A row written before the reason was recorded, or one whose reason this build cannot read:
+        // the sentence this line has always had, which says the true half of what is known.
         (false, _) => "untrusted: nothing vouches for it, and nothing will",
     };
 
@@ -75,8 +74,8 @@ pub(crate) fn blueprint_list(list: &BlueprintList) -> String {
             // A word rather than a colour, because `--json` carries the same fact and a listing
             // that only said it in ANSI would say it to nobody in a pipe.
             //
-            // Three words rather than two — roadmap task **T79b**. `mismatched` is the one worth
-            // scanning a table for: somebody signed that file, and this is not what they signed.
+            // Three words rather than two. `mismatched` is the one worth scanning a table for:
+            // somebody signed that file, and this is not what they signed.
             match (blueprint.trusted, blueprint.signature) {
                 (true, _) => "signed",
                 (false, Some(SignatureCheck::Missing)) => "unsigned",
@@ -99,9 +98,8 @@ pub(crate) fn blueprint_list(list: &BlueprintList) -> String {
 /// `✗`, and a non-ASCII status column is one more thing to be wrong on a Windows console — while
 /// the words are the vocabulary [`Disposition`] already has.
 ///
-/// The elevation sentence is gathered to the end and said **once** (the T77 design, D11): what a
-/// person needs to know before they start is that they will be asked for a password, not which of
-/// six lines asks for it.
+/// The elevation sentence is gathered to the end and said **once**: what a person needs to know
+/// before they start is that they will be asked for a password, not which of six lines asks for it.
 pub(crate) fn blueprint_plan(plan: &BlueprintPlan) -> String {
     let mut out = format!(
         "Plan: {} into project {} at {}
@@ -155,18 +153,18 @@ pub(crate) fn blueprint_applied(applied: &BlueprintApplied) -> String {
                 StepResult::Done { .. } => "done",
                 StepResult::AlreadyTrue => "already",
                 StepResult::NotRun { .. } => "not run",
-                // **A step that ran and did not succeed** — roadmap task **T78a**. Told apart from
-                // one nothing attempted, because what a person does next differs: a failure is
-                // theirs to read, and a skip is theirs to decide about.
+                // **A step that ran and did not succeed.** Told apart from one nothing attempted,
+                // because what a person does next differs: a failure is theirs to read, and a skip
+                // is theirs to decide about.
                 StepResult::Failed { .. } => "failed",
                 _ => "unknown",
             },
             with_site(action_said(&step.action), &actions, position)
         ));
 
-        // **T202, D2.** What differed from the plan, under the step it belongs to: fourteen
-        // spaces, which is the two of the indent plus the eleven of the status column plus its
-        // trailing space, so the sentence lines up with the action it is about.
+        // What differed from the plan, under the step it belongs to: fourteen spaces, which is the
+        // two of the indent plus the eleven of the status column plus its trailing space, so the
+        // sentence lines up with the action it is about.
         if let StepResult::Done { note: Some(note) } = &step.result {
             out.push_str(&format!("              {note}\n"));
         }
@@ -189,7 +187,7 @@ pub(crate) fn blueprint_applied(applied: &BlueprintApplied) -> String {
     out
 }
 
-/// A `site` line with the site it makes — roadmap task **T204a**, D7.
+/// A `site` line with the site it makes.
 ///
 /// Read off the step after it, as the daemon's executor reads it: a site's names are the `domain`
 /// steps straight after it, so a plan with two sites reads as two rather than as one long run of
@@ -203,7 +201,7 @@ fn with_site(said: String, actions: &[&PlanAction], position: usize) -> String {
     }
 }
 
-/// The steps a blueprint left, one line each — roadmap task **T205**, D6.
+/// The steps a blueprint left, one line each.
 pub(super) fn next_steps_said(steps: &mixengine_proto::NextSteps) -> String {
     use mixengine_proto::NextStepKind;
 
@@ -215,7 +213,7 @@ pub(super) fn next_steps_said(steps: &mixengine_proto::NextSteps) -> String {
             _ => step.run.clone().unwrap_or_default(),
         };
 
-        // **Which site it is for**, when the blueprint has several — roadmap task **T204a**, D7.
+        // **Which site it is for**, when the blueprint has several.
         let site = step.site.as_ref().map(|site| format!("({site})"));
 
         let mut tail = Vec::new();
@@ -238,7 +236,7 @@ pub(super) fn next_steps_said(steps: &mixengine_proto::NextSteps) -> String {
         }
     }
 
-    // **D12**: the same file the scaffold came from, so the same caution.
+    // The same file the scaffold came from, so the same caution.
     if !steps.trusted {
         out.push_str(
             "These come from a blueprint nobody vouches for; read them before running them.\n",
@@ -248,11 +246,11 @@ pub(super) fn next_steps_said(steps: &mixengine_proto::NextSteps) -> String {
     out
 }
 
-/// Whether any step of an apply ran and failed — roadmap task **T78a**.
+/// Whether any step of an apply ran and failed.
 ///
 /// **What the exit status is read off.** The job succeeded: the apply did everything it was asked
-/// and the report is complete, and the command's own exit code is the command's news (the T78a
-/// design, D7). A shell still has to hear it, and this is where it does.
+/// and the report is complete, and the command's own exit code is the command's news. A shell still
+/// has to hear it, and this is where it does.
 pub(crate) fn blueprint_had_a_failed_step(applied: &BlueprintApplied) -> bool {
     applied
         .steps
@@ -449,8 +447,8 @@ mod tests {
         }
     }
 
-    /// **What is left to do ends the report** — roadmap task **T205**, D6. A `serve` step says it
-    /// keeps running, an optional one says so, and an `open` step names its path.
+    /// **What is left to do ends the report.** A `serve` step says it keeps running, an optional
+    /// one says so, and an `open` step names its path.
     #[test]
     fn an_apply_with_steps_ends_with_what_to_run() {
         let step = |kind, run: Option<&str>, path: Option<&str>, note: Option<&str>, optional| {
@@ -509,7 +507,7 @@ mod tests {
         assert!(!said.contains("nobody vouches"), "{said}");
     }
 
-    /// **Untrusted steps say so** — T205, D12.
+    /// **Untrusted steps say so.**
     #[test]
     fn untrusted_steps_are_read_before_they_are_run() {
         let said = next_steps_said(&mixengine_proto::NextSteps {
@@ -527,9 +525,8 @@ mod tests {
         assert!(said.contains("nobody vouches"), "{said}");
     }
 
-    /// **Every step, and the one that did not run said in full** — roadmap task T78. A scaffold
-    /// command nobody ran is the one line a person has to act on themselves, so it is not folded
-    /// into a count.
+    /// **Every step, and the one that did not run said in full.** A scaffold command nobody ran is
+    /// the one line a person has to act on themselves, so it is not folded into a count.
     #[test]
     fn an_apply_prints_every_step_and_spells_out_what_did_not_run() {
         let applied = BlueprintApplied {
@@ -573,9 +570,8 @@ mod tests {
         assert!(rendered.contains("nobody agreed to it"), "{rendered}");
     }
 
-    /// **A step that ran and failed reads as that, not as one that was skipped** — roadmap task
-    /// **T78a**, its design's D7. What a person does next differs between the two, and the exit
-    /// status differs with it.
+    /// **A step that ran and failed reads as that, not as one that was skipped.** What a person
+    /// does next differs between the two, and the exit status differs with it.
     #[test]
     fn a_failed_step_prints_its_exit_rather_than_a_skip() {
         let applied = BlueprintApplied {
@@ -602,8 +598,8 @@ mod tests {
         assert!(super::blueprint_had_a_failed_step(&applied));
     }
 
-    /// T202, D2. What differed from the plan sits under the step it belongs to, indented past the
-    /// status column, so the account a project ended up with is found where the step is.
+    /// What differed from the plan sits under the step it belongs to, indented past the status
+    /// column, so the account a project ended up with is found where the step is.
     #[test]
     fn a_done_step_with_a_note_prints_it_under_the_step() {
         let applied = BlueprintApplied {
@@ -660,9 +656,9 @@ mod tests {
         assert!(untrusted.contains("nothing will"), "{untrusted}");
     }
 
-    /// **Which kind of untrusted** — roadmap task **T79b**. A file nobody signed and a file whose
-    /// signature did not verify are both untrusted and are not the same event, and the second is
-    /// the one worth reading twice.
+    /// **Which kind of untrusted.** A file nobody signed and a file whose signature did not verify
+    /// are both untrusted and are not the same event, and the second is the one worth reading
+    /// twice.
     #[test]
     fn an_import_says_which_kind_of_untrusted_it_is() {
         let summary = |signature| BlueprintSummary {
@@ -747,7 +743,7 @@ mod tests {
         );
     }
 
-    /// **T204a, D7.** A plan with two sites says which site each `site` line makes.
+    /// A plan with two sites says which site each `site` line makes.
     #[test]
     fn a_plan_with_two_sites_names_each_one() {
         let site = || PlanStep {
@@ -777,7 +773,7 @@ mod tests {
         assert!(rendered.contains("site docs.shop.test"), "{rendered}");
     }
 
-    /// **T204a, D7.** A step that belongs to one site says which.
+    /// A step that belongs to one site says which.
     #[test]
     fn a_step_with_a_site_says_it() {
         let steps = mixengine_proto::NextSteps {
@@ -796,8 +792,7 @@ mod tests {
         assert!(super::next_steps_said(&steps).contains("npm run dev   (vite.shop.test)"));
     }
 
-    /// **D11**: said once, at the end, so a person knows before they start rather than four lines
-    /// in.
+    /// Said once, at the end, so a person knows before they start rather than four lines in.
     #[test]
     fn a_plan_that_would_ask_for_a_password_says_so_once() {
         let rendered = super::blueprint_plan(&a_plan());

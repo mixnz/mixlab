@@ -1,8 +1,8 @@
-//! `mix extension inspect` against a real daemon — roadmap task **T80**.
+//! `mix extension inspect` against a real daemon.
 //!
-//! **The format is exercised by a command and not only by a unit test**, which is the whole reason
-//! T80 ships a verb at all: nothing else it built is reachable by a person until T81 installs
-//! something. A manifest format proved only against its own parser is a format nobody has typed a
+//! **The format is exercised by a command and not only by a unit test**, which is why the manifest
+//! format shipped with a verb at all: before the installer, nothing else about it was reachable by
+//! a person. A manifest format proved only against its own parser is a format nobody has typed a
 //! path into.
 //!
 //! What is only true of `mix` and is proved here: that a path typed relative to the shell's
@@ -26,7 +26,7 @@ fn extension(body: &str) -> tempfile::TempDir {
     directory
 }
 
-/// The Mailpit manifest T82 will ship, read end to end.
+/// The Mailpit manifest, read end to end.
 ///
 /// The fixture is written out here rather than pulled from `mixengine-testkit`, because
 /// `mixengine-core` is not a dependency of `mix` and is not made one for a test — the same rule
@@ -93,8 +93,8 @@ async fn inspecting_a_manifest_says_what_would_run() {
 }
 
 /// A manifest that writes an address is refused **naming the field**, and reaches the client as an
-/// argument that was wrong rather than as an internal error — which is where T77 left four
-/// blueprint variants and T77a had to go back for them.
+/// argument that was wrong rather than as an internal error — which is where capturing a blueprint
+/// first left four blueprint variants, and somebody had to go back for them.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_manifest_that_writes_an_address_is_refused_by_field() {
     let home = Home::new();

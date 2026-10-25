@@ -84,10 +84,10 @@ pub(crate) async fn elevation(
         }
 
         ElevationCommand::Grant { yes, no_wait } => {
-            // Roadmap task T64: what is about to be allowed is read before it is allowed. The
-            // ordering is a property of the API rather than of this function — the daemon never
-            // raises a prompt on its own initiative, so there is a moment between knowing the batch
-            // and asking for it, and this is what happens in that moment.
+            // What is about to be allowed is read before it is allowed. The ordering is a property
+            // of the API rather than of this function — the daemon never raises a prompt on its own
+            // initiative, so there is a moment between knowing the batch and asking for it, and
+            // this is what happens in that moment.
             let waiting: ElevationStatus =
                 ask(&mut client, rpc::method::ELEVATION_STATUS, None).await?;
 
@@ -267,7 +267,7 @@ pub(crate) fn say_where_the_command_is(route: Route) {
     }
 }
 
-/// Show what a grant would allow, ask about it, and answer whether to go on — roadmap task **T64**.
+/// Show what a grant would allow, ask about it, and answer whether to go on.
 ///
 /// The screen is printed whichever way this ends, because it is the point: a person is being asked
 /// to give an administrator's permission to a batch of operations, and the batch is what they are

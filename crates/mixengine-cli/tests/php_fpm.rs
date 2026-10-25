@@ -1,4 +1,4 @@
-//! The php-fpm recipe against a **real** PHP — roadmap task **T32**.
+//! The php-fpm recipe against a **real** PHP.
 //!
 //! Everything else about this recipe is provable in one process and is proved there: the template
 //! renders, the settings merge, the spec builds, the file and the readiness check name one socket.
@@ -106,8 +106,8 @@ fn provides(root: &Path) -> serde_json::Map<String, Value> {
 
 /// An index offering exactly this PHP, for this machine.
 ///
-/// `"kind": "php"` and not a package name: this is a **runtime**, which is the whole difference T32
-/// turns on.
+/// `"kind": "php"` and not a package name: this is a **runtime**, which is the whole difference
+/// this recipe turns on.
 fn index(packed: &Packed, url: &str, provides: serde_json::Map<String, Value>) -> Value {
     serde_json::json!({
         "schema": 1,
@@ -191,7 +191,7 @@ async fn installed() -> (Home, harness::Daemon, MockRegistry, Pool) {
     (home, daemon, registry, listen)
 }
 
-/// **The whole of T32, in the order a user meets it.**
+/// **The whole of the recipe, in the order a user meets it.**
 ///
 /// One test rather than six, deliberately: each step is the previous one's precondition, and six
 /// tests would be six real PHP installs performed to re-reach the state this one is already in.
@@ -203,8 +203,8 @@ async fn a_pool_is_created_started_serves_php_reloaded_and_stopped() {
 
     // --- created by the install, and by nobody else ---------------------------------------------
     //
-    // Nothing in this test asked for a service. The post-install hook did, which is the half of T32
-    // that is invisible from inside the daemon and obvious from out here.
+    // Nothing in this test asked for a service. The post-install hook did, which is the half of the
+    // recipe that is invisible from inside the daemon and obvious from out here.
     let listed = json(&home.mix(&["service", "list", "--json"]));
     assert!(
         listed["services"]
@@ -388,9 +388,9 @@ async fn a_running_pool_refuses_to_have_its_php_removed() {
     home.mix(&["service", "stop", &pool, "--json"]);
 }
 
-/// **What the whole of T72a's reading rule rests on**, proved against the program rather than
-/// argued: a status probe costs the pool exactly one `accepted conn`, and an otherwise idle pool
-/// reports exactly one active process — the worker answering the probe itself.
+/// **What the whole of the status page's reading rule rests on**, proved against the program rather
+/// than argued: a status probe costs the pool exactly one `accepted conn`, and an otherwise idle
+/// pool reports exactly one active process — the worker answering the probe itself.
 ///
 /// `idle::observe` subtracts precisely that one, so if php-fpm ever changes either number this suite
 /// goes red and the daemon's arithmetic is wrong. It is the reason the rule can be a comparison
@@ -401,7 +401,7 @@ async fn a_running_pool_refuses_to_have_its_php_removed() {
 /// connections to a real port, which needs none of this.
 ///
 /// **Run against 7.0.33 as well as against the version this suite pins**, by pointing
-/// `MIXENGINE_PHP_RUNTIME` at the older package: green on both. That is the evidence for T72a's
+/// `MIXENGINE_PHP_RUNTIME` at the older package: green on both. That is the evidence for the
 /// decision to use `pm.status_path` rather than the cleaner `pm.status_listen`, which exists only
 /// from PHP 8.0 and would have made a 7.x pool refuse to start. `cold_path.rs` is where two old
 /// versions are measured on every CI run rather than by hand.

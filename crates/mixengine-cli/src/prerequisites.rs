@@ -1,5 +1,5 @@
 //! What a machine lacks before an install or an apply, and whether the person agreed to fixing it
-//! first — roadmap task **T151**.
+//! first.
 
 use std::io::Write as _;
 
@@ -9,7 +9,7 @@ use crate::client::{Client, ask};
 use crate::confirm::unanswered;
 use crate::{confirm, render};
 
-/// What somebody said in advance about a machine that lacks something — roadmap task **T151**.
+/// What somebody said in advance about a machine that lacks something.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Agreement {
     /// `--yes`: install what MixEngine can install, without asking.
@@ -29,9 +29,9 @@ pub(crate) fn agreed_to_prerequisites(
     yes: bool,
     json: bool,
 ) -> Result<Option<bool>, Error> {
-    // **Said before anything is decided, and it decides nothing** — roadmap task **T27e**, D16: a
-    // library the distribution provides is the person's to install, and the runtime installs
-    // meanwhile. On `--json` it is left out, because the same list is in what the daemon answered.
+    // **Said before anything is decided, and it decides nothing**: a library the distribution
+    // provides is the person's to install, and the runtime installs meanwhile. On `--json` it is
+    // left out, because the same list is in what the daemon answered.
     let advisories: Vec<Requirement> = unmet
         .iter()
         .filter(|requirement| matches!(requirement.remedy, Remedy::InstallFromDistribution))
@@ -105,7 +105,7 @@ mod tests {
     use super::*;
     use mixengine_proto::PackageVersion;
 
-    /// **T151.** Nothing is asked, and nothing refused here, unless MixEngine could install it.
+    /// Nothing is asked, and nothing refused here, unless MixEngine could install it.
     #[test]
     fn only_an_installable_lack_is_asked_about() {
         use mixengine_proto::{Need, RedistributableArch};
@@ -147,7 +147,7 @@ mod tests {
             "--json needs --yes"
         );
 
-        // **A library the distribution provides asks nothing** — roadmap task T27e, D16.
+        // **A library the distribution provides asks nothing.**
         let advisory = Requirement {
             need: Need::SharedLibrary {
                 soname: "libasound.so.2".to_owned(),

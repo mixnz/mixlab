@@ -59,15 +59,15 @@ uptime: Uptime,
  * What is waiting for permission, and whether this machine could ask for it, or [`None`] from a
  * daemon built before this member existed.
  *
- * **In the call every client already makes**, so `mix status` can say "3 operations are waiting
- * for permission" without a second round trip and without a client deciding what *degraded*
- * means — the T40b design, D6. The list itself is `elevation.status`, because that is a screen
- * and this is a status line.
+ * **In the call every client already makes**, so `mix status` can say "3 operations are
+ * waiting for permission" without a second round trip and without a client deciding what
+ * *degraded* means (`docs/specs/2026-08-23-t40b-elevation-queue-design.md`, D6). The list
+ * itself is `elevation.status`, because that is a screen and this is a status line.
  *
  * **Optional because it arrived after protocol 1 was frozen** —
- * [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md), roadmap
- * task **T88c**. It was required until then, which meant a `mix` from a new build could not
- * *decode* the answer of an older daemon that had not been restarted yet.
+ * [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md). It was
+ * required until then, which meant a `mix` from a new build could not *decode* the answer of
+ * an older daemon that had not been restarted yet.
  *
  * **[`None`] means the daemon predates the member and nothing else.** It is never "the queue
  * could not be read": this call is fallible for exactly that case, so an unreadable queue is an
@@ -77,22 +77,22 @@ uptime: Uptime,
  */
 elevation?: ElevationSummary | null, 
 /**
- * Which of the two name mechanisms this home is running on, and why — roadmap task **T44** — or
- * [`None`] from a daemon built before this member existed.
+ * Which of the two name mechanisms this home is running on, and why — or [`None`] from a
+ * daemon built before this member existed.
  *
  * **In the call every client already makes**, on [`DaemonStatus::elevation`]'s reasoning: "is
  * `blog.test` going to resolve, and will a wildcard under it" is a status line, not a screen,
  * and a client that had to ask a second method for it would render the first line of `mix
  * status` a round trip late.
  *
- * **Optional on [`DaemonStatus::elevation`]'s reasoning too**, and for the same skew — **T88c**
- * changed both at once, because fixing one while the other was required bought nothing. [`None`]
- * means the daemon predates the member; a daemon that has it always answers [`Some`], since this
- * is read from state it owns and cannot fail.
+ * **Optional on [`DaemonStatus::elevation`]'s reasoning too**, and for the same skew — both
+ * were made optional at once, because fixing one while the other was required bought nothing.
+ * [`None`] means the daemon predates the member; a daemon that has it always answers [`Some`],
+ * since this is read from state it owns and cannot fail.
  */
 dns?: DnsStatus | null, 
 /**
- * A release this daemon has been offered, or [`None`] — roadmap task **T88**.
+ * A release this daemon has been offered, or [`None`].
  *
  * **In the call every client already makes**, on [`DaemonStatus::elevation`]'s reasoning: *"is
  * there a newer MixEngine"* is a status line and not a screen, and the screen is
@@ -102,15 +102,15 @@ dns?: DnsStatus | null,
  * workaround.** [`None`] is the honest value for a daemon that has not checked yet, for one
  * whose check found nothing, and for one built before this member existed — three states a
  * client renders identically, which is *nothing at all*. This is the only member here whose
- * [`None`] carries more than the wire fact, and **T88c** — which made
- * [`DaemonStatus::elevation`] and [`DaemonStatus::dns`] optional as well, under
- * [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md) — left it
+ * [`None`] carries more than the wire fact. Making [`DaemonStatus::elevation`] and
+ * [`DaemonStatus::dns`] optional as well, under
+ * [ADR 0019](../../../docs/decisions/0019-an-added-response-member-is-optional.md), left it
  * exactly as it was.
  */
 update?: UpdateOffer | null, 
 /**
- * Which credential store this home keeps its passwords in — roadmap task **T194** — or
- * [`None`] from a daemon built before this member existed.
+ * Which credential store this home keeps its passwords in, or [`None`] from a daemon built
+ * before this member existed.
  *
  * **In the call every client already makes**, on [`DaemonStatus::elevation`]'s reasoning: where
  * the passwords are is a status line, and the switch that changes it is

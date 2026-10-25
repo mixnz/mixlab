@@ -8,8 +8,9 @@ use super::super::Uninstall;
 
 use super::{firewall_label, resolver_place, trust_place};
 
-/// **1.** This home's block in this machine's hosts file, read the way T41 reads it — and the block
-/// every home shared before each kept its own (ADR 0066), which this home's uninstall also removes.
+/// **1.** This home's block in this machine's hosts file, read the way the hosts file's own writer
+/// reads it — and the block every home shared before each kept its own (ADR 0066), which this
+/// home's uninstall also removes.
 pub(super) fn hosts_block(uninstall: &Uninstall) -> Residue {
     let file = uninstall.host.hosts_file();
     let location = file.path().display().to_string();
@@ -50,7 +51,7 @@ pub(super) fn hosts_block(uninstall: &Uninstall) -> Residue {
     }
 }
 
-/// **2.** Whatever sends a managed TLD to this daemon's own DNS server — T45's probe.
+/// **2.** Whatever sends a managed TLD to this daemon's own DNS server — the resolver's probe.
 ///
 /// **Asked about the port the server is on, or about nothing.** A home whose DNS server never bound
 /// has no wiring of its own to find, and a probe against a port nothing listens on would be asking
@@ -99,10 +100,10 @@ pub(super) fn resolver_wiring(uninstall: &Uninstall) -> Residue {
 /// Whether there is wiring of this home's to revoke, as `state` reads it.
 ///
 /// **`declared` and not `method`.** A machine with a mechanism and nothing routed through it has
-/// nothing of ours to remove, and asking to revoke there would spend a prompt on an operation
-/// whose only outcome is `AlreadyDone` — T41's D11, one capability along. And `declared` rather
-/// than `wired`, found running M34: a link programs never reach is still on disk, and still this
-/// home's to take.
+/// nothing of ours to remove, and asking to revoke there would spend a prompt on an operation whose
+/// only outcome is `AlreadyDone` — the hosts file's rule that the disk is read before a prompt is
+/// spent, one capability along. And `declared` rather than `wired`, found running M34: a link
+/// programs never reach is still on disk, and still this home's to take.
 pub(super) fn resolver_removal(state: &mixengine_platform::ResolverState, port: u16) -> Removal {
     match (state.declared.is_empty(), state.target(port)) {
         (false, Some(target)) => Removal::Planned {
@@ -175,7 +176,7 @@ pub(super) async fn port_access(uninstall: &Uninstall) -> Residue {
     }
 }
 
-/// **4.** The inbound rules a shared site needed — T74's, and the one row read from the rows.
+/// **4.** The inbound rules a shared site needed — the one row read from the rows.
 ///
 /// **Read from this home's own sites rather than from the machine.** `FirewallRules` on the `Host`
 /// answers what rules exist under *any* name, which is what `mix doctor` uses to report the
@@ -218,7 +219,7 @@ pub(super) async fn firewall_rules(uninstall: &Uninstall) -> Residue {
 /// One function for two rows because they share one reading — the authority on disk — and taking it
 /// twice would be two answers to *what is this home's certificate a moment apart*. They are separate
 /// rows because they are separate stores, repaired and removed by different mechanisms: one needs a
-/// token and the other does not, which is the line T49 was split on.
+/// token and the other does not, which is why the browsers' databases are not the system store.
 pub(super) async fn certificate_rows(uninstall: &Uninstall) -> (Residue, Residue) {
     let trust_what = "MixEngine's certificate authority in this machine's trust store".to_owned();
     let browser_what = "the same authority in this machine's browsers".to_owned();

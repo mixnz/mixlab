@@ -1,4 +1,4 @@
-//! **MixLab ▸ Remove MixLab from this Mac…** — roadmap task **T182a**, spec D1.
+//! **MixLab ▸ Remove MixLab from this Mac…** — spec D1.
 //!
 //! Tauri gives macOS a default application menu and MixLab has never replaced it. That menu is
 //! taken as it is, which keeps the Edit submenu that makes copy and paste work in a webview, and

@@ -1,7 +1,6 @@
-//! What may be set on a service, and its readings: `service.limits` and `service.set_limits`
-//! (roadmap task **T68**, the watchdog **T71a**), `service.idle` and `service.set_idle` (**T69**),
-//! `service.save_resources` and `service.set_save_resources` (**T167b**), and
-//! `service.set_autostart` (**T112**).
+//! What may be set on a service, and its readings: `service.limits` and `service.set_limits` (with
+//! the memory watchdog), `service.idle` and `service.set_idle`, `service.save_resources` and
+//! `service.set_save_resources`, and `service.set_autostart`.
 //!
 //! Each writes a row and starts or stops nothing; `service.set_limits` alone also pushes what it
 //! wrote at a running process.
@@ -21,9 +20,9 @@ impl Api {
     /// `service.limits` — what this service may take, and what this machine will do about it.
     ///
     /// **Both halves in one answer**, because neither is worth having alone: a `memory_mb` of 512
-    /// means one thing where it is a commit charge enforced by a failed allocation and another where
-    /// it is charged pages enforced by the OOM killer — and a third where it is stored and enforced
-    /// by nothing. The T68 design, D2.
+    /// means one thing where it is a commit charge enforced by a failed allocation and another
+    /// where it is charged pages enforced by the OOM killer — and a third where it is stored and
+    /// enforced by nothing.
     pub(super) async fn service_limits(
         &self,
         target: &ServiceTarget,
@@ -50,7 +49,7 @@ impl Api {
     /// setting it reports: no policy, a policy switched off here, a running dependent, and a
     /// keep-warm project all look identical from outside — a service that stays running. Only two
     /// of them are settings anybody can change, and telling a person to go and change the wrong one
-    /// is worse than saying nothing. Roadmap task **T69**.
+    /// is worse than saying nothing.
     pub(super) async fn service_idle(&self, target: &ServiceTarget) -> Result<IdleReport, Error> {
         let id = self.named_service(target.service.as_ref())?;
         let spec = self.spec_of(&id).await?;
@@ -60,8 +59,8 @@ impl Api {
             .map_err(|error| error.to_wire())?;
 
         // The recipe's own default, asked of the same catalogue the generator renders with and
-        // through the same rule — its saving number while the home saves resources (T167b) — so
-        // this report and the policy actually in force cannot disagree about what "unset" means.
+        // through the same rule — its saving number while the home saves resources — so this report
+        // and the policy actually in force cannot disagree about what "unset" means.
         let saving = mixengine_core::services::save_resources::get(&self.store)
             .await
             .map_err(|error| error.to_wire())?;
@@ -110,7 +109,7 @@ impl Api {
         .await
     }
 
-    /// `service.save_resources` — whether this home stops services nobody is using (T167b).
+    /// `service.save_resources` — whether this home stops services nobody is using.
     pub(super) async fn service_save_resources(&self) -> Result<SaveResources, Error> {
         let on = mixengine_core::services::save_resources::get(&self.store)
             .await
@@ -125,8 +124,8 @@ impl Api {
     /// idle sweep rebuilds its graph from the rows and reads the switch there, so a service already
     /// past its saving policy is stopped by that sweep and not by this call.
     ///
-    /// **Which is why the kept graph is forgotten** — roadmap task T190b. The sweep looks through
-    /// the last walk's graph, and this changes every recipe's default policy without walking.
+    /// **Which is why the kept graph is forgotten.** The sweep looks through the last walk's graph,
+    /// and this changes every recipe's default policy without walking.
     pub(super) async fn service_set_save_resources(
         &self,
         asked: SaveResourcesSet,
@@ -149,7 +148,7 @@ impl Api {
     /// Answers the service as it now is rather than a report of its own, unlike `set_idle` beside
     /// it: an idle policy has four readings that all look alike from outside and needs a type to
     /// tell them apart, where this one is a column with two values and a [`ServiceSummary`] already
-    /// carries it. Roadmap task **T112**.
+    /// carries it.
     pub(super) async fn service_set_autostart(
         &self,
         asked: &ServiceAutostartSet,
@@ -230,7 +229,7 @@ impl Api {
     /// 1. **Refuse what is wrong on any machine.** `ResourceLimits::validate`, beside the type.
     /// 2. **Refuse what is wrong on *this* machine** — a `cpu_percent` above `100 × cores`. Here and
     ///    not in `mixengine-proto`, because the number it is measured against is a property of the
-    ///    machine and proto has no host to ask. The T68 design, D10.
+    ///    machine and proto has no host to ask.
     ///
     ///    **It guards small machines and nothing else, and that is worth knowing before reading it
     ///    as more than it is**: `cpu_percent` is a `u8`, so the largest value anybody can express is
@@ -248,7 +247,7 @@ impl Api {
 
         // Refused before anything is written, and refused for a service that does not exist before
         // that: a limit accepted for a name nothing declares would be a row nobody could read back.
-        // The spec is kept since T71a: whether a watchdog would restart this service is its answer.
+        // The spec is kept: whether a watchdog would restart this service is its answer.
         let spec = self.spec_of(&id).await?;
 
         asked.limits.validate().map_err(|reason| {
@@ -290,7 +289,7 @@ impl Api {
     }
 }
 
-/// What is watching this service's ceiling, if anything — roadmap task **T71a**.
+/// What is watching this service's ceiling, if anything.
 ///
 /// **[`None`] on two different machines, and it is the same answer for both**: one whose kernel
 /// holds the ceiling itself, and one where this service declared no ceiling at all. In each case

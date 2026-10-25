@@ -5,12 +5,11 @@ import type { JsonValue } from "./serde_json/JsonValue";
 /**
  * The half of a [`Response`] that is either a result or an error, never both.
  *
- * **Named for its container rather than `Outcome`** — roadmap task T56. The published TypeScript
- * contract names a file after each type, so this one and
- * [`doctor_api::Outcome`](crate::Outcome) were one file, carrying both declarations in whatever
- * order the exporter ran them. Type names are unique across this crate for that reason, and
- * `crates/mixengine-proto/tests/bindings.rs` says so. Nothing on the wire moved: the enum is
- * `#[serde(untagged)]`, so its name was never encoded.
+ * **Named for its container rather than `Outcome`.** The published TypeScript contract names a
+ * file after each type, so this one and [`doctor_api::Outcome`](crate::Outcome) were one file,
+ * carrying both declarations in whatever order the exporter ran them. Type names are unique across
+ * this crate for that reason, and `crates/mixengine-proto/tests/bindings.rs` says so. Nothing on
+ * the wire moved: the enum is `#[serde(untagged)]`, so its name was never encoded.
  */
 export type ResponseOutcome = { 
 /**

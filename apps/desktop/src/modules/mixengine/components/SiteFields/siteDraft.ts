@@ -5,7 +5,7 @@ export type Kind = SiteKind["kind"];
 export type Target = RouteTarget["target"];
 
 /**
- * One route while being edited — T135.
+ * One route while being edited.
  *
  * Flat, not a union: the user switches back and forth between targets, and the field they just
  * typed into has to still be there when they switch back. `routeToApi` is where it narrows to
@@ -35,8 +35,8 @@ export interface SiteDraft {
   routes: RouteRow[];
   services: Set<string>;
   https: boolean;
-  /** T98. Only meaningful with `https` on — the daemon refuses `true` beside `https: false`, so the
-   *  payload helpers below never send that pair. */
+  /** The HTTP→HTTPS redirect. Only meaningful with `https` on — the daemon refuses `true` beside
+   *  `https: false`, so the payload helpers below never send that pair. */
   httpsRedirect: boolean;
   acceptRiskyTld: boolean;
   /** Edit only: a site being created is always enabled. */
@@ -69,11 +69,11 @@ export function siteDraftFromDetail(detail: SiteDetail): SiteDraft {
     pool: kind.kind === "php-fpm" ? (kind.pool ?? "") : "",
     upstream: kind.kind === "reverse-proxy" ? kind.upstream : "",
     port: kind.kind === "node-app" ? String(kind.port) : "",
-    // T135. `?? []` because a daemon built before T135 does not send this field.
+    // `?? []` because a daemon built before routes does not send this field.
     routes: (detail.site.routes ?? []).map(routeFromApi),
     services: new Set(detail.services.map((s) => s.service)),
     https: detail.site.https,
-    // T98. `?? false` because a daemon built before T98 does not send this field.
+    // `?? false` because a daemon built before the redirect does not send this field.
     httpsRedirect: detail.site.https_redirect ?? false,
     acceptRiskyTld: false,
     enabled: detail.site.state === "enabled",

@@ -306,9 +306,9 @@ fn a_value_outside_the_closed_set_is_refused() {
 /// it. Everything here says the same thing in a different way: `..` and `bulk/..` land on the home
 /// or its parent, `/` on a whole filesystem.
 ///
-/// **One list, walked by both doors into the rule** — roadmap task **T143**. `config::load` reads
-/// it through serde and `config::set_paths` writes it through `check_relocation`; a second list
-/// beside this one is how the two come to disagree.
+/// **One list, walked by both doors into the rule.** `config::load` reads it through serde and
+/// `config::set_paths` writes it through `check_relocation`; a second list beside this one is how
+/// the two come to disagree.
 const NAMES_NOTHING: [&str; 8] = ["", ".", "./", "..", "../", "bulk/..", "x/../..", "/"];
 
 #[test]
@@ -426,9 +426,9 @@ fn a_retired_ipc_path_is_read_and_ignored() {
 
 #[test]
 fn the_retired_update_keys_are_read_and_ignored_whatever_they_hold() {
-    // Before T187 `check_seconds = 0` was refused, and the refusal pointed at `enabled = false`.
-    // Neither key does anything now, so a value that once meant "check constantly" must not be
-    // the one thing that stops a home from starting.
+    // `check_seconds = 0` was once refused, and the refusal pointed at `enabled = false`. Neither
+    // key does anything now, so a value that once meant "check constantly" must not be the one
+    // thing that stops a home from starting.
     let home = TempDir::new().unwrap();
     let path = write(&home, "[updates]\nenabled = false\ncheck_seconds = 0\n");
 
@@ -468,8 +468,8 @@ const RELEASED_TEMPLATES: &[(&str, &str)] = &[
 ];
 
 /// **`config.toml` is written once and never rewritten**, so a home keeps the template of the
-/// release it first ran — and whatever a later build drops from the template must still read
-/// there. T185b dropped `[bin]`, and every home first run by 0.0.7 to 0.0.9 stopped starting, the
+/// release it first ran — and whatever a later build drops from the template must still read there.
+/// A later build dropped `[bin]`, and every home first run by 0.0.7 to 0.0.9 stopped starting, the
 /// uninstaller with it, since it asks the daemon what it would remove.
 #[test]
 fn a_home_holding_any_released_template_still_starts() {
@@ -588,8 +588,8 @@ fn a_renewal_period_of_zero_is_refused_rather_than_corrected() {
 }
 
 /// A second is legal, and it is what the daemon's own renewal suite sets. A period no test can move
-/// would leave the loop the one part of T52 that nothing ever runs — which is exactly how T51 nearly
-/// shipped an nginx TLS port no machine could bind.
+/// would leave the loop the one part of renewal that nothing ever runs — which is exactly how TLS
+/// wiring nearly shipped an nginx TLS port no machine could bind.
 #[test]
 fn a_renewal_period_of_one_second_is_accepted() {
     let home = TempDir::new().unwrap();
@@ -600,8 +600,8 @@ fn a_renewal_period_of_one_second_is_accepted() {
     assert_eq!(config.certs.renew_check_seconds, 1);
 }
 
-/// **A share that ends by itself has a period, and zero is refused** — roadmap task **T76**, on the
-/// reasoning `renew_check_seconds` states: zero is not a short pause, it is none.
+/// **A share that ends by itself has a period, and zero is refused**, on the reasoning
+/// `renew_check_seconds` states: zero is not a short pause, it is none.
 #[test]
 fn a_sharing_check_of_zero_is_refused_rather_than_corrected() {
     let home = TempDir::new().unwrap();
@@ -641,8 +641,8 @@ fn a_home_with_no_sharing_section_checks_on_the_default_period() {
     assert_eq!(config.sharing.check_seconds, 30);
 }
 
-/// Recording is on unless the file says otherwise — the T91 design's reading of "opt-in", which is
-/// spent on transmission and not on a file in the user's own home.
+/// Recording is on unless the file says otherwise — the crash reporter's reading of "opt-in", which
+/// is spent on transmission and not on a file in the user's own home.
 #[test]
 fn crash_reports_are_recorded_unless_the_file_says_otherwise() {
     let home = TempDir::new().unwrap();
@@ -657,7 +657,7 @@ fn crash_reports_are_recorded_unless_the_file_says_otherwise() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Writing `[paths]` — roadmap task T143.
+// Writing `[paths]`.
 // ---------------------------------------------------------------------------------------------
 
 /// What a caller asks for, with only `data` set.

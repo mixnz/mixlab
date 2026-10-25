@@ -1,4 +1,4 @@
-//! The leaves this home's authority signs — roadmap task **T50**.
+//! The leaves this home's authority signs.
 //!
 //! One certificate per site, ninety days, `serverAuth` and nothing else, covering exactly the names
 //! that site answers to. `docs/features/tls.md` gives the reason ninety days is short for a
@@ -34,7 +34,7 @@ const LIFETIME: Duration = Duration::from_secs(90 * 24 * 60 * 60);
 
 /// Below this many days left, a certificate is reissued rather than reused.
 ///
-/// A third of the lifetime, which is what makes T52's daily check able to miss two months of
+/// A third of the lifetime, which is what makes the daily renewal check able to miss two months of
 /// laptop-asleep and still renew in time.
 pub const RENEW_WITHIN_DAYS: i64 = 30;
 
@@ -74,9 +74,9 @@ pub fn read(certs: &Path, domain: &str, now: SystemTime) -> CertState {
 
 /// What is on disk at these two paths, without changing any of it.
 ///
-/// **The body of [`read`], parameterised on the paths** — roadmap task **T99**, which needed the
-/// same reading of a pair that is not a site's. One function rather than two copies, so that what
-/// `Unusable` means is decided once.
+/// **The body of [`read`], parameterised on the paths**, because a service's certificate
+/// ([`super::service`]) needs the same reading of a pair that is not a site's. One function rather
+/// than two copies, so that what `Unusable` means is decided once.
 #[must_use]
 pub(super) fn read_pair(key_path: &Path, certificate_path: &Path, now: SystemTime) -> CertState {
     let key = std::fs::read_to_string(key_path).ok();
@@ -114,7 +114,7 @@ pub(super) fn read_pair(key_path: &Path, certificate_path: &Path, now: SystemTim
     }
 }
 
-/// What a certificate says about itself, from its DER — roadmap task **T53**.
+/// What a certificate says about itself, from its DER.
 ///
 /// **Shared by the file and the socket, and that is the point.** `mix cert status` reads a
 /// certificate off a TLS connection and compares it against the one in `certs/sites/`. Two
@@ -144,12 +144,12 @@ pub fn describe(der: &[u8], now: SystemTime) -> Option<SiteCert> {
 
 /// Every name in the subject alternative name extension, in the order it carries them.
 ///
-/// **DNS names and IP addresses, which overturns the T50 design's D4** — roadmap task **T74**. That
-/// decision said this module issues no IP SAN and that anything but a DNS name in the extension came
-/// from somewhere it did not write. It was right while every name a site answered to was a hostname;
-/// a LAN address is the first one that is not. The rule underneath it survives unchanged — report
-/// only what a browser will match the URL against — because a browser *does* match an IP SAN when
-/// the URL is an address. An email SAN is still never issued and still never reported.
+/// **DNS names and IP addresses, since LAN sharing.** This module first decided it issues no IP SAN
+/// and that anything but a DNS name in the extension came from somewhere it did not write. It was
+/// right while every name a site answered to was a hostname; a LAN address is the first one that is
+/// not. The rule underneath it survives unchanged — report only what a browser will match the URL
+/// against — because a browser *does* match an IP SAN when the URL is an address. An email SAN is
+/// still never issued and still never reported.
 ///
 /// **And this is why the comparison in [`reusable`] has to include the address.** It runs under
 /// renewal for every site: a certificate whose SANs read back differently from the list that would
@@ -167,7 +167,7 @@ fn names(certificate: &x509_parser::certificate::X509Certificate<'_>) -> Vec<Str
         .filter_map(|name| match name {
             x509_parser::extensions::GeneralName::DNSName(dns) => Some((*dns).to_owned()),
             x509_parser::extensions::GeneralName::IPAddress(bytes) => match bytes.len() {
-                // IPv4 only, as `covered` writes it — T74, D4. A 16-byte address is one this build
+                // IPv4 only, as `covered` writes it. A 16-byte address is one this build
                 // never issued, and rendering it would take a guess at a spelling.
                 4 => Some(
                     std::net::Ipv4Addr::new(bytes[0], bytes[1], bytes[2], bytes[3]).to_string(),
@@ -223,13 +223,13 @@ pub enum Issued {
 /// 3. More than [`RENEW_WITHIN_DAYS`] remain.
 /// 4. It was signed by the authority this home has **now**.
 ///
-/// The fourth is what makes rotation work, and it is the one `docs/features/tls.md` does not
-/// have: after T54 replaces the authority, every old leaf still parses, still covers the right
+/// The fourth is what makes rotation work, and it is the one `docs/features/tls.md` does not have:
+/// after a rotation replaces the authority, every old leaf still parses, still covers the right
 /// names and still has eighty days left, so a three-question rule would declare every site fine
 /// while every browser rejected it. The comparison is the leaf's issuer name against the
-/// authority's subject name, which is free because T48 put the key's identity *into* that name —
-/// and it gets both rotations right: onto a new key, the identity changes and every leaf is
-/// reissued; re-signing the same key keeps it, and the leaves stay valid.
+/// authority's subject name, which is free because [`super::ca`] puts the key's identity *into*
+/// that name — and it gets both rotations right: onto a new key, the identity changes and every
+/// leaf is reissued; re-signing the same key keeps it, and the leaves stay valid.
 ///
 /// # Errors
 ///
@@ -260,10 +260,10 @@ pub fn ensure(
 /// Give the pair at these two paths a certificate covering exactly `names`, if what is there is not
 /// already one.
 ///
-/// **The body of [`ensure`], parameterised on the paths** — roadmap task **T99**, for the same
-/// reason [`read_pair`] exists: a service's certificate is a leaf of this authority like a site's
-/// is, asks the same four questions, and is written in the same order. `names[0]` becomes the
-/// common name; `certs` is where the authority is read from.
+/// **The body of [`ensure`], parameterised on the paths**, for the same reason [`read_pair`]
+/// exists: a service's certificate is a leaf of this authority like a site's is, asks the same four
+/// questions, and is written in the same order. `names[0]` becomes the common name; `certs` is
+/// where the authority is read from.
 ///
 /// # Errors
 ///
@@ -345,19 +345,19 @@ pub(super) fn issue_at(
 }
 
 /// Every name this certificate has to cover: the domains, and — when the site is shared — its mDNS
-/// name and its LAN address — roadmap tasks **T74** and **T75**.
+/// name and its LAN address.
 ///
 /// **The address goes last and the domains keep their order**, because the head of the list is the
 /// common name and a certificate whose subject became an IP address the day somebody shared it
 /// would be a different certificate to every consumer that reads one. The mDNS name sits between
 /// them: it is a DNS name like the domains are, and it is not the one a subject is taken from.
 ///
-/// **One composition, asked by two callers** — roadmap task **T75**, the design's D10. `reusable`
-/// compares against it to decide whether to reissue, and the daemon compares against it to decide
-/// whether `mix cert status` has a problem to report. Those were two lists until T75 and the second
-/// one was wrong: T74 put the address in the certificate and left the status comparison reading the
-/// bare domain list, so every shared site reported `NamesDiffer` for as long as it was shared. Two
-/// call sites kept in step by hand is what produced that.
+/// **One composition, asked by two callers.** `reusable` compares against it to decide whether to
+/// reissue, and the daemon compares against it to decide whether `mix cert status` has a problem to
+/// report. Those were two lists once and the second one was wrong: LAN sharing put the address in
+/// the certificate and left the status comparison reading the bare domain list, so every shared
+/// site reported `NamesDiffer` for as long as it was shared. Two call sites kept in step by hand is
+/// what produced that.
 #[must_use]
 pub fn covered(domains: &[String], sharing: Option<&crate::sites::Sharing>) -> Vec<String> {
     let mut covered = domains.to_vec();
@@ -382,7 +382,7 @@ pub fn covered(domains: &[String], sharing: Option<&crate::sites::Sharing>) -> V
 
 /// The four questions of [`ensure`], asked of what is on disk.
 ///
-/// `pub(super)` since **T99**, so a service's leaf answers the same four rather than three of them.
+/// `pub(super)` so that a service's leaf answers the same four rather than three of them.
 pub(super) fn reusable(state: &CertState, domains: &[String], authority: &str) -> bool {
     let CertState::Present { cert } = state else {
         // Question one: `Absent` and `Unusable` both fail it.
@@ -456,7 +456,7 @@ mod tests {
         );
     }
 
-    /// **The wire and the disk are described by one function** — roadmap task **T53**.
+    /// **The wire and the disk are described by one function.**
     ///
     /// The handshake reads a certificate off a socket and has to say the same things about it that
     /// [`read`] says about the file, or "the file and the wire differ" becomes a comparison between
@@ -614,7 +614,7 @@ mod tests {
         }
     }
 
-    /// **Domains, then the name, then the address** — the T75 design, D10. The order is the meaning:
+    /// **Domains, then the name, then the address.** The order is the meaning:
     /// the head of the list is the common name, and the address is the one entry that is not a name
     /// at all.
     #[test]
@@ -633,7 +633,7 @@ mod tests {
         );
     }
 
-    /// An unshared site covers exactly what it covered before T74 existed.
+    /// An unshared site covers exactly what it covered before LAN sharing existed.
     #[test]
     fn an_unshared_site_covers_only_its_domains() {
         assert_eq!(
@@ -642,12 +642,13 @@ mod tests {
         );
     }
 
-    /// A shared site's certificate covers the address a phone will type — roadmap task **T74**.
+    /// A shared site's certificate covers the address a phone will type.
     ///
     /// **The address is an IP SAN and not a DNS one**, which is what a browser matches an
-    /// address-shaped URL against. Asserted rather than trusted to `rcgen`: the whole of D9 rests on
-    /// `CertificateParams::new` turning a string that parses as an address into `SanType::IpAddress`
-    /// by itself, and a version that stopped doing so would issue a certificate no phone accepts.
+    /// address-shaped URL against. Asserted rather than trusted to `rcgen`: putting the address in
+    /// the certificate rests on `CertificateParams::new` turning a string that parses as an address
+    /// into `SanType::IpAddress` by itself, and a version that stopped doing so would issue a
+    /// certificate no phone accepts.
     #[test]
     fn a_shared_site_certificate_carries_the_lan_address() {
         let home = a_home();
@@ -690,7 +691,7 @@ mod tests {
         assert_eq!(second, Issued::Reused);
     }
 
-    /// Unsharing takes the address back off, by the same path — roadmap task **T74**.
+    /// Unsharing takes the address back off, by the same path.
     #[test]
     fn unsharing_reissues_without_the_address() {
         let home = a_home();
@@ -828,9 +829,9 @@ mod tests {
         assert_eq!(issued, Issued::Written);
     }
 
-    /// **Question four, and the one that makes T54 work.** A leaf signed by an authority this home
-    /// no longer has still parses, still covers the right names and still has eighty days left — so
-    /// a three-question rule declares it fine and every browser rejects it.
+    /// **Question four, and the one that makes rotation work.** A leaf signed by an authority this
+    /// home no longer has still parses, still covers the right names and still has eighty days left
+    /// — so a three-question rule declares it fine and every browser rejects it.
     #[test]
     fn a_leaf_from_another_authority_is_reissued() {
         let home = a_home();
@@ -840,7 +841,7 @@ mod tests {
         ensure(home.path(), &domains, None, now).expect("it issues");
         let before = read(home.path(), "blog.test", now);
 
-        // Rotate: a second authority, written over the first, exactly as T54 will.
+        // Rotate: a second authority, written over the first, the way a rotation does.
         let elsewhere = tempfile::tempdir().expect("a second temp home");
         ca::ensure(elsewhere.path(), now).expect("a second authority");
         std::fs::copy(ca::key_path(elsewhere.path()), ca::key_path(home.path()))
@@ -886,9 +887,10 @@ mod tests {
         assert!(ensure(home.path(), &[], None, SystemTime::now()).is_err());
     }
 
-    /// **The cheap check of question four agrees with the expensive one.** D6 compares issuer and
-    /// subject names because T48 put the key's identity in the name; this asserts that the
-    /// `authorityKeyIdentifier` rcgen writes says the same thing, so the shortcut stays honest.
+    /// **The cheap check of question four agrees with the expensive one.** Question four compares
+    /// issuer and subject names because [`ca`] puts the key's identity in the name; this asserts
+    /// that the `authorityKeyIdentifier` rcgen writes says the same thing, so the shortcut stays
+    /// honest.
     #[test]
     fn the_issued_leaf_points_at_the_authoritys_key() {
         let home = a_home();

@@ -1,4 +1,4 @@
-//! What a browser gets from a site with nothing behind it — roadmap tasks **T124** and **T124a**.
+//! What a browser gets from a site with nothing behind it.
 //!
 //! The rendering assertions in the two recipes say what the file contains; this says what is
 //! *served*, which is the claim the design makes. Three things the text cannot prove on its own:
@@ -34,9 +34,9 @@ fn status(answer: &str) -> &str {
 /// **A site whose document root has nothing in it answers the welcome page at `/`**, and every other
 /// path still answers what the application answers.
 ///
-/// The whole of T124 in one arc: 200 rather than 404, this site's own name on the page, `no-store`
-/// so the answer cannot outlive the index that replaces it — and then the index written back, with
-/// the site answering for itself again and nothing reloaded in between.
+/// The whole of the welcome page in one arc: 200 rather than 404, this site's own name on the page,
+/// `no-store` so the answer cannot outlive the index that replaces it — and then the index written
+/// back, with the site answering for itself again and nothing reloaded in between.
 async fn a_site_with_nothing_in_it_says_so(front: &'static FrontEnd) {
     let served = php_site::served(front, &php_site::runtimes()[..1]).await;
     let site = &served.sites[0];
@@ -70,7 +70,8 @@ async fn a_site_with_nothing_in_it_says_so(front: &'static FrontEnd) {
         "without no-store a cached welcome page outlives the index that replaced it:\n{answer}"
     );
 
-    // **D3, and the assertion the whole narrow rule exists for.** A catch-all error handler passes
+    // **Only the site's root gets the page, and this is the assertion that rule exists for.** A
+    // catch-all error handler passes
     // everything above and fails here.
     for path in ["/missing", "/api/anything"] {
         let elsewhere = request_as(served.port, path, &site.domain)
@@ -83,8 +84,8 @@ async fn a_site_with_nothing_in_it_says_so(front: &'static FrontEnd) {
         );
     }
 
-    // **And it goes away by itself** — the design's D1. Nothing is re-rendered and nothing is
-    // reloaded between these two requests; the only thing that changed is the file.
+    // **And it goes away by itself.** Nothing is re-rendered and nothing is reloaded between these
+    // two requests; the only thing that changed is the file.
     std::fs::write(&index, format!("<?php echo \"{}\";\n", site.says)).expect("an index");
 
     let mine = request_as(served.port, "/", &site.domain).expect("an answer");
@@ -99,7 +100,7 @@ async fn a_site_with_nothing_in_it_says_so(front: &'static FrontEnd) {
     );
 }
 
-/// **A php-fpm site's own source is never what is served** — roadmap task **T124a**.
+/// **A php-fpm site's own source is never what is served.**
 ///
 /// Asserted on its own rather than as a clause above, because the failure is a *disclosure*: the
 /// first nginx rendering named `/index.php` in a `try_files` inside a location with no

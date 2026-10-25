@@ -9,9 +9,9 @@ use crate::{Error, Result, Store};
 
 use super::{ServiceError, StoppedBy, parse_state};
 
-/// A stored failure note, or [`None`] where there is none or it is one this build cannot read —
-/// roadmap task **T200b**. Said in `daemon.log` and not refused: a note is an explanation, and a row
-/// whose explanation a newer build wrote must still list.
+/// A stored failure note, or [`None`] where there is none or it is one this build cannot read. Said
+/// in `daemon.log` and not refused: a note is an explanation, and a row whose explanation a newer
+/// build wrote must still list.
 pub(super) fn failure_note(
     service: &str,
     stored: Option<&str>,
@@ -47,8 +47,7 @@ pub(super) fn listening_port(stored: Option<i64>) -> Option<u16> {
     stored.and_then(|port| u16::try_from(port).ok())
 }
 
-/// The same, for a version — a text this build cannot parse is a blank cell, not a failed listing
-/// (T183).
+/// The same, for a version — a text this build cannot parse is a blank cell, not a failed listing.
 pub(super) fn installed_version(stored: Option<String>) -> Option<PackageVersion> {
     stored.and_then(|version| PackageVersion::parse(version).ok())
 }
@@ -104,8 +103,7 @@ pub async fn transition(
     transition_noting(store, service, to, reason, None, at).await
 }
 
-/// [`transition`], carrying the sentence that explains a move into `failed` — roadmap task
-/// **T200b**, its design's D5.
+/// [`transition`], carrying the sentence that explains a move into `failed`.
 ///
 /// **In the transition's own transaction**, so a row cannot say `failed` without saying why: a note
 /// written beside it could be the one write that did not land. `detail` is used only for a move into
@@ -154,7 +152,7 @@ pub async fn transition_noting(
 
     let (next, current) = (to.as_str(), from.as_str());
 
-    // **Written on the transition into `stopped`, never separately** — roadmap tasks T70 and T123.
+    // **Written on the transition into `stopped`, never separately.**
     // On-demand activation may start a service a connection needed, and must not do it to one a
     // person stopped; a transition is not stored anywhere, so a daemon that restarts would
     // otherwise forget who had stopped which of its services. Set on every arrival at `stopped`, so
@@ -184,7 +182,7 @@ pub async fn transition_noting(
         }));
     }
 
-    // **T200b, D5.** The note moves with the state, in this transaction.
+    // The note moves with the state, in this transaction.
     let note = match to {
         ServiceState::Failed => Some(
             serde_json::to_string(&mixengine_proto::ServiceFailureNote {
@@ -226,12 +224,13 @@ pub async fn transition_noting(
 /// Record the process this service is now running as.
 ///
 /// **The pair is the point.** A pid on its own is not an identity — the OS reuses the number within
-/// minutes — so what makes a row adoptable after a daemon restart (T18) is `pid` *and* the moment
-/// that process began, read by
+/// minutes — so what makes a row adoptable after a daemon restart is `pid` *and* the moment that
+/// process began, read by
 /// [`Supervised::started_at`](mixengine_platform::process::Supervised::started_at) while the child
-/// is still held. `pid_start_time` is [`None`] where that reading could not be made — a process that
-/// ended in its first milliseconds is the ordinary case — and a null column is the honest answer for
-/// it: adoption refuses a row it cannot identify, where a zero would look like a reading.
+/// is still held. `pid_start_time` is [`None`] where that reading could not be made — a process
+/// that ended in its first milliseconds is the ordinary case — and a null column is the honest
+/// answer for it: adoption refuses a row it cannot identify, where a zero would look like a
+/// reading.
 ///
 /// Separate from [`transition`] rather than folded into it, because these are facts about a process
 /// and not an edge in the machine: the state was already written when the service reached

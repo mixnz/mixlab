@@ -1,14 +1,15 @@
 //! Blueprints on the wire: what one is, and what applying one would do.
 //!
-//! Roadmap task **T77**. **The plan is a value, not a paragraph** — the T77 design, D8. `mix`
-//! renders these steps and a graphical client renders the same ones differently; neither decides
-//! what is in the list. And the plan is what T78 executes, which is the only way `--dry-run` can
-//! promise to match the real run: one place decides the set and the order, and the executor may
-//! fail but may not add a step, drop one or reorder them.
+//! **The plan is a value, not a paragraph**
+//! (`docs/specs/2026-09-01-t77-blueprint-capture-design.md`, D8). `mix` renders these steps and a
+//! graphical client renders the same ones differently; neither decides what is in the list. And the
+//! plan is what an apply executes, which is the only way `--dry-run` can promise to match the real
+//! run: one place decides the set and the order, and the executor may fail but may not add a step,
+//! drop one or reorder them.
 
 use crate::{PackageVersion, RuntimeKind, SiteKind, VersionConstraint};
 
-/// What the signature check found when a blueprint arrived — roadmap task **T79b**.
+/// What the signature check found when a blueprint arrived.
 ///
 /// **Evidence beside an answer, never the answer.** [`BlueprintSummary::trusted`] is what decides
 /// whether a `[scaffold]` command may be offered; this says which of three things happened. A file
@@ -64,10 +65,10 @@ impl SignatureCheck {
 
 /// A reason this build cannot read is no reason, rather than a response nobody can decode.
 ///
-/// Roadmap task **T79b**, its design's D3, applied to the wire. This field decorates an answer that
-/// travels beside it, so a variant a later phase adds must cost an older client its explanation and
-/// nothing else — where a word it cannot read in [`BlueprintSource`], which drives what a plan
-/// does, is refused rather than guessed at.
+/// `docs/specs/2026-09-02-t79b-why-a-blueprint-is-untrusted-design.md`, D3, applied to the wire.
+/// This field decorates an answer that travels beside it, so a variant a later phase adds must cost
+/// an older client its explanation and nothing else — where a word it cannot read in
+/// [`BlueprintSource`], which drives what a plan does, is refused rather than guessed at.
 fn signature_check<'de, D>(deserializer: D) -> Result<Option<SignatureCheck>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -89,8 +90,8 @@ pub struct BlueprintSummary {
     /// The display name.
     ///
     /// Equal to [`Self::slug`] for a captured blueprint. The two are separate because the gallery
-    /// (T79) ships blueprints whose title is not a handle, and one column serving both would have
-    /// to pick which of the two it lies about.
+    /// ships blueprints whose title is not a handle, and one column serving both would have to pick
+    /// which of the two it lies about.
     pub name: String,
 
     /// What it is for, or empty.
@@ -102,8 +103,8 @@ pub struct BlueprintSummary {
     /// Where it came from.
     pub source: BlueprintSource,
 
-    /// Whether this build will offer to run the blueprint's own `[scaffold]` command — roadmap task
-    /// **T78a**, its design's D1.
+    /// Whether this build will offer to run the blueprint's own `[scaffold]` command
+    /// (`docs/specs/2026-09-01-t78a-scaffold-trust-design.md`, D1).
     ///
     /// Decided once, by whatever wrote the row: this build's own gallery and this machine's own
     /// captures are trusted, and a blueprint somebody handed over earns it only from a signature
@@ -115,16 +116,16 @@ pub struct BlueprintSummary {
     #[serde(default)]
     pub trusted: bool,
 
-    /// Why [`Self::trusted`] says what it says — roadmap task **T79b**.
+    /// Why [`Self::trusted`] says what it says.
     ///
     /// [`None`] where no signature was ever looked for — this build's own gallery and this
     /// machine's own captures — and for a row written before this task, whose reason the schema
     /// never recorded. Absent rather than guessed: an untrusted import from before this column is
     /// *either* of the two, and the answer to which is not on disk anywhere.
     ///
-    /// **A record of what arrived, and never a claim about the file on disk now** (the design's
-    /// D10). The rendering beside the row is not the artifact that was signed, and nothing
-    /// re-checks it — T78a's D16, which is also why trust is a column and not a promise.
+    /// **A record of what arrived, and never a claim about the file on disk now**. The rendering
+    /// beside the row is not the artifact that was signed, and nothing re-checks it, which is also
+    /// why trust is a column and not a promise.
     #[serde(
         default,
         deserialize_with = "signature_check",
@@ -142,9 +143,9 @@ pub struct BlueprintSummary {
 
 /// Where a blueprint came from.
 ///
-/// Three words rather than a boolean, because T78a's trust marking is what reads this: a
-/// hand-imported blueprint carries arbitrary scaffold code and stays untrusted for good, and
-/// "not built in" would not distinguish it from one captured on this machine.
+/// Three words rather than a boolean, because the scaffold's trust marking is what reads this: a
+/// hand-imported blueprint carries arbitrary scaffold code and stays untrusted for good, and "not
+/// built in" would not distinguish it from one captured on this machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -209,10 +210,10 @@ pub struct BlueprintPlan {
     /// Every action, in the order it would be carried out.
     pub steps: Vec<PlanStep>,
 
-    /// Where the blueprint being applied came from — roadmap task **T78a**, its design's D5.
+    /// Where the blueprint being applied came from.
     ///
-    /// Defaulted, so a plan encoded before this task still decodes as what it was: something this
-    /// machine captured.
+    /// Defaulted, so a plan encoded before the field existed still decodes as what it was:
+    /// something this machine captured.
     #[serde(default = "captured")]
     pub source: BlueprintSource,
 
@@ -228,14 +229,14 @@ pub struct BlueprintPlan {
     #[serde(default)]
     pub trusted: bool,
 
-    /// Why [`Self::trusted`] says what it says — roadmap task **T79b**.
+    /// Why [`Self::trusted`] says what it says.
     ///
     /// Carried here as well as on [`BlueprintSummary`] because the `[scaffold]` question is where
     /// it matters most: the moment somebody is asked to run a stranger's command is the moment
     /// worth knowing that a signature came with this file and was not the gallery's.
     ///
     /// It changes what is *said* and nothing about what is allowed: one flag still answers for both
-    /// kinds of untrusted, and a signature that did not verify is still not a refusal (T78a's D3).
+    /// kinds of untrusted, and a signature that did not verify is still not a refusal.
     #[serde(
         default,
         deserialize_with = "signature_check",
@@ -251,10 +252,10 @@ fn captured() -> BlueprintSource {
 
 /// What `blueprint.apply` answers.
 ///
-/// **One method, two answers** — T77 argued the single method, because the plan a person reads and
-/// the plan the daemon carries out have to be the same list. A tagged union is what lets that
-/// survive execution arriving: a client reads which answer it got from the object rather than
-/// inferring it from its own request.
+/// **One method, two answers.** One method, because the plan a person reads and the plan the daemon
+/// carries out have to be the same list. A tagged union is what lets that survive execution
+/// arriving: a client reads which answer it got from the object rather than inferring it from its
+/// own request.
 // No `Eq`: a [`JobSummary`](crate::JobSummary) carries the job's result, which is a
 // `serde_json::Value` and has no total equality. Following it here rather than working around it —
 // a type that claimed an equality its field cannot supply would be a type that lies.
@@ -268,11 +269,11 @@ pub enum BlueprintApplyResponse {
         /// The plan.
         plan: BlueprintPlan,
 
-        /// What the releases this plan would install lack on this machine — roadmap task **T152**.
+        /// What the releases this plan would install lack on this machine.
         ///
-        /// Composed by the daemon around the plan, never inside it (T78's D9): the plan holds
-        /// constraints, and the daemon resolves them against the index to judge. One entry per
-        /// distinct requirement, however many steps share it. [`None`] from a daemon before T152, or
+        /// Composed by the daemon around the plan, never inside it: the plan holds constraints, and
+        /// the daemon resolves them against the index to judge. One entry per distinct requirement,
+        /// however many steps share it. [`None`] from a daemon that does not judge requirements, or
         /// when the index could not be read — a dry run is never refused for want of a judgement.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         needs: Option<Vec<crate::Requirement>>,
@@ -285,7 +286,7 @@ pub enum BlueprintApplyResponse {
     },
 }
 
-/// What an apply did, as the job's result — roadmap task **T78**.
+/// What an apply did, as the job's result.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct BlueprintApplied {
@@ -305,16 +306,16 @@ pub struct BlueprintApplied {
     /// the first one finished.
     pub steps: Vec<StepOutcome>,
 
-    /// What is left to do, from the blueprint's `[[next_steps]]` — roadmap task **T205**, D6.
+    /// What is left to do, from the blueprint's `[[next_steps]]`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub next_steps: Option<NextSteps>,
 
-    /// The account the database step really used, when there was one — T205, D6.
+    /// The account the database step really used, when there was one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub database: Option<AppliedDatabase>,
 }
 
-/// What kind of thing a person still has to do after an apply — roadmap task **T205**, D4.
+/// What kind of thing a person still has to do after an apply.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -327,7 +328,7 @@ pub enum NextStepKind {
     Open,
 }
 
-/// One thing a blueprint says is left to do — roadmap task **T205**, D4.
+/// One thing a blueprint says is left to do.
 ///
 /// **The same type in a manifest and on the wire.** A manifest holds it with `{project}` in it; an
 /// answer holds it expanded. Nothing else differs, so one type carries both.
@@ -357,12 +358,13 @@ pub struct NextStep {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub credentials: bool,
 
-    /// Which site it belongs to. Absent in schema 1 and 2; T204a defines it.
+    /// Which site it belongs to. Absent in schema 1 and 2; schema 3, which holds several sites,
+    /// defines it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<String>,
 }
 
-/// A project's steps, and whether the blueprint they came from is trusted — T205, D12.
+/// A project's steps, and whether the blueprint they came from is trusted.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct NextSteps {
@@ -373,8 +375,8 @@ pub struct NextSteps {
     pub steps: Vec<NextStep>,
 }
 
-/// The account an apply's `CreateDatabase` step really used, after T202's free-name walk. Never a
-/// password.
+/// The account an apply's `CreateDatabase` step really used, after the walk for a free name. Never
+/// a password.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct AppliedDatabase {
@@ -399,10 +401,10 @@ pub struct StepOutcome {
 
 /// What happened to one step.
 ///
-/// **A step is reported by what became true, not by how many calls it took** (the T78 design, D3):
-/// one daemon call can make several steps true at once — `site.create` writes the row, queues the
-/// hosts entry and issues the certificate — and the steps that follow it report
-/// [`AlreadyTrue`](Self::AlreadyTrue).
+/// **A step is reported by what became true, not by how many calls it took**
+/// (`docs/specs/2026-09-01-t78-blueprint-apply-design.md`, D3): one daemon call can make several
+/// steps true at once — `site.create` writes the row, queues the hosts entry and issues the
+/// certificate — and the steps that follow it report [`AlreadyTrue`](Self::AlreadyTrue).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "result", rename_all = "snake_case")]
 #[non_exhaustive]
@@ -410,9 +412,9 @@ pub struct StepOutcome {
 pub enum StepResult {
     /// This apply did it.
     Done {
-        /// What differs from the plan, in one sentence a client prints under the step — roadmap
-        /// task **T202**, D2: the account used when the plan's was somebody else's, a database
-        /// that was already there. `None` when nothing does, which is the common case.
+        /// What differs from the plan, in one sentence a client prints under the step: the account
+        /// used when the plan's was somebody else's, a database that was already there. `None` when
+        /// nothing does, which is the common case.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         note: Option<String>,
     },
@@ -426,7 +428,7 @@ pub enum StepResult {
         why: String,
     },
 
-    /// It ran, and it did not succeed — roadmap task **T78a**, its design's D7.
+    /// It ran, and it did not succeed.
     ///
     /// **Distinct from [`NotRun`](Self::NotRun)**, which is a step nothing attempted. Only a
     /// `[scaffold]` produces this: every other action in a plan is a daemon call whose failure
@@ -454,12 +456,12 @@ pub struct PlanStep {
     /// Whether it needs doing, and what stands in the way.
     pub disposition: Disposition,
 
-    /// Whether carrying it out puts something in the elevation queue — the T77 design, D11.
+    /// Whether carrying it out puts something in the elevation queue.
     ///
     /// **It queues, and a client is what spends the prompt.** This daemon never raises one on its
-    /// own initiative (T40b), so an apply enqueues exactly as `site.create` does and the single
-    /// prompt comes afterwards, from whoever asked for the apply — corrected here by T78, which is
-    /// the task that found the earlier wording promising a prompt this step does not raise.
+    /// own initiative, so an apply enqueues exactly as `site.create` does and the single prompt
+    /// comes afterwards, from whoever asked for the apply. An earlier wording here promised a
+    /// prompt this step does not raise.
     ///
     /// A dry run that did not say a password is coming would still have failed to answer the
     /// question it was run to answer; what it says now is *once, at the end, if you say so*.
@@ -484,7 +486,7 @@ pub enum PlanAction {
         /// Its root.
         root: String,
 
-        /// The versions it will ask for — roadmap task **T78**, its design's D7.
+        /// The versions it will ask for.
         ///
         /// **Without this the blueprint's `[runtimes]` never reaches the machine**: the new site
         /// resolves to whatever this machine defaults to, and a capture of the applied project
@@ -512,13 +514,13 @@ pub enum PlanAction {
         wanted: VersionConstraint,
     },
 
-    /// Install a service package — roadmap task **T78**, its design's D8.
+    /// Install a service package.
     ///
-    /// **T77 planned an install for languages and none for services**, and `service.create` refuses
-    /// with `precondition_failed` when the version it is asked for is not on disk. That is a plan
-    /// discovering the impossible five actions into a project directory, which is what a plan exists
-    /// to prevent — and it is the ordinary case for the feature's headline scenario, a blueprint
-    /// from a teammate's machine.
+    /// **Without it a plan installs languages and no services**, and `service.create` refuses with
+    /// `precondition_failed` when the version it is asked for is not on disk. That is a plan
+    /// discovering the impossible five actions into a project directory, which is what a plan
+    /// exists to prevent — and it is the ordinary case for the feature's headline scenario, a
+    /// blueprint from a teammate's machine.
     ///
     /// **It never carries a question.** A version mismatch is a question about an *instance* that
     /// already exists, asked by [`PlanAction::EnsureService`]; where there is no instance yet there
@@ -592,7 +594,7 @@ pub enum PlanAction {
         /// Whether HTTPS is declared.
         https: bool,
 
-        /// The path routes it declares — roadmap task **T135**.
+        /// The path routes it declares.
         ///
         /// A php-fpm route's pool is not named here, for the reason `kind`'s is: which pool answers
         /// is decided on the machine that makes the site. Empty for every blueprint the gallery
@@ -600,9 +602,8 @@ pub enum PlanAction {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         routes: Vec<crate::SiteRoute>,
 
-        /// The services this site links, as their `EnsureService` steps name them — roadmap task
-        /// **T204a**, D3. [`None`] is every service the apply made sure of, which is what a
-        /// one-site blueprint links.
+        /// The services this site links, as their `EnsureService` steps name them. [`None`] is
+        /// every service the apply made sure of, which is what a one-site blueprint links.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         services: Option<Vec<crate::ServiceId>>,
     },
@@ -647,10 +648,9 @@ pub enum PlanAction {
 
     /// Run the blueprint's `[scaffold]` command in the new project's directory.
     ///
-    /// Capture never writes one. A hand-written or gallery blueprint may, and since roadmap task
-    /// **T78a** an apply runs it — but only carrying a
-    /// [`ScaffoldConsent`](crate::ScaffoldConsent) that names this exact command. Without one the
-    /// step comes back `NotRun` and everything else is applied.
+    /// Capture never writes one. A hand-written or gallery blueprint may, and an apply runs it —
+    /// but only carrying a [`ScaffoldConsent`](crate::ScaffoldConsent) that names this exact
+    /// command. Without one the step comes back `NotRun` and everything else is applied.
     ///
     /// The command has `{project}` already expanded, because what is shown has to be what runs.
     RunScaffold {
@@ -658,8 +658,7 @@ pub enum PlanAction {
         command: String,
     },
 
-    /// Download a release archive and unpack it into the project directory — roadmap task
-    /// **T205**, D2.
+    /// Download a release archive and unpack it into the project directory.
     FetchArchive {
         /// `https://` only; the format comes from its suffix.
         url: String,
@@ -669,9 +668,9 @@ pub enum PlanAction {
         strip: Option<String>,
     },
 
-    /// Append the project database's URL to `.env` under `key` — roadmap task **T205a**. Asked
-    /// for (`Confirm`) and answered by [`BlueprintApply::dotenv`](crate::BlueprintApply), apart
-    /// from the scaffold's consent. **Never the value**: it is read when the step runs.
+    /// Append the project database's URL to `.env` under `key`. Asked for (`Confirm`) and answered
+    /// by [`BlueprintApply::dotenv`](crate::BlueprintApply), apart from the scaffold's consent.
+    /// **Never the value**: it is read when the step runs.
     WriteDotenv {
         /// The variable name.
         key: String,

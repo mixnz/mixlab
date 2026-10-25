@@ -1,4 +1,4 @@
-//! `mix autostart` against a real `mixengined` — roadmap task **T85b**.
+//! `mix autostart` against a real `mixengined`.
 //!
 //! **Only the read is end to end, and that is deliberate rather than a gap.** `autostart.enable`
 //! registers a logon task, a LaunchAgent or a systemd user unit *for the account running it*, so a

@@ -1,4 +1,4 @@
-//! What a front end has to serve, assembled out of the three site tables — roadmap task **T43**.
+//! What a front end has to serve, assembled out of the three site tables.
 //!
 //! [`Served`] is a site as a *template* needs it and not as the database holds it: the doc root
 //! joined onto its project's root, the domains already ordered with the primary at the head, and a
@@ -24,7 +24,7 @@ use super::recipe::{Upstream, Upstreams};
 use crate::sites::SiteOwner;
 use crate::{Error, Result, ServiceError, Store};
 
-/// The certificate a site is served with — roadmap task **T51**.
+/// The certificate a site is served with.
 ///
 /// **Paths and a fingerprint, and no bytes.** A template writes the two paths into a directive the
 /// server reads for itself; nothing here has to hold a certificate, and there is nowhere a private
@@ -40,10 +40,10 @@ pub struct SiteCertificate {
 
     /// SHA-256 of the certificate's DER, lowercase hex.
     ///
-    /// **Rendered into the generated file's header, and read back by nothing** — the T51 design, D5.
-    /// T50 reissues to the same path, so without this the file a reissue produces is byte-identical
-    /// to the one already installed, `document::install` finds no difference, and the running server
-    /// is never told to read the new certificate.
+    /// **Rendered into the generated file's header, and read back by nothing.**
+    /// [`crate::certs::leaf`] reissues to the same path, so without this the file a reissue
+    /// produces is byte-identical to the one already installed, `document::install` finds no
+    /// difference, and the running server is never told to read the new certificate.
     ///
     /// **Being told is not the whole of it on Caddy**, and that half is the recipe's: the adapter
     /// strips comments, so the configuration a reissue produces is identical to the one the server
@@ -51,38 +51,38 @@ pub struct SiteCertificate {
     pub fingerprint: String,
 }
 
-/// What a shared site's rendering needs — roadmap tasks **T74** and **T75**.
+/// What a shared site's rendering needs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Shared {
-    /// The IPv4 address bound, certified and printed. IPv4 only — the T74 design, D4.
+    /// The IPv4 address bound, certified and printed. IPv4 only.
     pub address: std::net::Ipv4Addr,
 
-    /// The mDNS name this site answers to, `<slug>-mixengine.local` — roadmap task **T75**.
+    /// The mDNS name this site answers to, `<slug>-mixengine.local`.
     ///
     /// **The block has to name it, not only the network.** Advertising the name says where it
-    /// resolves; the block's address list says which site replies to it. T74 paid for learning
-    /// that those are two questions, with an address; this is the same lesson with a name.
+    /// resolves; the block's address list says which site replies to it. LAN sharing paid for
+    /// learning that those are two questions, with an address; this is the same lesson with a name.
     ///
     /// [`None`] for a primary domain nothing can be slugged out of — a site reached by address
     /// alone rather than a site that cannot be shared.
     pub name: Option<String>,
 }
 
-/// A prefix rewritten on the way out — roadmap task **T135**, that design's D2.
+/// A prefix rewritten on the way out.
 ///
 /// **A regex on both front ends**, because that is the one primitive they share: Caddy's `uri
 /// path_regexp` and nginx's `rewrite … break` take the same two strings, so one computation answers
 /// for both and a divergence between them has nowhere to hide.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Rewrite {
-    /// Anchored, with every `.` in the matched prefix escaped — the design's D5.
+    /// Anchored, with every `.` in the matched prefix escaped.
     pub regex: String,
 
     /// `$1` carries whatever followed the prefix.
     pub replacement: String,
 }
 
-/// An address and the rewrite its path implies, split apart — roadmap task **T135**.
+/// An address and the rewrite its path implies, split apart.
 ///
 /// **Caddy refuses a path in a proxy upstream outright** — *"for now, URLs for proxy upstreams only
 /// support scheme, host, and port components"*, measured against 2.11.4 — and the whole rendering is
@@ -124,8 +124,7 @@ fn split_upstream(path: &str, upstream: &str) -> (String, Option<Rewrite>) {
     (address, Some(rewrite))
 }
 
-/// One route of a site, with everything a template would otherwise have to look up resolved —
-/// roadmap task **T135**.
+/// One route of a site, with everything a template would otherwise have to look up resolved.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServedRoute {
     /// The prefix, exactly as the row holds it.
@@ -135,7 +134,7 @@ pub struct ServedRoute {
     pub target: ServedRouteTarget,
 }
 
-/// What answers under a route, with its addresses resolved — roadmap task **T135**.
+/// What answers under a route, with its addresses resolved.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ServedRouteTarget {
     /// Forwarded, with the prefix rewritten when the upstream asked for it.
@@ -152,7 +151,7 @@ pub enum ServedRouteTarget {
         /// Where the pool is, in this system's shape.
         upstream: Upstream,
 
-        /// Where the activator waits for it — roadmap task **T70**, the site's own rule.
+        /// Where the activator waits for it, on the site's own rule.
         activator: Option<Upstream>,
     },
 
@@ -170,34 +169,34 @@ pub struct Served {
     pub domains: Vec<String>,
 
     /// Absolute: the owner's root — a project's directory, or an extension's install directory
-    /// (roadmap task **T81b**) — joined to the row's relative doc root.
+    /// — joined to the row's relative doc root.
     pub doc_root: PathBuf,
 
-    /// The row's own spelling of it, before the join above — roadmap task **T124**.
+    /// The row's own spelling of it, before the join above.
     ///
     /// **Carried rather than recovered.** The welcome page names where a site's files are looked
     /// for, and it may not name an absolute path: a shared site's page is reachable from the local
-    /// network (T74, T75), and where this machine keeps its projects is a fact about the machine.
-    /// Recovering it with `strip_prefix` afterwards would be undoing the join two lines below, and
-    /// would answer differently for the one doc root that is not under its own root.
+    /// network, and where this machine keeps its projects is a fact about the machine. Recovering
+    /// it with `strip_prefix` afterwards would be undoing the join two lines below, and would
+    /// answer differently for the one doc root that is not under its own root.
     ///
     /// Empty for a site served from the owner's root itself, which is what the column holds.
     pub doc_root_relative: String,
 
-    /// What the welcome page lists — roadmap task **T205**, D6. Empty for an extension's site and
-    /// for a project whose blueprint names no steps.
+    /// What the welcome page lists. Empty for an extension's site and for a project whose blueprint
+    /// names no steps.
     pub steps: Vec<crate::generate::welcome::WelcomeStep>,
 
     /// What it serves, and what that kind needs to know.
     pub kind: ServedKind,
 
-    /// What answers before the kind does, **in match order** — longest prefix first — roadmap task
-    /// **T135**.
+    /// What answers before the kind does, **in match order** — longest prefix first.
     ///
     /// **Sorted here and not in a template**, because the two front ends resolve an overlap by
     /// different native rules — Caddy takes its handlers in order, nginx has location precedence of
     /// its own — and a rendering that left the decision to either would be two behaviours wearing
-    /// one name. Empty for every site made before T135, which renders exactly what it rendered then.
+    /// one name. Empty for every site made before routes existed, which renders exactly what it
+    /// rendered then.
     pub routes: Vec<ServedRoute>,
 
     /// Whether HTTPS is declared.
@@ -208,7 +207,7 @@ pub struct Served {
     /// none is a site working as asked.
     pub https: bool,
 
-    /// Whether the plaintext address redirects to the HTTPS one — roadmap task **T98**.
+    /// Whether the plaintext address redirects to the HTTPS one.
     ///
     /// **Read beside [`certificate`](Self::certificate), not instead of it.** A site can carry this
     /// as `true` and still have no usable certificate — the same gap `https` above already has a
@@ -217,22 +216,22 @@ pub struct Served {
     /// they already gate the `tls` block itself.
     pub https_redirect: bool,
 
-    /// The certificate it is served with, when it has a usable one — roadmap task **T51**.
+    /// The certificate it is served with, when it has a usable one.
     ///
     /// [`None`] renders no TLS for this site at all. It keeps working over HTTP, the other sites are
     /// untouched, and `mix doctor`'s `SiteCertificateMissing` reports it.
     pub certificate: Option<SiteCertificate>,
 
-    /// Where the local network reaches this site, when it does — roadmap tasks **T74** and **T75**.
+    /// Where the local network reaches this site, when it does.
     ///
     /// **Per site, which is the whole of "opt-in per site".** The front end's own `bind_addr` is
     /// untouched by sharing; what changes is this one site's listeners. A site that is not shared
-    /// renders exactly what it rendered before T74 existed, and each recipe asserts that rather
-    /// than assuming it.
+    /// renders exactly what it rendered before LAN sharing existed, and each recipe asserts that
+    /// rather than assuming it.
     ///
     /// **One value or none**, like the [`Sharing`](crate::sites::Sharing) row it is built from: an
     /// address without the name it is advertised under is a pair of fields a reader has to agree
-    /// about, and T75 needs both in the same places.
+    /// about, and the mDNS advertisement needs both in the same places.
     pub shared: Option<Shared>,
 }
 
@@ -259,13 +258,12 @@ pub enum ServedKind {
         /// Where the pool is, in this system's shape.
         upstream: Upstream,
 
-        /// Where the activator waits for it, when something can start this pool by connecting to it
-        /// — roadmap task **T70**.
+        /// Where the activator waits for it, when a connection can start this pool.
         ///
         /// The site names it *after* [`upstream`](Self::PhpFpm::upstream), so a request arriving
         /// while the pool is idle-stopped is retried against it instead of answered with a 502.
-        /// [`None`] renders exactly what this site rendered before T70: a home whose pool nothing
-        /// can wake is the home it was yesterday.
+        /// [`None`] renders exactly what this site rendered before on-demand activation: a home
+        /// whose pool nothing can wake is the home it was yesterday.
         activator: Option<Upstream>,
     },
 
@@ -274,12 +272,12 @@ pub enum ServedKind {
 
     /// Everything forwarded to an address the user already has listening.
     ReverseProxy {
-        /// Scheme, host and port — **and never a path**, roadmap task **T135**.
+        /// Scheme, host and port — **and never a path**.
         ///
-        /// The row may hold one, and until T135 it was written into the configuration unchanged:
-        /// nginx read it as a prefix replacement and Caddy refused the file outright, which cost
-        /// every site on the machine its rendering. `split_upstream` in this module takes it off,
-        /// and [`rewrite`](Self::ReverseProxy::rewrite) carries what it meant.
+        /// The row may hold one, and once it was written into the configuration unchanged: nginx
+        /// read it as a prefix replacement and Caddy refused the file outright, which cost every
+        /// site on the machine its rendering. `split_upstream` in this module takes it off, and
+        /// [`rewrite`](Self::ReverseProxy::rewrite) carries what it meant.
         upstream: String,
 
         /// What `/` becomes on the way out, when the row's upstream carried a path.
@@ -336,12 +334,12 @@ pub(super) fn render(
 /// site's pool resolved through `upstreams`.
 ///
 /// **A site whose pool is not in the map is left out**, and that is a decision rather than an
-/// oversight — the T43 design, D5. `sites.php_service_id` is `ON DELETE SET NULL` and
-/// `service.delete --force` is allowed to cross a site's declaration, so a php-fpm site with no pool
-/// is a row this build can produce. Failing the render over one would mean a single `--force` left a
-/// daemon that could not render *anything*; serving it any other way would mean answering PHP with
-/// something that is not PHP. So it is absent, its file is swept away, a line goes in `daemon.log`,
-/// and reporting it to a person is `mix doctor`'s (T47).
+/// oversight. `sites.php_service_id` is `ON DELETE SET NULL` and `service.delete --force` is
+/// allowed to cross a site's declaration, so a php-fpm site with no pool is a row this build can
+/// produce. Failing the render over one would mean a single `--force` left a daemon that could not
+/// render *anything*; serving it any other way would mean answering PHP with something that is not
+/// PHP. So it is absent, its file is swept away, a line goes in `daemon.log`, and reporting it to a
+/// person is `mix doctor`'s.
 ///
 /// # Errors
 ///
@@ -353,8 +351,8 @@ pub(super) async fn served(
     certs: &Path,
     extensions: &BTreeMap<String, crate::extensions::store::Installed>,
 ) -> Result<Vec<Served>> {
-    // **The blueprint each project came from, beside its root** — roadmap task **T205**, D6: the
-    // welcome page lists what that blueprint says to run.
+    // **The blueprint each project came from, beside its root**: the welcome page lists what that
+    // blueprint says to run.
     let rows = sqlx::query!(
         r#"SELECT p.id AS "id!: i64", p.root_path AS "root_path!: String",
                   p.name AS "name!: String", b.manifest_toml AS "manifest?: String"
@@ -365,7 +363,7 @@ pub(super) async fn served(
     .map_err(|source| store.failure("read", source))?;
 
     let mut roots: BTreeMap<i64, String> = BTreeMap::new();
-    // Each step beside the site it names, when it names one — roadmap task **T204a**, D5.
+    // Each step beside the site it names, when it names one.
     let mut welcome_steps: BTreeMap<
         i64,
         Vec<(Option<String>, crate::generate::welcome::WelcomeStep)>,
@@ -405,9 +403,9 @@ pub(super) async fn served(
             continue;
         }
 
-        // **The owner's root, whichever owner** — roadmap task **T81b**, the design's D3. Both
-        // foreign keys make the misses unreachable through the database's own rules, so reaching one
-        // is a row somebody wrote by hand. Said rather than rendered against nothing.
+        // **The owner's root, whichever owner.** Both foreign keys make the misses unreachable
+        // through the database's own rules, so reaching one is a row somebody wrote by hand. Said
+        // rather than rendered against nothing.
         let root: PathBuf = match &record.owner {
             SiteOwner::Project(project) => match roots.get(project) {
                 Some(root) => PathBuf::from(root),
@@ -487,10 +485,10 @@ pub(super) async fn served(
                     ServedRouteTarget::Proxy { address, rewrite }
                 }
 
-                // **A route whose pool has gone loses the route, not the site** — the T135 design,
-                // D8. A site with no pool has nothing left to serve and is dropped whole; a route is
-                // one prefix of a site that still has a root, a kind and possibly four other
-                // routes, and taking it down would turn one `--force` into an outage.
+                // **A route whose pool has gone loses the route, not the site.** A site with no
+                // pool has nothing left to serve and is dropped whole; a route is one prefix of a
+                // site that still has a root, a kind and possibly four other routes, and taking it
+                // down would turn one `--force` into an outage.
                 mixengine_proto::RouteTarget::PhpFpm { pool: None } => {
                     tracing::warn!(
                         site = record.id,
@@ -550,8 +548,8 @@ pub(super) async fn served(
                     .map(|steps| {
                         steps
                             .iter()
-                            // **A step that names a site belongs to that site alone** — roadmap
-                            // task **T204a**, D5. One naming none is the one site's.
+                            // **A step that names a site belongs to that site alone.** One naming
+                            // none is the one site's.
                             .filter(|(site, _)| {
                                 site.as_ref()
                                     .is_none_or(|site| record.domains.contains(site))
@@ -573,7 +571,7 @@ pub(super) async fn served(
     Ok(served)
 }
 
-/// What this site is served with, or [`None`] — roadmap task **T51**.
+/// What this site is served with, or [`None`].
 ///
 /// **The one call in this module that touches a disk.** `generate` is otherwise a function of the
 /// database alone, and that is worth saying out loud rather than discovering later: `tls` names two

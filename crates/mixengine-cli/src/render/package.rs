@@ -31,7 +31,7 @@ pub(crate) fn package_list(list: &PackageList) -> String {
                 package.package.clone(),
                 package.version.to_string(),
                 size(package.bytes),
-                // **Gone reads as gone** — roadmap task **T206d**, D4.
+                // **Gone reads as gone.**
                 match package.is_missing() {
                     true => "missing".to_owned(),
                     false => ago(package.installed_at, now),
@@ -63,7 +63,7 @@ pub(crate) fn package_list(list: &PackageList) -> String {
     said
 }
 
-/// `mix package available`, for a person — one row per line unless `lines` says otherwise (T193a).
+/// `mix package available`, for a person — one row per line unless `lines` says otherwise.
 #[must_use]
 pub(crate) fn package_catalogue(catalogue: &PackageCatalogue, lines: &Lines) -> String {
     let mut rendered = String::new();
@@ -204,7 +204,7 @@ mod tests {
 
     use super::*;
 
-    /// The same for a package — T206d, D4.
+    /// The same for a package.
     #[test]
     fn a_package_whose_folder_is_gone_reads_missing_and_names_the_way_back() {
         let package = mixengine_proto::PackageSummary {

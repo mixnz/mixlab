@@ -29,7 +29,7 @@ pub struct Context {
     /// Which service this is.
     pub(super) service: ServiceId,
 
-    /// Which home this is — roadmap task **T126**.
+    /// Which home this is.
     ///
     /// Read once per walk by [`Generator`](super::Generator), like
     /// [`bindings`](Self::bindings): a recipe is a function of its context, and one that went
@@ -74,7 +74,7 @@ pub struct Context {
     /// The port from the row, or [`None`] for a service that listens on a socket.
     pub(super) port: Option<u16>,
 
-    /// The port the *activator* listens on for this service — roadmap task **T70**.
+    /// The port the *activator* listens on for this service.
     ///
     /// [`None`] for a service that listens on a socket, whose activator derives its address from
     /// the service's own, and for a row written before the column existed.
@@ -102,12 +102,11 @@ pub struct Context {
     /// through the `bound` filter.
     pub(super) bindings: Vec<PortBinding>,
 
-    /// This home's certificate authority, as the public PEM — roadmap task **T75**.
+    /// This home's certificate authority, as the public PEM.
     ///
-    /// **Filled by [`Generator`](super::Generator), like [`bindings`](Self::bindings)**, and for the
-    /// same reason: a recipe may not go looking for it. A front end renders it into a directory of
-    /// its own so that a phone can install it and trust a shared site's certificate — the T75
-    /// design, D9.
+    /// **Filled by [`Generator`](super::Generator), like [`bindings`](Self::bindings)**, and for
+    /// the same reason: a recipe may not go looking for it. A front end renders it into a directory
+    /// of its own so that a phone can install it and trust a shared site's certificate.
     ///
     /// **The bytes and not a path**, which is the whole of that decision. `certs/ca/root.key` sits
     /// beside `certs/ca/root.crt`, so a front end pointed at the certificates directory would serve
@@ -118,7 +117,7 @@ pub struct Context {
     /// [`None`] on a home whose authority has not been generated.
     pub(super) authority: Option<String>,
 
-    /// Whether a site with nothing behind it answers with MixEngine's page — roadmap task **T124**.
+    /// Whether a site with nothing behind it answers with MixEngine's page.
     ///
     /// **Filled by [`Generator`](super::Generator), like [`authority`](Self::authority)**, and for
     /// the same reason: a recipe is a function of its context, and one that went reading
@@ -127,8 +126,7 @@ pub struct Context {
     /// `config.sites.welcome_page`, and therefore `true` unless somebody turned it off.
     pub(super) welcome: bool,
 
-    /// What the extensions installed here add to this front end's configuration — roadmap task
-    /// **T81c**.
+    /// What the extensions installed here add to this front end's configuration.
     ///
     /// **Filled by [`Generator`](super::Generator), like [`bindings`](Self::bindings) and
     /// [`authority`](Self::authority)**, and for the same reason: a recipe is a function of its
@@ -151,8 +149,7 @@ pub struct Context {
     /// [`FirstRun::steps`]: super::first_run::FirstRun::steps
     pub(super) secrets: BTreeMap<String, String>,
 
-    /// The credential this service's processes are handed at spawn, when it has one — roadmap task
-    /// **T82a**, that design's D4.
+    /// The credential this service's processes are handed at spawn, when it has one.
     ///
     /// **Filled by [`Generator`](super::Generator), like [`bindings`](Self::bindings) and
     /// [`fragments`](Self::fragments)**, and for the same reason: what it takes to answer is three
@@ -167,7 +164,7 @@ pub struct Context {
     /// `signs_in`.
     pub(super) credential: Option<crate::extensions::pools::Credential>,
 
-    /// The certificate this service presents, when it has one on disk — roadmap task **T99**.
+    /// The certificate this service presents, when it has one on disk.
     ///
     /// **Filled by [`Generator`](super::Generator), like [`authority`](Self::authority)**, and for
     /// the same reason: a recipe may not go looking on a disk. The generator reads the pair while
@@ -176,7 +173,8 @@ pub struct Context {
     /// said about the files, never a description of what was just written.
     ///
     /// [`None`] on every service whose recipe asks for none, and on one whose issuance failed — the
-    /// template then writes nothing about TLS and the server does what it did before T99.
+    /// template then writes nothing about TLS and the server does what it does with no certificate
+    /// named.
     ///
     /// [`Recipe::certificate`]: super::Recipe::certificate
     pub(super) certificate: Option<ServiceCertificate>,
@@ -231,13 +229,13 @@ impl Context {
         &self.etc_root
     }
 
-    /// This home's certificate authority as a public PEM, when it has one — roadmap task **T75**.
+    /// This home's certificate authority as a public PEM, when it has one.
     #[must_use]
     pub fn authority(&self) -> Option<&str> {
         self.authority.as_deref()
     }
 
-    /// Whether this home answers a site with nothing behind it — roadmap task **T124**.
+    /// Whether this home answers a site with nothing behind it.
     #[must_use]
     pub fn welcome(&self) -> bool {
         self.welcome
@@ -263,10 +261,10 @@ impl Context {
 
     /// The port the activator listens on for this service, where it needs one of its own.
     ///
-    /// **A second column and not `port + 1`** — roadmap task **T70**, design D3. With pools on 9000
-    /// and 9001 an arithmetic rule gives the first pool's activator the second pool's own port, and
-    /// what a user sees is one service refusing to bind and a conflict reported about a number
-    /// nobody chose. Allocated once by [`crate::services::ports`] and never computed again.
+    /// **A second column and not `port + 1`.** With pools on 9000 and 9001 an arithmetic rule gives
+    /// the first pool's activator the second pool's own port, and what a user sees is one service
+    /// refusing to bind and a conflict reported about a number nobody chose. Allocated once by
+    /// [`crate::services::ports`] and never computed again.
     #[must_use]
     pub fn activation_port(&self) -> Option<u16> {
         self.activation_port
@@ -369,10 +367,10 @@ impl Context {
         self.endpoints.scratch.as_deref()
     }
 
-    /// Which home this is — roadmap task **T126**.
+    /// Which home this is.
     ///
     /// What tells two homes on one machine apart wherever they would otherwise share a name: the
-    /// keyring address, and the bootstrap's space-free view (T33b).
+    /// keyring address, and the bootstrap's space-free view.
     #[must_use]
     pub fn home(&self) -> &crate::home::HomeId {
         &self.home
@@ -390,7 +388,7 @@ impl Context {
     /// as a service that never became ready.
     ///
     /// **The composition itself is [`services::handoff::secret_key`](crate::services::handoff::secret_key)'s**
-    /// — roadmap task **T84**. It moved there when the address stopped being ours alone: MixLab reads
+    /// — it moved there when the address stopped being ours alone: MixLab reads
     /// these entries, so the rule is published, and a published rule spelled out in two places is
     /// one that drifts.
     #[must_use]
@@ -398,7 +396,7 @@ impl Context {
         crate::services::handoff::secret_key(&self.home, &self.service, key)
     }
 
-    /// What this home's extensions add to this front end's configuration — roadmap task **T81c**.
+    /// What this home's extensions add to this front end's configuration.
     ///
     /// Already rendered and already filtered to this front end. Empty for everything that is not
     /// one.
@@ -407,8 +405,7 @@ impl Context {
         &self.fragments
     }
 
-    /// The credential this service's processes are handed at spawn, when it has one — roadmap task
-    /// **T82a**.
+    /// The credential this service's processes are handed at spawn, when it has one.
     ///
     /// **An address rather than a password**, so a recipe reading this puts an
     /// [`EnvValue::Keyring`](mixengine_proto::EnvValue) on its spec and the supervisor does the
@@ -418,8 +415,8 @@ impl Context {
         self.credential.as_ref()
     }
 
-    /// The certificate this service presents, when a usable pair is on disk — roadmap task
-    /// **T99**. See [`Context::certificate`](Self#structfield.certificate).
+    /// The certificate this service presents, when a usable pair is on disk. See
+    /// [`Context::certificate`](Self#structfield.certificate).
     #[must_use]
     pub fn certificate(&self) -> Option<&ServiceCertificate> {
         self.certificate.as_ref()
@@ -488,7 +485,7 @@ impl Context {
     }
 }
 
-/// The home id every context built by [`Context::for_test`] carries — roadmap task **T126**.
+/// The home id every context built by [`Context::for_test`] carries.
 ///
 /// Named rather than inline so a test asserting a whole address writes it once: the addresses a
 /// recipe composes begin with this.
@@ -559,8 +556,8 @@ impl Context {
         self
     }
 
-    /// The certificate a real render would have read off this home's `certs/services/` — roadmap
-    /// task **T99**. A setter for [`with_credential`](Self::with_credential)'s reason.
+    /// The certificate a real render would have read off this home's `certs/services/`. A setter
+    /// for [`with_credential`](Self::with_credential)'s reason.
     pub(super) fn with_certificate(mut self, certificate: ServiceCertificate) -> Self {
         self.certificate = Some(certificate);
         self
@@ -585,8 +582,8 @@ impl Context {
         self
     }
 
-    /// The address a row asked this service to bind — roadmap task **T154**, whose recipe refuses
-    /// every one that is not loopback.
+    /// The address a row asked this service to bind — the `mongodb` recipe refuses every one that
+    /// is not loopback.
     pub(super) fn with_bind(mut self, bind: &str) -> Self {
         bind.clone_into(&mut self.bind);
         self
@@ -610,14 +607,14 @@ impl Context {
         self
     }
 
-    /// A home that turned the welcome page off — roadmap task **T124**.
+    /// A home that turned the welcome page off.
     #[cfg(test)]
     pub(super) fn with_welcome(mut self, welcome: bool) -> Self {
         self.welcome = welcome;
         self
     }
 
-    /// A home whose id is not [`TEST_HOME`] — roadmap task **T33b**, whose test needs two.
+    /// A home whose id is not [`TEST_HOME`], for the bootstrap view's test, which needs two.
     #[cfg(test)]
     pub(super) fn with_home(mut self, home: crate::home::HomeId) -> Self {
         self.home = home;
@@ -646,7 +643,7 @@ pub(super) struct Rendering<'a> {
     /// Also `settings.extra`, and repeated at the top level because every template ends with it.
     extra: &'a str,
 
-    /// The certificate this service presents, or nothing — roadmap task **T99**.
+    /// The certificate this service presents, or nothing.
     ///
     /// **A fifth group rather than three loose fields on `paths`**, so a template branches on one
     /// value: `{% if certificate %}`. This is the one `Option` a template *can* branch on safely,
@@ -655,7 +652,7 @@ pub(super) struct Rendering<'a> {
     certificate: Option<CertificateView<'a>>,
 }
 
-/// The `certificate` group of a [`Rendering`] — roadmap task **T99**.
+/// The `certificate` group of a [`Rendering`].
 #[derive(Debug, Serialize)]
 struct CertificateView<'a> {
     /// The certificate, absolute.
@@ -675,8 +672,7 @@ struct Instance<'a> {
     name: &'a str,
     instance: Option<&'a str>,
 
-    /// The instance half of the id, falling back to the package name for a service that has none —
-    /// roadmap task **T82a**.
+    /// The instance half of the id, falling back to the package name for a service that has none.
     ///
     /// **Not [`instance`](Self::instance), which is an [`Option`] a template cannot branch on
     /// safely**: minijinja renders a `none` as the word rather than as an undefined value, so a
@@ -687,8 +683,7 @@ struct Instance<'a> {
     /// readiness check naming one socket.
     instance_or_name: &'a str,
 
-    /// Whether this service's own process manager should pass its environment to what it spawns —
-    /// roadmap task **T82a**, that design's D3.
+    /// Whether this service's own process manager should pass its environment to what it spawns.
     ///
     /// True exactly when this service carries a [`Credential`](crate::extensions::pools::Credential):
     /// php-fpm clears a worker's environment unless told otherwise, and the only alternative to

@@ -23,17 +23,17 @@ clap.workspace = true
 # manifest. `default-features = false` drops the executor and the `Sink` machinery, neither of which
 # a daemon that runs on tokio has any use for.
 futures-util = { workspace = true, default-features = false, features = ["alloc"] }
-# The DNS server of T44. `hickory-server` owns the UDP and TCP framing, the EDNS handling and the
+# The DNS server. `hickory-server` owns the UDP and TCP framing, the EDNS handling and the
 # truncation; the policy it serves is this crate's own `RequestHandler`, because this zone holds no
-# records to configure an authority with — the T44 design, D5. `hickory-proto` is a direct edge
-# rather than a re-export, because the answering table is a pure function over these types and its
-# tests build messages with no server at all.
+# records to configure an authority with. `hickory-proto` is a direct edge rather than a re-export,
+# because the answering table is a pure function over these types and its tests build messages with
+# no server at all.
 hickory-proto.workspace = true
 hickory-server.workspace = true
 http-body-util.workspace = true
 hyper = { workspace = true, features = ["http1", "server"] }
 hyper-util = { workspace = true, features = ["tokio"] }
-# The mDNS responder a shared site is advertised by -- roadmap task T75.
+# The mDNS responder a shared site is advertised by.
 mdns-sd.workspace = true
 # `network`: the daemon is what fetches — the index, the installer, the extension registry, the
 # update feed. The workspace entry takes none of core's features, so the ask is here.
@@ -42,10 +42,10 @@ mixengine-platform = { workspace = true, features = ["default"] }
 mixengine-proto.workspace = true
 mixengine-supervisor.workspace = true
 # Named here so `main` can spell `reqwest::Client` for the one transport it builds and hands to the
-# package index, extension registry and update feed clients — roadmap task **T72b**. The workspace
-# `Cargo.toml`'s comment on `rustls` already argues this edge exists regardless: `cargo tree -p
-# mixengine-daemon -i aws-lc-rs` showed `rustls` reaching the daemon through `mixengine-core` ->
-# `reqwest` before this line, so nothing new is downloaded or shipped.
+# package index, extension registry and update feed clients. The workspace `Cargo.toml`'s comment on
+# `rustls` already argues this edge exists regardless: `cargo tree -p mixengine-daemon -i aws-lc-rs`
+# showed `rustls` reaching the daemon through `mixengine-core` -> `reqwest` before this line, so
+# nothing new is downloaded or shipped.
 reqwest.workspace = true
 rustls.workspace = true
 # `Serialize` as a bound: the API layer writes any `mixengine-proto` type into a response without
@@ -65,11 +65,11 @@ tracing.workspace = true
 # `json` is `log.format = "json"` / `MIXENGINE_LOG_FORMAT=json`: one object per line for a
 # collector, rather than a second formatter written here.
 tracing-subscriber = { workspace = true, features = ["json"] }
-# Writing the diagnostics archive — roadmap task T93. The same workspace dependency
-# `mixengine-core` reads the Windows release artefact with; `ZipWriter` is exported unconditionally,
-# so `deflate-flate2` alone is enough to write one. `.zip` on all three systems rather than the
-# `.tar.gz` the pipeline packs, because a bug report is opened by whoever was sent it and Explorer
-# only learned `tar` in Windows 11 23H2.
+# Writing the diagnostics archive. The same workspace dependency `mixengine-core` reads the Windows
+# release artefact with; `ZipWriter` is exported unconditionally, so `deflate-flate2` alone is
+# enough to write one. `.zip` on all three systems rather than the `.tar.gz` the pipeline packs,
+# because a bug report is opened by whoever was sent it and Explorer only learned `tar` in Windows
+# 11 23H2.
 zip.workspace = true
 
 [dev-dependencies]
@@ -96,7 +96,7 @@ mixengine-testkit.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 
 [features]
-# T91a: a daemon that panics on request, so CI can prove a stripped release build's crash report
+# A daemon that panics on request, so CI can prove a stripped release build's crash report
 # symbolises. Nothing that ships enables it — `packaging/stage.sh` passes no features — and without
 # it the code is not compiled at all. See `crash::probe`.
 crash-probe = []

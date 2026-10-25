@@ -23,7 +23,7 @@ impl SyncState {
     }
 
     /// Which of `collections` a full run must pull, in one request; every other one's cursor is
-    /// moved past this machine's own writes (T189). Plain names in, plain names out.
+    /// moved past this machine's own writes. Plain names in, plain names out.
     pub async fn heads(&self, collections: Vec<String>) -> Result<Vec<String>, AppError> {
         let collections = Arc::new(collections);
         self.with_session(|session| {

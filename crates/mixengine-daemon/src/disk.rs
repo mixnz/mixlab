@@ -1,8 +1,8 @@
-//! `daemon.disk_usage` and `daemon.cleanup` — roadmap task **T96**.
+//! `daemon.disk_usage` and `daemon.cleanup`.
 //!
-//! **A strict read and a job, on `daemon.uninstall_plan`/`daemon.uninstall`'s split (T87).** A call
-//! that measured and deleted in one breath would leave no moment in which somebody could be shown
-//! what is about to go.
+//! **A strict read and a job, on `daemon.uninstall_plan`/`daemon.uninstall`'s split.** A call that
+//! measured and deleted in one breath would leave no moment in which somebody could be shown what
+//! is about to go.
 //!
 //! **The read is cached, and that is not a convenience.** The dashboard this exists for holds the
 //! event stream open and re-reads whenever something changes; a walk of `runtimes/` is tens of
@@ -34,7 +34,7 @@ use measure::{Measured, Reclaimable};
 /// somebody having started it. A caller who wants *now* says so.
 const FRESH_FOR: Duration = Duration::from_secs(60);
 
-/// Both halves of T96.
+/// Both halves: the measurement and the cleanup.
 #[derive(Debug)]
 pub(crate) struct Disk {
     /// The home's layout: which directory each category is, wherever `[paths]` put it.
@@ -66,8 +66,7 @@ impl Disk {
     ///
     /// [`ErrorCode::Internal`] if the blocking thread the walk runs on panicked. A *machine* that
     /// could not be read is never an error: it is a note on the row it is about, because a total
-    /// that failed rather than saying "at least this" is a screen nobody can use — the T96 design,
-    /// D8.
+    /// that failed rather than saying "at least this" is a screen nobody can use.
     pub(crate) async fn usage(&self, query: &DiskUsageQuery) -> Result<DiskUsage, Error> {
         let mut last = self.last.lock().await;
 
@@ -256,8 +255,7 @@ fn by_cleanup(reclaimable: &Reclaimable) -> Reclaim {
 ///
 /// A closed list of directories and files, and not a walk of the root: a stray directory somebody
 /// dropped in the home is theirs, and counting it would make this number mean *"what is in the
-/// home"* rather than *"what MixEngine put there"* — `daemon.bundle`'s rule (**T93**) in the other
-/// direction.
+/// home"* rather than *"what MixEngine put there"* — `daemon.bundle`'s rule in the other direction.
 fn remainder(paths: &Paths) -> u64 {
     let directories = [
         paths.bin(),

@@ -21,17 +21,18 @@ packages: Array<PackageRelease>,
  */
 stale: boolean, 
 /**
- * Each installed version whose line has a newer release here, and which one — T193a, D2.
+ * Each installed version whose line has a newer release here, and which one.
  *
  * Composed with the available list and never with the installed one, because listing what is
- * on the disk must not cost a request to the index. [`None`] is a daemon from before T193.
+ * on the disk must not cost a request to the index. [`None`] is a daemon that does not offer
+ * updates within a line.
  */
 updates?: Array<PackageUpdate> | null, 
 /**
- * What this list could not be read for — roadmap task **T196**.
+ * What this list could not be read for.
  *
  * The package index is one file per kind, so one file that could not be read costs that kind
- * and no other. [`None`] is a daemon from before T196; an empty list is one that read
- * everything it was asked for.
+ * and no other. [`None`] is a daemon from before the index had one file per kind; an empty
+ * list is one that read everything it was asked for.
  */
 unavailable?: Array<CatalogueGap> | null, };

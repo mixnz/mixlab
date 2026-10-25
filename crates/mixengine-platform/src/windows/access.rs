@@ -157,11 +157,11 @@ impl Access {
 /// so counting is the only way to see it without resolving every printed name back to a SID, which
 /// `icacls` gives no way to do and which localisation makes unsafe to guess at.
 ///
-/// It still cannot say *who* the three are. If T47 needs that, the way out is
+/// It still cannot say *who* the three are. If `mix doctor` needs that, the way out is
 /// `GetNamedSecurityInfoW` plus `GetSecurityDescriptorControl` for `SE_DACL_PROTECTED` — the first
 /// half of this answer, read from the descriptor instead of from printed text — and `GetAce` with
 /// `EqualSid` for the second. That is `unsafe` FFI, which this crate may use per item; it was not
-/// worth writing for a function with no caller yet. See T47 in the roadmap.
+/// worth writing while nothing asks.
 pub(crate) fn matches_what_we_apply(listing: &str) -> bool {
     let mut aces = 0;
 

@@ -1,4 +1,4 @@
-//! Linux: no such mechanism — roadmap task **T94**.
+//! Linux: no such mechanism.
 
 use crate::{AppControl, AppControlState, Error, Result};
 

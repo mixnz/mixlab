@@ -1,5 +1,5 @@
 /* The daemon's own CPU and memory, in one strip: the Dashboard's header, and the tray panel's
-   engine card (T168). */
+   engine card. */
 /* As tall as the Dashboard's Copy button, so the line it sits on keeps the height it had. */
 .usage {
   display: flex;

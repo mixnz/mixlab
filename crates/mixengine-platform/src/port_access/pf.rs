@@ -1,9 +1,11 @@
 //! What macOS's packet filter has to say for 80 and 443 to reach an unprivileged front end, as text.
 //!
 //! **Compiled on all three systems** so it is tested on all three; what writes any of it is
-//! `macos/port_access.rs`. Three artifacts, and the third is the interesting one — see the T42
-//! design, D3, and ADR 0012: pf is disabled on every boot and `pfctl -e` needs root, so a redirect
-//! that is only installed is a redirect that works until the first reboot and then silently stops.
+//! `macos/port_access.rs`. Three artifacts, and the third is the interesting one — see ADR 0012: pf
+//! is disabled on every boot and `pfctl -e` needs root, so a redirect that is only installed is a
+//! redirect that works until the first reboot and then silently stops.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-23-t42-port-access-design.md`.
 
 #![allow(
     dead_code,
@@ -54,7 +56,8 @@ pub(crate) fn anchor(redirects: &[PortRedirect]) -> String {
     );
 
     for redirect in redirects {
-        // The rule measured on a real runner, verbatim — see the T42 design, "What was measured".
+        // The rule measured on a real runner, verbatim — see *What was measured, rather than
+        // remembered*, in `docs/specs/2026-08-23-t42-port-access-design.md`.
         let _ = writeln!(
             text,
             "rdr pass on lo0 inet proto tcp from any to 127.0.0.1 port {} -> 127.0.0.1 port {}",
@@ -182,7 +185,8 @@ load anchor \"com.apple\" from \"/etc/pf.anchors/com.apple\"
 
     /// The rule that was measured on a real runner, verbatim. Written as a literal rather than
     /// assembled from parts, because what makes it trustworthy is that it is the same string that
-    /// was seen to work — see the T42 design, "What was measured".
+    /// was seen to work — see *What was measured, rather than remembered*, in
+    /// `docs/specs/2026-08-23-t42-port-access-design.md`.
     #[test]
     fn the_anchor_is_the_rule_that_was_measured() {
         let text = anchor(&eighty());
@@ -225,7 +229,8 @@ load anchor \"com.apple\" from \"/etc/pf.anchors/com.apple\"
         assert!(ours < filter, "{written}");
     }
 
-    /// T41's own criterion, applied to the second file this product edits: in, out, byte-identical.
+    /// The hosts file's own criterion, applied to the second file this product edits: in, out,
+    /// byte-identical.
     #[test]
     fn every_unrelated_line_of_apples_file_survives() {
         let written = declared(APPLE).unwrap();

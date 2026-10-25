@@ -1,6 +1,6 @@
-# `window` and `binaries`, then `build` (T171).
-# Called from ci.yml, and from release-rehearsal.yml for its weekly `release-exact` build (T174b);
-# never run on its own (T172e). The triggers, the `jobs` choice and concurrency live in the caller.
+# `window` and `binaries`, then `build`.
+# Called from ci.yml, and from release-rehearsal.yml for its weekly `release-exact` build; never run
+# on its own. The triggers, the `jobs` choice and concurrency live in the caller.
 # `inputs.jobs` and `inputs.profile` below are the caller's choices, passed through.
 name: build
 
@@ -10,7 +10,7 @@ on:
       jobs:
         type: string
         default: ''
-      # T174a: `release-exact` asks these three jobs to build what a tag builds. Empty is `branch`,
+      # `release-exact` asks these three jobs to build what a tag builds. Empty is `branch`,
       # so a caller that does not know about this input gets what it always got.
       profile:
         type: string
@@ -23,13 +23,13 @@ env:
   CARGO_TERM_COLOR: always
   # CI builds are never incremental: it only costs cache size and hurts a cold runner.
   CARGO_INCREMENTAL: 0
-  # T170l: line tables only in debug builds. Set in every workflow rather than per job because
+  # Line tables only in debug builds. Set in every workflow rather than per job because
   # rust-cache hashes the `CARGO_*` environment into its key.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   RUST_BACKTRACE: 1
 
 jobs:
-  # T171: `window` and `binaries` build on runners of their own, and `build` packages what they
+  # `window` and `binaries` build on runners of their own, and `build` packages what they
   # hand on. The three matrices must stay the same five rows.
   window:
     # **`inputs` is empty for a tag push**, which is what the first arm is for: a release
@@ -38,8 +38,8 @@ jobs:
     if: ${{ inputs.jobs == '' || inputs.jobs == 'all' || inputs.jobs == 'build' }}
     name: window (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    # One Tauri release build, twice over on macOS for the two slices (T103). Measured at 8 to 17
-    # minutes cold in run 35458805745; there is no cache to make it warm (T170a).
+    # One Tauri release build, twice over on macOS for the two slices. Measured at 8 to 17 minutes
+    # cold in run 35458805745; there is no cache to make it warm.
     timeout-minutes: 45
     strategy:
       # An artifact that failed to build on one system is not a reason to stop producing the other
@@ -50,7 +50,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             container: ""
-          # T85a: native, not cross. GitHub's own arm64-hosted runners exist and are free for this
+          # Native, not cross. GitHub's own arm64-hosted runners exist and are free for this
           # (public) repository, so this leg is the same shape as the row above rather than a
           # cross-compilation of it — see the design's "Measured, not assumed".
           - os: windows-11-arm
@@ -59,8 +59,8 @@ jobs:
           - os: macos-latest
             target: ""
             container: ""
-          # T85a, D2: the binaries in a manylinux_2_28 container for an older glibc. T103: the window on
-          # the 22.04 host, because manylinux's WebKitGTK is too old for Tauri 2.
+          # The binaries in a manylinux_2_28 container for an older glibc; the window on the 22.04
+          # host, because manylinux's WebKitGTK is too old for Tauri 2.
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             container: quay.io/pypa/manylinux_2_28_x86_64:2026.09.02-0
@@ -78,8 +78,8 @@ jobs:
         with:
           profile: ${{ inputs.profile }}
 
-      # T173b: before anything compiles, and after checkout because the action reads the workspace's
-      # path. Nothing on the three legs that are not Windows.
+      # Before anything compiles, and after checkout because the action reads the workspace's path.
+      # Nothing on the three legs that are not Windows.
       - uses: ./.github/actions/defender-aside
 
       # On every leg, the Linux ones included: the window is built on the runner itself, never in
@@ -89,8 +89,8 @@ jobs:
           rustup toolchain install --no-self-update
           rustup show active-toolchain
 
-      # **No Actions cache (T170a).** This job's release artifacts, with `binaries`', are several GB,
-      # and with them one `master` run writes more than the repository's 10 GB, so `master`'s own
+      # **No Actions cache.** This job's release artifacts, with `binaries`', are several GB, and
+      # with them one `master` run writes more than the repository's 10 GB, so `master`'s own
       # entries would evict each other and every job would build cold.
 
       - uses: actions/setup-node@v4
@@ -105,16 +105,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev libssl-dev build-essential
 
-      # T105: the window, through `packaging/desktop.sh` — which runs `npm ci`, `cargo tauri build`
+      # The window, through `packaging/desktop.sh` — which runs `npm ci`, `cargo tauri build`
       # (`--bundles app` on macOS, where a webview application is a `.app` directory), adds the
       # macOS slices itself, exports `MIXENGINE_RELEASE` and asserts what it produced.
       - name: Build the window
         shell: bash
         env:
           MIX_TARGET: ${{ matrix.target }}
-          # T173c: a repository variable, not a committed line — `gh variable set MIX_TIMINGS 1`
-          # turns the report on for the next run and `gh variable delete` turns it off again, so
-          # measuring this job costs no commit in either direction.
+          # A repository variable, not a committed line — `gh variable set MIX_TIMINGS 1` turns the
+          # report on for the next run and `gh variable delete` turns it off again, so measuring
+          # this job costs no commit in either direction.
           MIX_TIMINGS: ${{ vars.MIX_TIMINGS }}
         run: bash packaging/desktop.sh
 
@@ -128,7 +128,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # T171c, E3: the window's half of `binaries`' x86_64 check, after the build above because
+      # The window's half of `binaries`' x86_64 check, after the build above because
       # `tauri::generate_context!` reads the frontend it built at compile time.
       - name: Compile the window for x86_64 as well
         if: runner.os == 'macOS' && env.MIX_MACOS_SLICES == 'aarch64'
@@ -138,10 +138,10 @@ jobs:
           rustup target add x86_64-apple-darwin
           MIXENGINE_RELEASE=1 cargo check --release --locked --target x86_64-apple-darwin
 
-      # **A tar, not the files** (T171, E1). `upload-artifact` keeps neither file modes nor
-      # symlinks: the window would arrive not executable, and a macOS bundle does not survive the
-      # trip without its links. The tar holds `window/<key>/…`, relative to `target/packaging`,
-      # which is where `build` unpacks it and where `stage.sh` looks.
+      # **A tar, not the files.** `upload-artifact` keeps neither file modes nor symlinks: the
+      # window would arrive not executable, and a macOS bundle does not survive the trip without its
+      # links. The tar holds `window/<key>/…`, relative to `target/packaging`, which is where
+      # `build` unpacks it and where `stage.sh` looks.
       - name: Hand the window on
         shell: bash
         run: tar -cf window.tar -C target/packaging window
@@ -167,7 +167,7 @@ jobs:
     name: binaries (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     # The four headless binaries, in release: twice on macOS for the two slices, and from scratch
-    # inside a container on both Linux legs (T85a, D3), where no cache would reach anyway.
+    # inside a container on both Linux legs, where no cache would reach anyway.
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -200,7 +200,7 @@ jobs:
         with:
           profile: ${{ inputs.profile }}
 
-      # T173b, as in `window` above.
+      # As in `window` above.
       - uses: ./.github/actions/defender-aside
 
       # Only the legs that build on the runner itself rather than inside a container: the two Linux
@@ -216,9 +216,9 @@ jobs:
         if: matrix.container == ''
         run: cargo fetch --locked
 
-      # `stage.sh --build-only` (T171a): the compile half of what the per-OS packaging scripts used
-      # to do, with the same flags — `MIXENGINE_RELEASE`, `crt-static` on Windows, the container on
-      # Linux — because it is the same file doing it.
+      # `stage.sh --build-only`: the compile half of what the per-OS packaging scripts used to do,
+      # with the same flags — `MIXENGINE_RELEASE`, `crt-static` on Windows, the container on Linux —
+      # because it is the same file doing it.
       - name: Build the binaries
         shell: bash
         env:
@@ -241,10 +241,10 @@ jobs:
             bash packaging/stage.sh "${args[@]}"
           fi
 
-      # **T171c, E3.** A branch that builds only `aarch64` would otherwise stop noticing code that
-      # does not compile for Intel Macs until a tag. `check` over the same `-p` list `stage.sh`
-      # builds, with `MIXENGINE_RELEASE` as it sets it: it proves the code compiles for x86_64 without
-      # paying for a second release build. Linking that slice and `lipo` are left to `master`.
+      # A branch that builds only `aarch64` would otherwise stop noticing code that does not compile
+      # for Intel Macs until a tag. `check` over the same `-p` list `stage.sh` builds, with
+      # `MIXENGINE_RELEASE` as it sets it: it proves the code compiles for x86_64 without paying for
+      # a second release build. Linking that slice and `lipo` are left to `master`.
       - name: Compile for x86_64 as well
         if: runner.os == 'macOS' && env.MIX_MACOS_SLICES == 'aarch64'
         shell: bash
@@ -292,9 +292,10 @@ jobs:
     if: ${{ inputs.jobs == '' || inputs.jobs == 'all' || inputs.jobs == 'build' }}
     name: build (${{ matrix.os }})
     # **The whole of both matrices, not this leg's row** — Actions has no per-leg `needs`, so every
-    # leg here waits for the slowest `window` or `binaries` anywhere. Accepted in the T171 spec (E1):
-    # the run ends with its slowest leg either way, and five matrix-free copies of this job would
-    # cost more to keep than the minutes they save.
+    # leg here waits for the slowest `window` or `binaries` anywhere. Accepted in
+    # `docs/specs/2026-09-20-t171-a-build-that-fans-out-design.md` (E1): the run ends with its
+    # slowest leg either way, and five matrix-free copies of this job would cost more to keep than
+    # the minutes they save.
     needs: [window, binaries]
     runs-on: ${{ matrix.os }}
     # Packaging and the two probes, nothing compiled: about three to five minutes. The ceiling is
@@ -347,7 +348,7 @@ jobs:
           name: binaries-${{ matrix.os }}
 
       # Back where the two builds left them, so every packaging script below runs as it would after
-      # compiling here — with `MIX_PREBUILT` telling `stage.sh` that it must not (T171a).
+      # compiling here — with `MIX_PREBUILT` telling `stage.sh` that it must not.
       - name: Put both where their builds left them
         shell: bash
         run: |
@@ -383,8 +384,8 @@ jobs:
         shell: bash
         run: bash packaging/macos/build.sh
 
-      # T86a: the Mark-of-the-Web and quarantine readings of this leg's artifacts; `windows-latest`
-      # alone (D12). `MIX_PROBE_INSTALL` installs for real and puts the machine back.
+      # The Mark-of-the-Web and quarantine readings of this leg's artifacts; `windows-latest` alone.
+      # `MIX_PROBE_INSTALL` installs for real and puts the machine back.
       - name: What an unsigned release shows SmartScreen
         if: matrix.os == 'windows-latest'
         shell: bash
@@ -424,10 +425,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # **T171's tripwire.** The two tars carry finished binaries and nothing of cargo's, so a `deps`
-      # or `.fingerprint` directory, or the window's own `target`, exists here only if something
-      # compiled in this job. `stage.sh` refuses to under `MIX_PREBUILT`; this is for whatever else
-      # might start to, since the result would be a green job exactly as slow as before T171.
+      # **The fan-out's tripwire.** The two tars carry finished binaries and nothing of cargo's, so
+      # a `deps` or `.fingerprint` directory, or the window's own `target`, exists here only if
+      # something compiled in this job. `stage.sh` refuses to under `MIX_PREBUILT`; this is for
+      # whatever else might start to, since the result would be a green job exactly as slow as
+      # before the build fanned out.
       - name: Nothing was compiled here
         if: always()
         shell: bash

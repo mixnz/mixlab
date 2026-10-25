@@ -2,8 +2,8 @@
 import type { ServiceId } from "./ServiceId";
 
 /**
- * The account an apply's `CreateDatabase` step really used, after T202's free-name walk. Never a
- * password.
+ * The account an apply's `CreateDatabase` step really used, after the walk for a free name. Never
+ * a password.
  */
 export type AppliedDatabase = { 
 /**

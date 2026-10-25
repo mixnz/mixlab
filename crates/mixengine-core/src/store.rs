@@ -27,7 +27,7 @@ use crate::{Error, Result};
 static MIGRATIONS: Migrator = sqlx::migrate!("./migrations");
 
 /// The newest migration this build carries — what a copy of a database written by another build is
-/// compared with before it is read (T182h).
+/// compared with before it is read.
 #[must_use]
 pub fn schema_version() -> i64 {
     MIGRATIONS

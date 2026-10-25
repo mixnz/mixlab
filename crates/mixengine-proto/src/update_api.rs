@@ -1,4 +1,4 @@
-//! What `update.*` answers — roadmap task **T88**.
+//! What `update.*` answers.
 //!
 //! **The daemon decides and the client renders.** Whether a release is offered is
 //! [`UpdateStatus::offered`] and *why not* is [`UpdateStatus::because`], as a whole sentence: the
@@ -9,7 +9,8 @@
 //!
 //! **Nothing here names the elevated helper's update path.** `mixengine-elevate` is excluded from
 //! the swap by name and reported in [`UpdateApplied::kept`]; replacing it needs its own elevation
-//! prompt with a minisign check inside the elevated context, which is roadmap task **T88a**.
+//! prompt with a minisign check inside the elevated context, which is
+//! [`PrivilegedOp::HelperReplace`](crate::privileged::PrivilegedOp::HelperReplace).
 
 use crate::{ServiceId, Timestamp};
 
@@ -119,8 +120,7 @@ pub struct UpdateStatus {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub will_restart: Vec<ServiceId>,
 
-    /// The installer this copy is updated with, present exactly when the `.pkg` installed it —
-    /// roadmap task **T88f**, the design's D3.
+    /// The installer this copy is updated with, present exactly when the `.pkg` installed it.
     ///
     /// **A member of its own and not a new [`UpdatePlacement`] variant**: that stays `managed` on
     /// the wire, because a tag an old client does not know would fail the whole status for it. A
@@ -129,12 +129,12 @@ pub struct UpdateStatus {
     pub installer: Option<UpdateInstaller>,
 
     /// The version the daemon binary on disk reports, while it is the one handed to the installer
-    /// and not the one running — roadmap task **T88f**. It means *installed, restart to finish*.
+    /// and not the one running. It means *installed, restart to finish*.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub installed: Option<String>,
 }
 
-/// The installer a copy of MixEngine is updated with — roadmap task **T88f**.
+/// The installer a copy of MixEngine is updated with.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct UpdateInstaller {
@@ -145,7 +145,7 @@ pub struct UpdateInstaller {
     pub size: u64,
 }
 
-/// What `update.hand_over` takes — roadmap task **T88f**.
+/// What `update.hand_over` takes.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -156,7 +156,7 @@ pub struct UpdateHandOver {
 }
 
 /// What `update.hand_over` answers: the verified package is open in the installer, and the daemon
-/// is still running — roadmap task **T88f**.
+/// is still running.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct UpdateHandedOver {
@@ -167,17 +167,17 @@ pub struct UpdateHandedOver {
     pub package: String,
 
     /// The line that installs [`UpdateHandedOver::package`] without a window, for a person who is
-    /// not at this Mac's screen: over SSH, the installer opens on the desktop anyway (the T88f
-    /// readings, M4). Written by the daemon so no client composes it.
+    /// not at this Mac's screen: over SSH, the installer opens on the desktop anyway, as measured
+    /// on a real Mac. Written by the daemon so no client composes it.
     pub command: String,
 
-    /// Whether a software installer opened on this machine's screen — roadmap task **T182b**, D5.
-    /// `false` on a Linux machine with no desktop session: the package is verified and waiting,
-    /// and [`UpdateHandedOver::command`] is the only way to install it.
+    /// Whether a software installer opened on this machine's screen. `false` on a Linux machine
+    /// with no desktop session: the package is verified and waiting, and
+    /// [`UpdateHandedOver::command`] is the only way to install it.
     pub opened: bool,
 }
 
-/// What `update.finish` takes: nothing — roadmap task **T88f**.
+/// What `update.finish` takes: nothing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -284,8 +284,8 @@ pub struct UpdateOffer {
 mod tests {
     use super::*;
 
-    /// A client from before T88f reads a status carrying the two new members, and one from after it
-    /// reads them (ADR 0019).
+    /// A client from before the `.pkg` updater reads a status carrying its two members, and one
+    /// from after it reads them (ADR 0019).
     #[test]
     fn a_status_with_the_installer_members_reads() {
         let status = serde_json::json!({
@@ -326,7 +326,7 @@ mod tests {
     }
 
     /// Absent rather than `null`, so a status from a copy that is not the `.pkg`'s is byte for byte
-    /// what it was before T88f.
+    /// what it was before the `.pkg` updater.
     #[test]
     fn a_status_without_them_writes_neither() {
         let status = UpdateStatus {

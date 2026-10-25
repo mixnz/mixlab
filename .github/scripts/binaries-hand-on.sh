@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The tar `binaries` hands to `build` (T171, E1): exactly the headless binaries `common.sh` names,
+# The tar `binaries` hands to `build`: exactly the headless binaries `common.sh` names,
 # from every `target/<triple>/release` this job built, and nothing else of cargo's. `build` fails on
 # any trace of a compile in its tree, and `deps/` or `.fingerprint/` arriving in this tar would be
 # one. A tar and not the files because `upload-artifact` drops file modes.
@@ -15,7 +15,7 @@ for dir in target/*/release; do
     fi
   done
   # The daemon's symbols on Windows, which the linker writes beside the executable rather than into
-  # it. `packaging/symbols.sh` turns them into the release's symbol archive in `build` — T91a.
+  # it. `packaging/symbols.sh` turns them into the release's symbol archive in `build`.
   if [ -f "$dir/mixengined.pdb" ]; then
     files+=("$dir/mixengined.pdb")
   fi

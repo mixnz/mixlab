@@ -3,16 +3,15 @@
 //! **This is where the timing lives.** `mixengine-supervisor` has the mechanisms and no loop;
 //! `mixengine-core` has the graph, the state machine and the row; the daemon is what holds a task
 //! per service, the [`CancellationToken`] it stops on, and the clock both of those are measured by.
-//! Roadmap task **T19**.
 //!
 //! It is also where a daemon's first act lives: [`Registry::recover`] reconciles the rows the last
 //! daemon left behind — adopting the processes that survived it, stopping the ones nothing can
-//! supervise, and clearing the rows whose process is gone. Roadmap task **T18**, and the reason this
-//! module reads a `services` row it did not write.
+//! supervise, and clearing the rows whose process is gone. That is crash recovery, and the reason
+//! this module reads a `services` row it did not write.
 //!
-//! A walk is **sequential over [`Plan::flat`]**, which is what T17 left this free to be: the tiers
-//! are already computed, so M3's ten-second budget buys concurrency by changing this walker and
-//! nothing else. A tier that fails stops the walk, and everything below it is marked
+//! A walk is **sequential over [`Plan::flat`]**, which is what the graph's plan leaves this free to
+//! be: the tiers are already computed, so M3's ten-second budget buys concurrency by changing this
+//! walker and nothing else. A tier that fails stops the walk, and everything below it is marked
 //! [`StateReason::DependencyFailed`] rather than spawned against a dependency that is not there.
 
 pub(crate) mod activate;
@@ -76,7 +75,7 @@ pub(crate) struct Registry {
     /// The OS, for the credentials a spec names and cannot carry.
     host: Arc<dyn Host>,
 
-    /// Whether a site with nothing behind it answers with MixEngine's page — roadmap task **T124**.
+    /// Whether a site with nothing behind it answers with MixEngine's page.
     ///
     /// **Here rather than beside every generator that needs it.** `config.sites.welcome_page` is
     /// read once at boot, and four call sites build a generator from `paths`, `store` and `host` —
@@ -116,14 +115,14 @@ pub(crate) struct Registry {
     /// would make every reader of "what is running" an async function for no reason.
     running: Arc<Mutex<HashMap<ServiceId, Running>>>,
 
-    /// The addresses being held on stopped services' behalf — roadmap task **T70a**.
+    /// The addresses being held on stopped services' behalf.
     ///
     /// **Beside [`Registry::running`] rather than inside it**, although the two are the same idea
     /// turned over: that map is one entry per service something is supervising, and this is one
     /// entry per service nothing is supervising and something may still connect to.
     holder: Arc<hold::Holder>,
 
-    /// What a client reads on `GET /logs/{id}` — roadmap task **T16b**.
+    /// What a client reads on `GET /logs/{id}`.
     ///
     /// **Deliberately not part of [`Registry::running`]**, although every line in it comes from
     /// something that is: a `follow` has to survive the run it started in, and an entry that lived
@@ -145,7 +144,7 @@ pub(crate) struct Registry {
     generations: AtomicU64,
 
     /// The job registry, for the one thing a start may have to do that is too long to answer inline:
-    /// a first-run ritual — roadmap task **T33**.
+    /// a first-run ritual.
     jobs: Arc<crate::jobs::Jobs>,
 
     /// What each declared service still has to have done to it once, refreshed at every walk.
@@ -156,15 +155,14 @@ pub(crate) struct Registry {
     /// begin. A [`ServiceGraph`] carries specs, and a ritual is not one.
     rituals: Arc<Mutex<HashMap<ServiceId, mixengine_core::generate::FirstRun>>>,
 
-    /// How each declared service's databases are administered, if it has any — roadmap task
-    /// **T77a**.
+    /// How each declared service's databases are administered, if it has any.
     ///
     /// Beside `rituals` and filled on the same walk, for the same reason: a
     /// [`Provisioning`](mixengine_core::generate::Provisioning) holds a cloned
     /// [`Context`](mixengine_core::generate::Context), which only the generator can build.
     provisioning: Arc<Mutex<HashMap<ServiceId, mixengine_core::generate::Provisioning>>>,
 
-    /// The graph the last [`Registry::graph`] produced, and when — roadmap task **T190b**.
+    /// The graph the last [`Registry::graph`] produced, and when.
     ///
     /// Read only by the idle sweep, through [`Registry::graph_for_sweep`]. Every other caller
     /// renders, because every other caller either changes this home or answers somebody who just
@@ -181,14 +179,14 @@ struct Running {
 
     /// Notify it to ask the runner to start the service *now*.
     ///
-    /// **The one thing the registry can do to a live runner besides read it**, and the whole of
-    /// T19c: a runner sitting out a restart backoff is not reachable through [`Running::readiness`],
-    /// which is a report and not a request, so an explicit start had nothing to act on. See
-    /// [`Registry::begin`].
+    /// **The one thing the registry can do to a live runner besides read it**, and the reason it
+    /// exists: a runner sitting out a restart backoff is not reachable through
+    /// [`Running::readiness`], which is a report and not a request, so an explicit start had
+    /// nothing to act on. See [`Registry::begin`].
     asked_to_start: Arc<Notify>,
 
     /// Notify it to hand the running process the configuration that has just been rewritten under
-    /// it — roadmap task **T31**, and see [`Registry::hand_over`].
+    /// it — see [`Registry::hand_over`].
     ///
     /// The sibling of [`Running::asked_to_start`] in mechanism and its opposite in what it means: a
     /// start is asked of a service that is *not* up, and a reload only ever of one that is.
@@ -202,14 +200,14 @@ struct Running {
     /// channel type [`Running::readiness`] uses, running the other way.
     limits: watch::Sender<mixengine_proto::ResourceLimits>,
 
-    /// Tell the runner why the stop it is about to perform is happening — roadmap task **T69**.
+    /// Tell the runner why the stop it is about to perform is happening.
     ///
     /// [`None`] is *somebody asked*, and it is what every stop but one is. Set by
     /// [`Registry::stopping_because`] immediately before the cancel, so the transition a client
     /// reads says `idle` rather than claiming a person asked for it.
     stopping_because: watch::Sender<Option<StateReason>>,
 
-    /// What the memory watchdog last concluded about this service — roadmap task **T71a**.
+    /// What the memory watchdog last concluded about this service.
     ///
     /// **A `watch` like [`Running::limits`] rather than a [`Notify`] like its other neighbours**,
     /// and for that field's reason: this one carries a value. The runner folds it with its own
@@ -267,9 +265,9 @@ impl Drop for Stopping {
     }
 }
 
-/// What was persisted about a service that did not get where a walk wanted it — roadmap task
-/// **T202a**, D3: the reason the state machine recorded, and the sentence the runner wrote beside
-/// it (T200b's `last_failure`), which is the one a person reads first.
+/// What was persisted about a service that did not get where a walk wanted it: the reason the state
+/// machine recorded, and the sentence the runner wrote beside it (its `last_failure`), which is the
+/// one a person reads first.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct Fault {
     /// [`None`] when the failure was the daemon's own — a database that would not take the write,
@@ -311,7 +309,7 @@ enum Start {
 ///
 /// Not a `Result`: a plan of six services where the fourth fails has three that are running, one
 /// that failed and two that were never tried, and a caller that has to render that needs all three
-/// lists. T19a's `service.start` is the first such caller.
+/// lists. `service.start` is the first such caller.
 #[derive(Debug, Default)]
 pub(crate) struct Walk {
     /// Services that reached what the walk was aiming for, in the order they got there.
@@ -333,7 +331,7 @@ pub(crate) struct Walk {
 ///
 /// **Two variants because they are two different people's problem**, and the wire mapping has to
 /// tell them apart: a source that failed is the daemon's and is an internal error, while a set that
-/// is not a graph is what the user declared and is `invalid_argument` — the mapping T17 fixed, which
+/// is not a graph is what the user declared and is `invalid_argument` — the mapping
 /// [`crate::error::ToWire`] already applies to [`mixengine_core::Error::Graph`].
 ///
 /// **Both halves carry the same type, and the variant is still the whole point.** What differs is
@@ -361,7 +359,7 @@ pub(crate) enum Undeclarable {
 }
 
 impl Registry {
-    /// What `config.toml` says about the welcome page — roadmap task **T124**.
+    /// What `config.toml` says about the welcome page.
     ///
     /// A setter rather than an eighth argument to [`new`](Self::new), which is at the seven
     /// `clippy::too_many_arguments` allows. The daemon calls it once with
@@ -386,9 +384,9 @@ impl Registry {
             paths: paths.clone(),
             store: store.clone(),
             host,
-            // **On unless this home said otherwise** — roadmap task T124, and a setter rather than
-            // an eighth argument: `new` is at the seven clippy allows. The default is the product's
-            // own, so a fixture that never mentions it renders what a home renders.
+            // **On unless this home said otherwise**, and a setter rather than an eighth argument:
+            // `new` is at the seven clippy allows. The default is the product's own, so a fixture
+            // that never mentions it renders what a home renders.
             welcome: true,
             events,
             specs,
@@ -407,7 +405,7 @@ impl Registry {
         }
     }
 
-    /// Write a new set of ceilings into a service that is running now — roadmap task **T68**.
+    /// Write a new set of ceilings into a service that is running now.
     ///
     /// `false` when nothing is supervising that id, which is not a failure: a stopped service's
     /// limits live in its row and are read by the next spawn. The caller has already written the row.
@@ -426,7 +424,7 @@ impl Registry {
         true
     }
 
-    /// Say why the next stop of this service is happening, before asking for it — task **T69**.
+    /// Say why the next stop of this service is happening, before asking for it.
     ///
     /// **Set, then cancel, in that order**: the runner reads this at the moment it enters
     /// `Stopping`, so a value written after the cancel arrives too late to explain the stop it was
@@ -450,7 +448,7 @@ impl Registry {
         true
     }
 
-    /// Tell the runner what the memory watchdog concluded — roadmap task **T71a**.
+    /// Tell the runner what the memory watchdog concluded.
     ///
     /// [`None`] is *under its ceiling, or not measured*, which are the same fact to a reader of
     /// state. The runner folds this with its own health verdict rather than being told what state to
@@ -486,12 +484,12 @@ impl Registry {
         true
     }
 
-    /// The store this registry writes through, for the activator's own read of a row — T70.
+    /// The store this registry writes through, for the activator's own read of a row.
     pub(crate) fn store(&self) -> &Store {
         &self.store
     }
 
-    /// What is being held on stopped services' behalf — roadmap task **T70a**.
+    /// What is being held on stopped services' behalf.
     pub(crate) fn holder(&self) -> &Arc<hold::Holder> {
         &self.holder
     }
@@ -507,7 +505,7 @@ impl Registry {
         self.host.as_ref()
     }
 
-    /// Whether this home answers a site with nothing behind it — roadmap task **T124**.
+    /// Whether this home answers a site with nothing behind it.
     ///
     /// Read by every caller that builds a generator of its own, so that the drift check and the
     /// install render the same thing.
@@ -517,13 +515,13 @@ impl Registry {
 
     /// Which services have a task supervising them right now.
     ///
-    /// **Not a second opinion about what a service is doing** — that is the row's, and this registry
-    /// never writes one behind `core`'s back. It answers the other question, and since T18 the two
-    /// only come apart within one run of the daemon: a row that says `running` with nothing in here
-    /// used to be what a killed daemon left behind, and [`Registry::recover`] now reconciles those
-    /// before the first client is served. What is left for this to show is a service whose runner
-    /// ended without the row following it — which is a fault, and is what `service.list` makes
-    /// visible instead of implying.
+    /// **Not a second opinion about what a service is doing** — that is the row's, and this
+    /// registry never writes one behind `core`'s back. It answers the other question, and since
+    /// crash recovery the two only come apart within one run of the daemon: a row that says
+    /// `running` with nothing in here used to be what a killed daemon left behind, and
+    /// [`Registry::recover`] now reconciles those before the first client is served. What is left
+    /// for this to show is a service whose runner ended without the row following it — which is a
+    /// fault, and is what `service.list` makes visible instead of implying.
     pub(crate) fn supervised(&self) -> BTreeSet<ServiceId> {
         lock(&self.running)
             .iter()
@@ -532,7 +530,7 @@ impl Registry {
             .collect()
     }
 
-    /// What a client reads on `GET /logs/{id}` — roadmap task **T16b**.
+    /// What a client reads on `GET /logs/{id}`.
     ///
     /// A read-only handle for the endpoint, which is what the layering asks for: everything that
     /// *writes* a line into one of these is a runner this registry started, and a request handler
@@ -549,7 +547,7 @@ impl Registry {
     }
 }
 
-/// Which services a restart brings back up — roadmap task **T18**, shared since **T71a**.
+/// Which services a restart brings back up, whether a person or the memory watchdog asked for it.
 ///
 /// **Everything that was supervised, and the service that was named whether it was or not.** A
 /// stop plan reaches every dependent, including ones that were already down, and feeding the whole
@@ -583,7 +581,7 @@ pub(crate) fn restarted(
 /// automatic one each mean.
 ///
 /// **When the stop fails, that is what comes back and the start never happens.** The one way it can
-/// (T18) is a survivor this daemon adopted and could not kill — a process still holding the port and
+/// is a survivor crash recovery adopted and could not kill — a process still holding the port and
 /// the data directory — and starting the service again on top of it would put a second one there to
 /// collide with the first. A restart that could not take the service down has not restarted it, and
 /// says so.
@@ -605,7 +603,7 @@ pub(crate) async fn stop_then_start(
     registry.start(graph, up).await
 }
 
-/// Restart one service, on nobody's request but this daemon's — roadmap task **T71a**.
+/// Restart one service, on nobody's request but this daemon's: the memory watchdog's.
 ///
 /// The plans a person's `mix service restart` would build for the same service, walked by the same
 /// [`stop_then_start`]. [`None`] where a plan could not be built at all, which cannot happen through
@@ -645,7 +643,7 @@ async fn record(
     record_noting(store, events, service, to, reason, None).await
 }
 
-/// [`record`], with the sentence that explains a move into `failed` — roadmap task **T200b**, D5.
+/// [`record`], with the sentence that explains a move into `failed`.
 async fn record_noting(
     store: &Store,
     events: &Events,

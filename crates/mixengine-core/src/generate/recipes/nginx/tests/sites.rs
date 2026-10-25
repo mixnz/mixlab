@@ -131,8 +131,8 @@ fn each_kind_renders_a_server_block_naming_what_it_was_given() {
     );
 }
 
-/// **One file per extension, named after it** — roadmap task **T81c**. The fragment arrives
-/// already substituted and already forward-slashed; what this adds is the header.
+/// **One file per extension, named after it.** The fragment arrives already substituted and already
+/// forward-slashed; what this adds is the header.
 #[test]
 fn an_extension_s_fragment_is_a_file_of_its_own() {
     let context = context("{}").with_fragments(vec![FrontEndAddition {
@@ -157,15 +157,15 @@ fn an_extension_s_fragment_is_a_file_of_its_own() {
 }
 
 /// One site per file and one fragment per extension, and all three directories are swept —
-/// `welcome/` since roadmap task **T124**, because a deleted site that kept its page would be a
-/// page served for a site that no longer exists.
+/// `welcome/` too, because a deleted site that kept its page would be a page served for a site that
+/// no longer exists.
 #[test]
 fn the_front_end_sweeps_the_directories_that_follow_a_table() {
     assert_eq!(Nginx.swept(), &["sites", "extensions", "welcome"]);
 }
 
-/// **Two documents per site now** — roadmap task T124: the site's configuration, and the page
-/// it answers with when it has nothing to serve.
+/// **Two documents per site**: the site's configuration, and the page it answers with when it has
+/// nothing to serve.
 #[test]
 fn a_site_renders_a_welcome_page_beside_its_configuration() {
     let documents = Nginx
@@ -192,9 +192,8 @@ fn a_site_renders_a_welcome_page_beside_its_configuration() {
     );
 }
 
-/// **The root path only, and after the site's own index files** — the T124 design, D3. A
-/// catch-all `error_page 404` would replace an application's own 404, which is MixEngine lying
-/// about somebody else's program.
+/// **The root path only, and after the site's own index files.** A catch-all `error_page 404` would
+/// replace an application's own 404, which is MixEngine lying about somebody else's program.
 #[test]
 fn a_static_site_falls_back_to_the_welcome_page_only_at_the_root() {
     let rendered = render_site(&a_static_site());
@@ -245,9 +244,9 @@ fn both_server_blocks_fall_back_to_the_welcome_page() {
     );
 }
 
-/// **A dead upstream is answered, at every path** — the T124 design, D4. Wide is safe here in
-/// a way it is not for the file kinds: a 502 nginx generated means nothing was listening, so
-/// there is no application whose answer is being overwritten.
+/// **A dead upstream is answered, at every path.** Wide is safe here in a way it is not for the
+/// file kinds: a 502 nginx generated means nothing was listening, so there is no application whose
+/// answer is being overwritten.
 #[test]
 fn a_proxy_site_answers_a_dead_upstream_with_the_welcome_page() {
     let rendered = render_site(&Served {
@@ -311,9 +310,9 @@ fn a_proxy_site_has_no_root_only_welcome_location() {
     );
 }
 
-/// **Off renders neither the page nor the route** — the T124 design, D6. Either half alone is
-/// worse than neither: a page nothing routes to is a file nobody reads, and a route with no
-/// page behind it is a 404 on top of the 404 this feature exists to replace.
+/// **Off renders neither the page nor the route.** Either half alone is worse than neither: a page
+/// nothing routes to is a file nobody reads, and a route with no page behind it is a 404 on top of
+/// the 404 this feature exists to replace.
 #[test]
 fn the_switch_turned_off_renders_no_welcome_at_all() {
     let documents = Nginx
@@ -328,8 +327,8 @@ fn the_switch_turned_off_renders_no_welcome_at_all() {
     );
 }
 
-/// **A php-fpm site is answered through the index module, never through `try_files`** — roadmap
-/// task **T124a**, and the assertion that keeps T124's source leak out.
+/// **A php-fpm site is answered through the index module, never through `try_files`** — the
+/// assertion that keeps out the source leak the first welcome page shipped.
 ///
 /// `try_files` serves the first file it finds *in the current context*, and this location has no
 /// `fastcgi_pass`, so a `location = /` naming `/index.php` would answer the site's home page
@@ -355,9 +354,9 @@ fn a_php_site_is_answered_through_the_index_module_and_never_through_try_files()
     );
 }
 
-/// **The leak, asserted as an absence** — roadmap task **T124a**. This is the rendering T124
-/// shipped and had to take back, and the failure it causes is a disclosure rather than a wrong
-/// page, so it is worth a test of its own rather than a clause in the one above.
+/// **The leak, asserted as an absence.** This is the rendering the first welcome page shipped and
+/// had to take back, and the failure it causes is a disclosure rather than a wrong page, so it is
+/// worth a test of its own rather than a clause in the one above.
 #[test]
 fn no_try_files_in_this_rendering_ever_names_a_php_file() {
     let rendered = render_site(&a_php_site());
@@ -384,7 +383,7 @@ fn no_try_files_in_this_rendering_ever_names_a_php_file() {
     );
 }
 
-/// **An application's own error is still its own** — the T124 design, D3, and T167f.
+/// **An application's own error is still its own.**
 ///
 /// The `error_page` for a 404 lives in an exact-match location on `/`, so no other path reaches
 /// it. The php handler carries exactly one, for the 502 and 504 nginx produces when the pool
@@ -425,9 +424,9 @@ fn the_error_page_is_scoped_to_the_root_and_not_to_the_php_handler() {
 }
 
 /// **`alias` is refused inside a named location, and nginx refuses the whole file over it** —
-/// roadmap task **T124a**, measured against nginx 1.31.3: *the "alias" directive cannot be used
-/// inside the named location*. One page's mistake would take every site on the machine down
-/// with it, which is why this is asserted here rather than left to the serving suite.
+/// measured against nginx 1.31.3: *the "alias" directive cannot be used inside the named location*.
+/// One page's mistake would take every site on the machine down with it, which is why this is
+/// asserted here rather than left to the serving suite.
 #[test]
 fn the_welcome_location_is_served_with_root_and_never_with_alias() {
     for site in [a_static_site(), a_php_site()] {
@@ -454,7 +453,7 @@ fn the_welcome_location_is_served_with_root_and_never_with_alias() {
     }
 }
 
-/// A php-fpm site with three routes, as `served` hands them over — roadmap task **T135**.
+/// A php-fpm site with three routes, as `served` hands them over.
 fn a_site_with_routes() -> Served {
     use crate::generate::served::{Rewrite, ServedRoute, ServedRouteTarget};
 
@@ -489,8 +488,7 @@ fn a_site_with_routes() -> Served {
     }
 }
 
-/// **Every route is rendered before the site's own `location ~ \.php$`** — roadmap task
-/// **T135**.
+/// **Every route is rendered before the site's own `location ~ \.php$`.**
 ///
 /// nginx takes regex locations in the order it read them, so a route written after that
 /// handler would never be reached for a `.php` under its prefix.
@@ -533,12 +531,11 @@ fn a_route_is_rendered_before_the_php_handler() {
     );
 }
 
-/// **A file-serving route is a pair of prefix locations with its PHP handler nested inside** —
-/// roadmap task **T135**, that design's D4.
+/// **A file-serving route is a pair of prefix locations with its PHP handler nested inside.**
 ///
 /// `^~` stops the sibling regex search, so a handler written beside this location would never
 /// be reached and `try_files $uri` would answer `/admin/x.php` with its own source, as text —
-/// T124a's leak, in a new place.
+/// the first welcome page's leak, in a new place.
 #[test]
 fn a_php_route_nests_its_handler_inside_the_prefix_location() {
     let rendered = render_site(&a_site_with_routes());
@@ -569,8 +566,8 @@ fn a_php_route_nests_its_handler_inside_the_prefix_location() {
     );
 }
 
-/// **A `.` in a path is escaped where it reaches a regex** — roadmap task **T135**, that
-/// design's D5. Unescaped, `/v1.0` would also take `/v1X0`.
+/// **A `.` in a path is escaped where it reaches a regex.** Unescaped, `/v1.0` would also take
+/// `/v1X0`.
 #[test]
 fn a_dot_in_a_route_path_is_escaped() {
     let rendered = render_site(&a_site_with_routes());

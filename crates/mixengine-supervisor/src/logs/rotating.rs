@@ -77,7 +77,7 @@ impl RotatingFile {
     }
 
     /// Let go of the handle, so the file can be removed on a system that will not remove an open
-    /// one — roadmap task **T87**.
+    /// one.
     ///
     /// **Windows is the whole reason this exists.** Rust opens files with `FILE_SHARE_DELETE`, so
     /// `remove_file` on the live log *succeeds* while a handle is open — but the name stays in its
@@ -96,7 +96,7 @@ impl RotatingFile {
     fn handle(&mut self) -> io::Result<&mut File> {
         if self.file.is_none() {
             // `append`, not `write`: a second writer — `mix doctor`, or a second daemon that has
-            // not yet lost the single-instance race (T9) — then interleaves whole lines instead of
+            // not yet lost the single-instance race — then interleaves whole lines instead of
             // overwriting from a stale offset.
             let file = OpenOptions::new()
                 .create(true)

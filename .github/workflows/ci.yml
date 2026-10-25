@@ -16,7 +16,7 @@ on:
         type: choice
         default: all
         options: [all, lint, test, system, bench, bindings, docs, desktop, build]
-      # T174a: `release-exact` builds what a tag builds, from whatever ref this runs on — no LTO,
+      # `release-exact` builds what a tag builds, from whatever ref this runs on — no LTO,
       # codegen-units, optimisation-level or macOS-slice override. It is how a release's
       # configuration gets built before the release, rather than for the first time during it.
       # `.github/workflows/release-rehearsal.yml` asks for it weekly.
@@ -32,7 +32,7 @@ on:
 # anyway, so that ref keeps a complete result history however the runs were started.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # A tag joins master in never being cancelled (T86). A cancelled release run leaves a half-uploaded
+  # A tag joins master in never being cancelled. A cancelled release run leaves a half-uploaded
   # draft, which is the one state that pipeline has no answer for.
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && !startsWith(github.ref, 'refs/tags/') }}
 
@@ -43,13 +43,13 @@ env:
   CARGO_TERM_COLOR: always
   # CI builds are never incremental: it only costs cache size and hurts a cold runner.
   CARGO_INCREMENTAL: 0
-  # T170l: line tables only in debug builds. Set here rather than per job because rust-cache
+  # Line tables only in debug builds. Set here rather than per job because rust-cache
   # hashes the `CARGO_*` environment into its key.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   RUST_BACKTRACE: 1
 
 jobs:
-  # One entry per job family, each a workflow of its own under .github/workflows/_*.yml (T172e).
+  # One entry per job family, each a workflow of its own under .github/workflows/_*.yml.
   # A called workflow does not see this file's `env:`, so each declares the same four variables;
   # and it cannot be granted more than its caller grants, which is why two entries widen
   # `permissions`. Job names read `<family> / <job>` in the run.
@@ -96,10 +96,10 @@ jobs:
       jobs: ${{ inputs.jobs }}
     secrets: inherit
 
-  # T86. Three questions that need no compiler, so a release that cannot work fails in thirty seconds
-  # instead of in an hour. It gates `release` and nothing else — a conditional `needs` is not a thing
-  # Actions has, and making `build` wait behind this would slow every ordinary run for a job that has
-  # nothing to say on one.
+  # Three questions that need no compiler, so a release that cannot work fails in thirty seconds
+  # instead of in an hour. It gates `release` and nothing else — a conditional `needs` is not a
+  # thing Actions has, and making `build` wait behind this would slow every ordinary run for a job
+  # that has nothing to say on one.
   preflight:
     name: preflight
     if: ${{ startsWith(github.ref, 'refs/tags/v') && (inputs.jobs == '' || inputs.jobs == 'all') }}

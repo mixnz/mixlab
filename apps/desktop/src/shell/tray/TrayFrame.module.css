@@ -1,4 +1,4 @@
-/* The tray panel's frame — T192. On macOS and Windows the window is transparent and sits in the
+/* The tray panel's frame. On macOS and Windows the window is transparent and sits in the
    corner of the screen; the card is drawn 10px inside it — the gap the eye sees — and slides in from
    the right each time the window is shown. On Linux the window is an ordinary one and the card
    simply fills it. What goes under the header is the sections modules lend. */

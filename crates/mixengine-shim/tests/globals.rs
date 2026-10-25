@@ -1,4 +1,4 @@
-//! A globally installed tool is a command — roadmap task **T131**.
+//! A globally installed tool is a command.
 //!
 //! The second complaint this phase answers, end to end: `npm -g install yarn`, and then the `yarn`
 //! command cannot be run. npm's global prefix is the Node install's own directory, which is on

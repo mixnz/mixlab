@@ -1,4 +1,4 @@
-//! `mix self-update` end to end — roadmap task **T88**.
+//! `mix self-update` end to end.
 //!
 //! **The one test that can exercise the whole sequence**, and it has to be an end-to-end one for a
 //! reason no unit test can get around: what an update is *about* is a running daemon replacing the
@@ -38,7 +38,7 @@ const OFFERED: &str = "99.0.0";
 const BINARIES: [&str; 4] = ["mix", "mixengined", "mixengine-elevate", "mixengine-shim"];
 
 /// In the payload and not in the install: a binary a release gained, which an update does not add
-/// and the new daemon's first start does — T185a, ADR 0054.
+/// and the new daemon's first start does — ADR 0054.
 const GAINED: &str = "mixengine-trampoline";
 
 /// What the helper's stand-in holds: this test installs no privileged binary anywhere.
@@ -59,8 +59,8 @@ struct Installed {
 impl Installed {
     /// Copy `mix` and `mixengined` out of `target/`, and put a stand-in beside them for the helper.
     ///
-    /// **A stand-in and not the real helper**: the swap replaces it like the others (T182b, D4), which
-    /// the daemon's own report says, and this test has no business installing a privileged binary
+    /// **A stand-in and not the real helper**: the swap replaces it like the others, which the
+    /// daemon's own report says, and this test has no business installing a privileged binary
     /// anywhere.
     fn here() -> Self {
         let root = tempfile::tempdir().expect("a temporary directory");
@@ -294,9 +294,9 @@ async fn an_update_replaces_the_binaries_relaunches_and_starts_what_was_running(
     // from a thread that is driving one.
     tokio::task::block_in_place(|| home.declare(&[Service::new("fakeservice@main")]));
 
-    // A Node recorded, so that `bin/` holds a `node` to compare with the trampoline at the end: since
-    // T185b a language with nothing installed has no command there. Node and not PHP, which would
-    // bring a pool this fixture cannot run. Windows only, where that comparison is made.
+    // A Node recorded, so that `bin/` holds a `node` to compare with the trampoline at the end: a
+    // language with nothing installed has no command there. Node and not PHP, which would bring a
+    // pool this fixture cannot run. Windows only, where that comparison is made.
     if cfg!(windows) {
         mixengine_testkit::declare::runtime(
             &home.database_file(),
@@ -337,8 +337,8 @@ async fn an_update_replaces_the_binaries_relaunches_and_starts_what_was_running(
 
     assert_eq!(applied["from"], env!("CARGO_PKG_VERSION"), "{applied}");
     assert_eq!(applied["to"], OFFERED, "{applied}");
-    // T182b, D4: the helper beside the program is swapped like every other binary, so it is
-    // current when the daemon next installs the privileged copy from it.
+    // The helper beside the program is swapped like every other binary, so it is current when the
+    // daemon next installs the privileged copy from it.
     assert_eq!(
         applied["replaced"],
         serde_json::json!(["mix", "mixengine-elevate", "mixengine-shim", "mixengined"]),
@@ -363,9 +363,9 @@ async fn an_update_replaces_the_binaries_relaunches_and_starts_what_was_running(
         home.daemon_log()
     );
 
-    // **T185a: the install completed itself.** The swap kept the trampoline out; the new daemon's
-    // first start copied it in from the payload it was updated from, whose `mixengined` is this
-    // one byte for byte, and then removed the staging directory it no longer needs.
+    // **The install completed itself.** The swap kept the trampoline out; the new daemon's first
+    // start copied it in from the payload it was updated from, whose `mixengined` is this one byte
+    // for byte, and then removed the staging directory it no longer needs.
     assert!(
         installed.binary(GAINED).is_file(),
         "the install did not complete itself from its payload\n--- daemon.log ---\n{}",
@@ -378,7 +378,7 @@ async fn an_update_replaces_the_binaries_relaunches_and_starts_what_was_running(
         "the staging directory outlived the completion that needed it"
     );
 
-    // And on Windows `bin/` is made of it now rather than of copies of the shim (T185).
+    // And on Windows `bin/` is made of it now rather than of copies of the shim.
     if cfg!(windows) {
         let trampoline = std::fs::metadata(installed.binary(GAINED)).expect("the trampoline");
         let node =
@@ -552,7 +552,7 @@ async fn a_payload_that_is_not_what_the_feed_named_is_refused_and_nothing_is_rep
 
 /// **ADR 0056 rule 8: MixEngine never reads the feed unprompted.** A daemon started against a feed
 /// offering a release has, a moment later, still not heard of it: `mix status` shows no update
-/// line, because nothing asked. Before T187 the check at start put `99.0.0` there.
+/// line, because nothing asked. When a daemon still checked at start, it put `99.0.0` there.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_daemon_that_nobody_asked_does_not_read_the_feed() {
     let installed = Installed::here();

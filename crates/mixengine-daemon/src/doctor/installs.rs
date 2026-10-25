@@ -9,9 +9,9 @@ use mixengine_proto::{Check, Outcome, ProblemId, RuntimeKind};
 use super::Doctor;
 
 impl Doctor {
-    /// **What is recorded and not on disk** — roadmap task **T206d**, D4. A `Problem` for a folder
-    /// that is gone, which `daemon.doctor_repair` leaves to a person; a `Note` for one this daemon
-    /// cannot read, which may be a drive that is not mounted.
+    /// **What is recorded and not on disk.** A `Problem` for a folder that is gone, which
+    /// `daemon.doctor_repair` leaves to a person; a `Note` for one this daemon cannot read, which
+    /// may be a drive that is not mounted.
     pub(super) async fn missing_installs(&self) -> Check {
         let name = "installs recorded but not on disk".to_owned();
 
@@ -62,13 +62,13 @@ impl Doctor {
         }
     }
 
-    /// **What is on disk but not recorded** — roadmap task **T182f**. A directory an earlier home
-    /// installed that this one could not check. A `Note`: it costs disk and blocks an install of the
-    /// same version, and nothing is broken by it. Walked at report time rather than remembered from
-    /// the start, so a directory recorded or removed since is not reported.
+    /// **What is on disk but not recorded.** A directory an earlier home installed that this one
+    /// could not check. A `Note`: it costs disk and blocks an install of the same version, and
+    /// nothing is broken by it. Walked at report time rather than remembered from the start, so a
+    /// directory recorded or removed since is not reported.
     ///
-    /// **And service data an earlier home left under `data/`** — roadmap task **T182g** — counted
-    /// here rather than in a check of its own, because both are the same leftover of one uninstall.
+    /// **And service data an earlier home left under `data/`**, counted here rather than in a check
+    /// of its own, because both are the same leftover of one uninstall.
     pub(super) async fn unrecorded(&self) -> Check {
         let name = "installs on disk that this home has not recorded".to_owned();
 
@@ -124,7 +124,7 @@ impl Doctor {
         }
     }
 
-    /// **Whether a pinned Go is the Go that builds** — roadmap task **T27d**, its design's D8.
+    /// **Whether a pinned Go is the Go that builds.**
     ///
     /// The shim writes `GOTOOLCHAIN=local` for a `go` and leaves a value the session already carries
     /// alone, and it never sets `GOROOT`. So a daemon whose own environment carries either is a
@@ -153,7 +153,7 @@ impl Doctor {
         }
     }
 
-    /// **Whether a pinned JDK is the JDK a build tool uses** — roadmap task **T27e**, its design's D7.
+    /// **Whether a pinned JDK is the JDK a build tool uses.**
     ///
     /// The shim overwrites `JAVA_HOME` for what it starts, and reaches nothing else: `mvn` and
     /// `./gradlew` typed in a terminal read the session's. The daemon's environment is the proxy for
@@ -189,7 +189,7 @@ impl Doctor {
         }
     }
 
-    /// **What is on the PATH that MixEngine did not choose the name of** — tasks **T130**/**T131**.
+    /// **What is on the PATH that MixEngine did not choose the name of.**
     ///
     /// Never a problem, always a `Note` or `Ok`, and deliberately: both conditions are somebody's
     /// own doing and neither is broken.
@@ -252,7 +252,7 @@ impl Doctor {
             )),
         }
 
-        // T185b, D4: a language MixEngine fronts that the person also installed themselves.
+        // A language MixEngine fronts that the person also installed themselves.
         said.extend(runtimes_hidden(&self.bin, |name| {
             elsewhere_on_the_path(name, &self.bin)
         }));
@@ -278,15 +278,15 @@ impl Doctor {
 /// daemon — `mixengine_platform`'s reserved-range parser one check along, and for the same reason.
 /// Each item is an id and whether its row claims a supervisor at all; `held` is what this registry is
 /// actually running.
-/// Where else on this user's PATH a program of this name is, ahead of nothing — task **T131**.
+/// Where else on this user's PATH a program of this name is, ahead of nothing.
 ///
 /// Read off `PATH` rather than off the filesystem generally, because that is the question: a `git`
 /// in `/usr/bin` matters and one in a directory nothing searches does not. `<root>/bin` itself is
 /// skipped, since the name being asked about is the one this directory holds.
 ///
 /// [`None`] when nothing else answers to it, which is every name on nearly every machine.
-/// Each language name `bin/` fronts that is also installed further down the PATH — roadmap task
-/// **T185b**, D4 — as a sentence naming where. `elsewhere` answers that question for one name.
+/// Each language name `bin/` fronts that is also installed further down the PATH, as a sentence
+/// naming where. `elsewhere` answers that question for one name.
 ///
 /// Without this a person who installed Node twice cannot see which one a terminal runs: `bin/` is
 /// first on the PATH, so wherever MixEngine has installed a language its copy is the one that runs.
@@ -338,7 +338,7 @@ fn elsewhere_on_the_path(command: &str, bin: &std::path::Path) -> Option<std::pa
         .find(|candidate| candidate.is_file())
 }
 
-/// What [`Doctor::missing_installs`] decides, as a function of what it read — T206d, D4.
+/// What [`Doctor::missing_installs`] decides, as a function of what it read.
 fn missing_outcome(gone: &[String], out_of_reach: &[String]) -> Outcome {
     match (gone.is_empty(), out_of_reach.is_empty()) {
         (true, true) => Outcome::Ok {},
@@ -442,7 +442,7 @@ fn java_outcome(
 mod shadowing_tests {
     use super::*;
 
-    /// **T185b, D4.** A language `bin/` fronts that is also installed further down the PATH is
+    /// A language `bin/` fronts that is also installed further down the PATH is
     /// named, with where; a language `bin/` does not front, or that nothing else provides, is not.
     #[test]
     fn a_language_in_bin_that_hides_another_is_named() {
@@ -464,8 +464,8 @@ mod shadowing_tests {
 mod tests {
     use super::*;
 
-    /// **A home with no Go is not asked about Go** — roadmap task **T27d**, its design's D8. A
-    /// variable nothing here reads is not news about this home.
+    /// **A home with no Go is not asked about Go.** A variable nothing here reads is not news about
+    /// this home.
     #[test]
     fn a_home_with_no_go_is_not_asked_about_go() {
         let outcome = super::go_outcome(false, Some(OsStr::new("auto")), None);
@@ -486,7 +486,7 @@ mod tests {
         }
     }
 
-    /// **Gone is a problem, out of reach is a note** — roadmap task **T206d**, D4.
+    /// **Gone is a problem, out of reach is a note.**
     #[test]
     fn a_gone_install_is_a_problem_and_one_out_of_reach_a_note() {
         assert!(matches!(super::missing_outcome(&[], &[]), Outcome::Ok {}));
@@ -532,7 +532,7 @@ mod tests {
         assert!(because.contains("GOROOT=/usr/local/go"), "{because}");
     }
 
-    /// **A home with no Java is not asked about Java** — roadmap task **T27e**, its design's D7.
+    /// **A home with no Java is not asked about Java.**
     #[test]
     fn a_home_with_no_java_is_not_asked_about_java() {
         let outcome = super::java_outcome(

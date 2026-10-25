@@ -1,5 +1,5 @@
 //! `service.list`, `service.status` and the walks — `service.start`, `service.stop`,
-//! `service.restart` and `service.reset_credential`; roadmap tasks **T19a** and **T125**.
+//! `service.restart` and `service.reset_credential`.
 //!
 //! The walk itself is the registry's ([`crate::services`]). What is here is which services a
 //! request names, the plan that reaches them, and the shape a client renders — which is also how
@@ -28,8 +28,8 @@ impl Api {
     /// whether a task is supervising it comes from the registry, which is a different question and
     /// is reported as one. Nothing here re-derives a fact another layer already owns.
     ///
-    /// An empty list is a real answer and not a failure: until T30 renders a `services` row into a
-    /// runnable spec, this build declares nothing at all.
+    /// An empty list is a real answer and not a failure: a home that declares no service has
+    /// nothing to list.
     pub(super) async fn service_list(&self) -> Result<ServiceList, Error> {
         let graph = self
             .services
@@ -90,12 +90,11 @@ impl Api {
 
     /// `service.start` — bring a service up, and everything it depends on with it.
     ///
-    /// **Three subjects, and the third is the daemon answering a question no client may** — roadmap
-    /// task **T125**. A named service is the transitive set below it; nothing named is every
-    /// declared service; and [`ServiceTarget::project`] is what one project needs, which is
-    /// [`Self::project_roots`]'s to work out. Until T125 a client that wanted the third asked for
-    /// the second, so applying a blueprint on a home with four PHP versions and three databases
-    /// started all of them.
+    /// **Three subjects, and the third is the daemon answering a question no client may.** A named
+    /// service is the transitive set below it; nothing named is every declared service; and
+    /// [`ServiceTarget::project`] is what one project needs, which is [`Self::project_roots`]'s to
+    /// work out. Before the third existed a client that wanted it asked for the second, so applying
+    /// a blueprint on a home with four PHP versions and three databases started all of them.
     pub(super) async fn service_start(&self, target: &ServiceTarget) -> Result<ServiceWalk, Error> {
         let graph = self
             .services
@@ -123,7 +122,7 @@ impl Api {
         .await
     }
 
-    /// Every service one project needs, for [`ServiceTarget::project`] — roadmap task **T125**.
+    /// Every service one project needs, for [`ServiceTarget::project`].
     ///
     /// **Two readings, because the front end is not a service any site declares.**
     /// [`mixengine_core::sites::services_of`] answers what the project's own sites named — the database and the
@@ -132,11 +131,10 @@ impl Api {
     /// first set without the second is a project whose parts are all running and whose address
     /// answers nothing.
     ///
-    /// **A root the graph does not know is passed over rather than refused.** That is T122's shape:
-    /// `service.delete` can take a pool row while a site still names it, and a project that cannot
-    /// be started at all because one link dangles is a worse answer than one started without it —
-    /// the start plan is the transitive set below what is left, which is still everything that can
-    /// run.
+    /// **A root the graph does not know is passed over rather than refused.** `service.delete` can
+    /// take a pool row while a site still names it, and a project that cannot be started at all
+    /// because one link dangles is a worse answer than one started without it — the start plan is
+    /// the transitive set below what is left, which is still everything that can run.
     ///
     /// An empty set is not an error either: a project with no sites yet needs nothing, and a walk
     /// over nothing is a truthful empty answer.
@@ -182,9 +180,9 @@ impl Api {
 
     /// `service.stop` — take a service down, and everything that depends on it first.
     ///
-    /// **A stop can fail**, and since T18 there is exactly one way: a process that outlived a
-    /// previous daemon, was adopted by this one, and would not die. What comes back then names it,
-    /// with no reason attached — see [`Registry::stop`](crate::services::Registry::stop).
+    /// **A stop can fail**, and since crash recovery there is exactly one way: a process that
+    /// outlived a previous daemon, was adopted by this one, and would not die. What comes back then
+    /// names it, with no reason attached — see [`Registry::stop`](crate::services::Registry::stop).
     pub(super) async fn service_stop(&self, target: &ServiceTarget) -> Result<ServiceWalk, Error> {
         refuse_project_scope(target, "stop")?;
 
@@ -223,8 +221,8 @@ impl Api {
     /// What comes back describes the *start*, in the ordinary case where the stop reached everything
     /// it was asked to; the plan reported is then the one that was walked second.
     ///
-    /// **When the stop fails, that is what comes back instead, and the start never happens.** The one
-    /// way it can (T18) is a survivor this daemon adopted and could not kill — a process still
+    /// **When the stop fails, that is what comes back instead, and the start never happens.** The
+    /// one way it can is a survivor this daemon adopted and could not kill — a process still
     /// holding the port and the data directory — and starting the service again on top of it would
     /// put a second one there to collide with the first. A restart that could not take the service
     /// down has not restarted it, and says so.
@@ -257,8 +255,8 @@ impl Api {
             up.flat().cloned().collect(),
             move |services| async move {
                 // **The walk itself is `services::stop_then_start`**, shared with the memory
-                // watchdog since T71a: what is left here is the reporting this method owes a client
-                // and the target semantics only an RPC has.
+                // watchdog: what is left here is the reporting this method owes a client and the
+                // target semantics only an RPC has.
                 (
                     services::stop_then_start(&services, &graph, &down, &up).await,
                     "restart",
@@ -275,10 +273,10 @@ impl Api {
     /// what the stop *took down* rather than everything it covered. A repair that started the
     /// covered set would put back dependents somebody had deliberately stopped.
     ///
-    /// **The named service always ends running, whatever state it was in** — the design's D7. The
-    /// proof that a reset worked is the readiness check, which for all three of these recipes is an
-    /// authenticated query; a repair that ended with the service stopped would be reporting an exit
-    /// code and calling it a repair, and `postgres --single` exits 0 on a syntax error.
+    /// **The named service always ends running, whatever state it was in.** The proof that a reset
+    /// worked is the readiness check, which for all three of these recipes is an authenticated
+    /// query; a repair that ended with the service stopped would be reporting an exit code and
+    /// calling it a repair, and `postgres --single` exits 0 on a syntax error.
     ///
     /// **The stop carries [`StateReason::CredentialReset`]**, which `StoppedBy::of` reads as a
     /// person's stop — so nothing holds this service's addresses while a step is writing into its
@@ -427,7 +425,7 @@ fn start_plan(graph: &ServiceGraph, roots: Option<&[ServiceId]>) -> Result<Plan,
     }
 }
 
-/// The refusal for a request naming a service *and* a project — roadmap task **T125**.
+/// The refusal for a request naming a service *and* a project.
 ///
 /// Two subjects is not a request with a winner, so neither is picked: resolving it by precedence
 /// would carry out the half the caller did not mean, silently, on somebody's machine.
@@ -439,7 +437,7 @@ fn two_subjects() -> Error {
     .with_hint("send `service` for one service, `project` for what one project needs, neither for every declared service")
 }
 
-/// The refusal `service.stop` and `service.restart` give a project-scoped request — **T125**.
+/// The refusal `service.stop` and `service.restart` give a project-scoped request.
 ///
 /// **Not an omission to be filled in later without thinking about it.** What a project needs
 /// includes the front end every *other* site on the machine is reached through, so a project-scoped
@@ -474,10 +472,10 @@ fn stop_plan(graph: &ServiceGraph, service: Option<&ServiceId>) -> Result<Plan, 
 
 /// One service, as the three readings that know about it describe it.
 ///
-/// `record` is [`None`] for a service that is declared and has no `services` row. That is not a case
-/// a finished MixEngine reaches — from T30 a declaration is rendered *from* a row — and it is
-/// reported rather than smoothed into `stopped`, because a service that claims to be stopped and
-/// then refuses to start explains nothing to whoever declared it.
+/// `record` is [`None`] for a service that is declared and has no `services` row. That is not a
+/// case a finished MixEngine reaches — a declaration is rendered *from* a row — and it is reported
+/// rather than smoothed into `stopped`, because a service that claims to be stopped and then
+/// refuses to start explains nothing to whoever declared it.
 pub(super) fn summary(
     graph: &ServiceGraph,
     catalogue: &mixengine_core::generate::Catalogue,
@@ -509,22 +507,22 @@ pub(super) fn summary(
         // exactly as it has no state — and `false` is the reading that cannot be acted on, which is
         // the safer of the two for something a boot walk reads.
         autostart: record.is_some_and(|record| record.autostart),
-        // Only about a service that *is* stopped (T167d): the column keeps the last word after a
+        // Only about a service that *is* stopped: the column keeps the last word after a
         // start, and a running service reported as "stopped by a person" would be a client drawing
         // a state that is over.
         stopped_by: record
             .filter(|record| record.state == mixengine_proto::ServiceState::Stopped)
             .map(|record| record.stopped_by.into()),
-        // The row's parent's version (T183), on `port`'s rule: no row, no version to report.
+        // The row's parent's version, on `port`'s rule: no row, no version to report.
         version: record.and_then(|record| record.version.clone()),
-        // Only about a service that *is* failed (T200b, D5), on `stopped_by`'s rule above.
+        // Only about a service that *is* failed, on `stopped_by`'s rule above.
         last_failure: record
             .filter(|record| record.state == mixengine_proto::ServiceState::Failed)
             .and_then(|record| record.last_failure.clone()),
     }
 }
 
-/// What a package is *for*, as the catalogue answers it — roadmap task **T97**.
+/// What a package is *for*, as the catalogue answers it.
 ///
 /// **By what the recipe says, never by the name.** That is the whole of what this member exists to
 /// stop a client doing, so deriving it here from a string would only move the copy one crate down.

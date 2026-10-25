@@ -3,7 +3,7 @@
 //! **The claim these tests hold is that no daemon is involved.** `mix` links neither
 //! `mixengine-core` nor `sqlx`, so the answer comes from running `mixengined` once; what has to be
 //! true is that asking starts nothing, creates nothing, and renders what the other binary said
-//! rather than a second opinion. Roadmap task **T145**.
+//! rather than a second opinion.
 
 use std::process::Command;
 
@@ -108,7 +108,7 @@ fn a_missing_daemon_binary_is_reported_as_one() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// A home whose four directories are elsewhere — roadmap task T147.
+// A home whose four directories are elsewhere.
 //
 // **The assertion is that nothing restated the layout twice.** `[paths]` is read in one place and
 // the rest of the workspace is supposed to ask `Paths` rather than compose its own answer; these
@@ -187,7 +187,7 @@ mod relocated {
         let (home, bulk) = a_relocated_home();
 
         // A PHP inside the relocated `runtimes/`, recorded, and a start to put its name in `bin/` —
-        // since T185b a language with nothing installed has no command there to run.
+        // a language with nothing installed has no command there to run.
         let program = match cfg!(windows) {
             true => "php.exe",
             false => "bin/php",

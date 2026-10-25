@@ -1,12 +1,11 @@
 //! What a shim costs, and which half of that the budget is about.
 //!
-//! Roadmap task **T29**. [`../features/runtime-versions.md`](../features/runtime-versions.md) puts a
-//! number on step 2 of the shim and on nothing else — *"Calls `resolve` (in-process, reading SQLite
-//! read-only + walking for `mixengine.toml`) — **no IPC**, so it stays fast even when the daemon is
-//! down. Target: **< 15 ms** overhead, enforced by a bench"* — and that sentence is the reason
-//! `mixengine-shim` links `mixengine-core` at all. A promise nothing measures is a design decision
-//! nothing is holding to account, so `resolving_a_version_stays_inside_the_budget` is the bench it
-//! asks for.
+//! [`../features/runtime-versions.md`](../features/runtime-versions.md) puts a number on step 2 of
+//! the shim and on nothing else — *"Calls `resolve` (in-process, reading SQLite read-only + walking
+//! for `mixengine.toml`) — **no IPC**, so it stays fast even when the daemon is down. Target:
+//! **< 15 ms** overhead, enforced by a bench"* — and that sentence is the reason `mixengine-shim`
+//! links `mixengine-core` at all. A promise nothing measures is a design decision nothing is
+//! holding to account, so `resolving_a_version_stays_inside_the_budget` is the bench it asks for.
 //!
 //! # Two measurements, and only one of them is a gate
 //!
@@ -41,7 +40,7 @@
 //! run, so a regression in them is visible in the log, and `really_ran` is what keeps them
 //! measurements of a shim that really became something.
 //!
-//! **Since T185 the Windows row has a third process in it.** `bin/php.exe` there is the trampoline,
+//! **The Windows row has a third process in it.** `bin/php.exe` there is the trampoline,
 //! which runs the shim for the resolution and then starts the program itself; the extra creation
 //! measured 10–15 ms on a developer machine against a full chain whose run-to-run noise was wider
 //! than that. The table above predates it.

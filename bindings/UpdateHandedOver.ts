@@ -2,7 +2,7 @@
 
 /**
  * What `update.hand_over` answers: the verified package is open in the installer, and the daemon
- * is still running — roadmap task **T88f**.
+ * is still running.
  */
 export type UpdateHandedOver = { 
 /**
@@ -15,13 +15,13 @@ version: string,
 package: string, 
 /**
  * The line that installs [`UpdateHandedOver::package`] without a window, for a person who is
- * not at this Mac's screen: over SSH, the installer opens on the desktop anyway (the T88f
- * readings, M4). Written by the daemon so no client composes it.
+ * not at this Mac's screen: over SSH, the installer opens on the desktop anyway, as measured
+ * on a real Mac. Written by the daemon so no client composes it.
  */
 command: string, 
 /**
- * Whether a software installer opened on this machine's screen — roadmap task **T182b**, D5.
- * `false` on a Linux machine with no desktop session: the package is verified and waiting,
- * and [`UpdateHandedOver::command`] is the only way to install it.
+ * Whether a software installer opened on this machine's screen. `false` on a Linux machine
+ * with no desktop session: the package is verified and waiting, and
+ * [`UpdateHandedOver::command`] is the only way to install it.
  */
 opened: boolean, };

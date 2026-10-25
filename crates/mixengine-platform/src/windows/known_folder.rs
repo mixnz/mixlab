@@ -11,8 +11,9 @@
 //! Three callers. Two are about a directory root owns: the audit log's
 //! ([`crate::elevated::audit_directory`]) and the one the privileged helper is installed into
 //! ([`crate::install::helper_path`]). The third is [`local_app_data`], which is about the per-user
-//! directory the installer wrote — asked the same way the installer asks it. See the T85 design,
-//! D4, and the T107 design, D1.
+//! directory the installer wrote — asked the same way the installer asks it. Why a known folder is
+//! asked of the operating system and never of the environment is D4 of
+//! `docs/specs/2026-09-04-t85-installers-design.md`.
 
 use std::ffi::OsString;
 use std::io;
@@ -40,10 +41,10 @@ pub(crate) fn program_data() -> Result<PathBuf> {
 
 /// `%LOCALAPPDATA%`, wherever this profile actually put it.
 ///
-/// **The third caller, and the one that is not about root** — roadmap task **T107**. MixEngine
-/// installs per user, and the NSIS installer resolves that folder by asking the shell. So does
-/// this: two answers to *where MixEngine is* would be a window that looks somewhere the installer
-/// never wrote, on a profile whose Local AppData has been redirected.
+/// **The third caller, and the one that is not about root.** MixEngine installs per user, and the
+/// NSIS installer resolves that folder by asking the shell. So does this: two answers to *where
+/// MixEngine is* would be a window that looks somewhere the installer never wrote, on a profile
+/// whose Local AppData has been redirected.
 pub(crate) fn local_app_data() -> Result<PathBuf> {
     resolve(&FOLDERID_LocalAppData, "locate the Local AppData folder")
 }

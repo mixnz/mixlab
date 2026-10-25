@@ -1,6 +1,6 @@
-//! `daemon.cleanup` — roadmap task **T96**: the job, and the refusal while anything else is
-//! running. What is measured and removed is [`crate::disk`]'s; `daemon.disk_usage` is an arm in
-//! [`super::rpc`] that asks it directly.
+//! `daemon.cleanup`: the job, and the refusal while anything else is running. What is measured and
+//! removed is [`crate::disk`]'s; `daemon.disk_usage` is an arm in [`super::rpc`] that asks it
+//! directly.
 
 use std::sync::Arc;
 
@@ -11,13 +11,13 @@ use mixengine_proto::{
 
 use super::Api;
 
-/// How many running jobs a cleanup looks at before it decides — roadmap task **T96**.
+/// How many running jobs a cleanup looks at before it decides.
 ///
 /// The question is *is anything running*, so one would do; five is what makes the message able to
 /// name what it found even when a client started several things at once.
 const JOBS_LOOKED_AT: u32 = 5;
 
-/// Refuse when any job other than `except` is running — roadmap task **T96**.
+/// Refuse when any job other than `except` is running.
 ///
 /// A cleanup empties `cache/downloads/`, which is where a download resumes from, and
 /// `cache/updates/`, which is where a verified payload waits to be run. On Windows the unlink would
@@ -51,7 +51,7 @@ impl Api {
     /// **Nothing else may be running.** `cache/downloads/` holds a resumable download
     /// `runtime.install` may be writing to and `cache/updates/` a payload `update.apply` is about to
     /// run; unlinking either mid-flight succeeds on Linux and macOS and breaks the install at its
-    /// final rename, for a reason nothing in its own log explains (the T96 design, D6).
+    /// final rename, for a reason nothing in its own log explains.
     ///
     /// **Checked twice.** Here, so that the refusal is a plain error rather than a job somebody has
     /// to go and read; and again as the job's first step, so a job that started in between is
@@ -95,7 +95,7 @@ mod tests {
     use super::*;
     use crate::api::test_daemon::undeclared;
 
-    /// T96. The disk read answers five rows in one order and asks for nothing — the same strictness
+    /// The disk read answers five rows in one order and asks for nothing — the same strictness
     /// `daemon.uninstall_plan` has, and for the same reason: it is what a screen re-reads.
     #[tokio::test]
     async fn the_disk_read_answers_five_rows_and_asks_for_nothing() {
@@ -125,7 +125,7 @@ mod tests {
         assert!(waiting.pending.is_empty(), "the read enqueued something");
     }
 
-    /// T96. A category this method may not reach is not a field, so asking for one is refused before
+    /// A category this method may not reach is not a field, so asking for one is refused before
     /// anything is opened — the refusal cannot be forgotten in a later edit because there is no
     /// code path to forget.
     #[tokio::test]

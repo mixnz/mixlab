@@ -5,7 +5,7 @@ import type { Timestamp } from "./Timestamp";
 /**
  * One service, as the daemon currently sees it. Also the whole of what `service.status` answers.
  *
- * Why a service last failed — roadmap task **T200b**, its design's D5.
+ * Why a service last failed.
  *
  * `detail` is always a sentence: the error the supervisor had when it gave up, or the reason's
  * own words. That is what lets a client show it without a second table of what each

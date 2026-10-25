@@ -9,9 +9,9 @@ import styles from "./UpdatePanel.module.css";
 const MB = 1_000_000;
 
 /**
- * *Open installer* on macOS and Linux leaves the next step, *Finish*, in Settings → Updates (T187
- * D5), so Settings opens there once the installer is open. A Windows install relaunches instead,
- * and a step that failed leaves the panel on its failure.
+ * *Open installer* on macOS and Linux leaves the next step, *Finish*, in Settings → Updates, so
+ * Settings opens there once the installer is open. A Windows install relaunches instead, and a step
+ * that failed leaves the panel on its failure.
  */
 export async function installThenFollow(
   install: () => Promise<boolean>,
@@ -28,11 +28,12 @@ interface Props {
 }
 
 /**
- * A MixLab release, offered in the corner: T188, `docs/specs/2026-09-27-t188-an-update-offered-in-the-corner-design.md`.
+ * A MixLab release, offered in the corner:
+ * `docs/specs/2026-09-27-t188-an-update-offered-in-the-corner-design.md`.
  *
  * A corner and not a bar across the top: this arrives while somebody is in the middle of something,
  * and nothing here is urgent enough to move what they are looking at. Every step forward is a click
- * (spec D1, D3). What it draws is `updates.panel`, decided in `shell/update/view.ts`; the pane in
+ * (D1, D3). What it draws is `updates.panel`, decided in `shell/update/view.ts`; the pane in
  * Settings → Updates reads the same state.
  */
 function UpdatePanel({ updates, onInstallerOpened }: Props) {

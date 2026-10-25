@@ -1,9 +1,10 @@
-//! Whether this machine trusts MixEngine's own certificate authority — roadmap task **T49a**.
+//! Whether this machine trusts MixEngine's own certificate authority.
 //!
-//! T48 generated an authority and nothing that asks any operating system to believe it. This is the
-//! other half: three mechanisms, one per system, none of them interchangeable — a certificate store
-//! on Windows, the System keychain on macOS, and a file plus a refresh command on Linux, where which
-//! file it is depends on the distribution family rather than on the platform.
+//! `mixengine_core::certs::ca` generates an authority and nothing that asks any operating system to
+//! believe it. This is the other half: three mechanisms, one per system, none of them
+//! interchangeable — a certificate store on Windows, the System keychain on macOS, and a file plus
+//! a refresh command on Linux, where which file it is depends on the distribution family rather
+//! than on the platform.
 //!
 //! **The check is written here, pure and compiled everywhere**, exactly as [`crate::resolver`] and
 //! [`crate::port_access`] are: that is what lets a developer on any one of the three test the check

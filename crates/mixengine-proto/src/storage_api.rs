@@ -1,5 +1,4 @@
-//! Where a home's four growing directories are, and whether that can still change — roadmap task
-//! **T145**.
+//! Where a home's four growing directories are, and whether that can still change.
 //!
 //! **Not an RPC, and the types are here anyway.** Everything this describes is decided *before* a
 //! daemon is listening: a window drawing its "choose a disk" screen has nothing to call, because the

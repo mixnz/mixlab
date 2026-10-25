@@ -21,9 +21,9 @@ struct Answer {
 impl Default for Resolver {
     /// A machine with no scoped mechanism, routing nothing.
     ///
-    /// **Which is what every suite written before T45 should keep looking like**: they were written
-    /// against a home in `hosts_only`, they assert the hosts entries that mode produces, and a
-    /// default that quietly wired them would rewrite what they are about.
+    /// **Which is what every suite written before the resolver was wired should keep looking
+    /// like**: they were written against a home in `hosts_only`, they assert the hosts entries that
+    /// mode produces, and a default that quietly wired them would rewrite what they are about.
     fn default() -> Self {
         Self {
             answer: Ok(Answer {
@@ -156,8 +156,8 @@ mod tests {
         assert!(state.plan(&["test", "internal"], 53).is_some());
     }
 
-    /// The default is a machine with no mechanism, so every suite written before T45 keeps the mode
-    /// it was written against.
+    /// The default is a machine with no mechanism, so every suite written before the resolver was
+    /// wired keeps the mode it was written against.
     #[test]
     fn the_default_mock_routes_nothing_and_has_no_mechanism() {
         let host = crate::mock::Host::with_home("/mixengine");

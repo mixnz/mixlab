@@ -92,7 +92,7 @@ describe("toggleMode", () => {
   });
 });
 
-/* T167g, ADR 0041: a service MixEngine put to rest is neither broken nor something a person turned
+/* ADR 0041: a service MixEngine put to rest is neither broken nor something a person turned
    off, so it is drawn as resting — and only that combination changes anything. */
 describe("a service MixEngine stopped", () => {
   it("is resting, in a tone of its own", () => {

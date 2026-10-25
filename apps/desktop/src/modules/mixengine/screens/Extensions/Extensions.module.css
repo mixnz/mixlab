@@ -40,7 +40,7 @@
   margin-top: 8px;
   font-size: var(--text-md);
 }
-/* The name and, under it, what the add-on is for — T200, D5. */
+/* The name and, under it, what the add-on is for. */
 .nameText {
   display: flex;
   flex-direction: column;
@@ -58,8 +58,8 @@
   color: var(--text-secondary);
 }
 
-/* The ports an installed add-on holds — T201, D5. The description's metrics, so the two lines sit
-   on one rhythm; tabular figures so a column of port numbers does not shimmer. */
+/* The ports an installed add-on holds. The description's metrics, so the two lines sit on one
+   rhythm; tabular figures so a column of port numbers does not shimmer. */
 .ports {
   max-width: 420px;
   overflow: hidden;
@@ -72,7 +72,7 @@
   color: var(--text-secondary);
 }
 
-/* An install's progress on its own row — T200, D3. */
+/* An install's progress on its own row. */
 .progress {
   display: inline-flex;
   flex-direction: column;
@@ -94,7 +94,7 @@
   white-space: nowrap;
 }
 
-/* An offer this machine has no artifact for — T200, D8. */
+/* An offer this machine has no artifact for. */
 .unavailable {
   display: inline-flex;
   align-items: center;
@@ -104,7 +104,7 @@
   color: var(--text-faint);
 }
 
-/* Why what the add-on runs could not start — T200b, D6. */
+/* Why what the add-on runs could not start. */
 .failure {
   max-width: 420px;
   overflow: hidden;

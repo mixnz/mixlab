@@ -1,4 +1,4 @@
-//! PostgreSQL: the other database MixEngine runs — roadmap task **T34**.
+//! PostgreSQL: the other database MixEngine runs.
 //!
 //! **The second and last recipe with something to do before it can start**, after MariaDB: a data
 //! directory `initdb` creates once, and a superuser password that exists only in the OS keyring.
@@ -13,7 +13,7 @@
 //!
 //! - **`postgres` refuses an elevated Windows token.** `check_root()` asks `pgwin32_is_admin()` and
 //!   exits. That is not a database problem and is not solved here: every child MixEngine starts to
-//!   run a user's software is created from a restricted token — roadmap task **T34a**, and
+//!   run a user's software is created from a restricted token —
 //!   `docs/decisions/0010-supervised-child-never-inherits-administrators.md`.
 //! - **`initdb` inherits the machine's locale when it is not told one**, reports *could not find
 //!   suitable text search configuration* on a machine whose locale it does not recognise, sets the
@@ -45,7 +45,7 @@
 //!
 //! `pg_upgrade` — a cluster bootstrapped by one major cannot be read by the next, and
 //! [`READY_MARKER`](crate::generate::first_run::READY_MARKER) already records which one did it. A
-//! second instance beside the first (T36). An application role that is not the superuser.
+//! second instance beside the first. An application role that is not the superuser.
 //! Extensions: the artifact ships 46 and `CREATE EXTENSION` is the user's to run;
 //! `shared_preload_libraries` stays empty. Backup and restore.
 
@@ -101,10 +101,9 @@ const IDENT_FILE: &str = "pg_ident.conf";
 
 /// How much memory the server keeps pages in, taken as one shared segment at startup.
 ///
-/// **32MB against the server's own 128MB** — roadmap task **T73**. PostgreSQL sizes this for a
-/// machine whose whole job is the database; a development cluster holds a schema and a seed, and
-/// the rest of the page cache is the operating system's anyway. **Not re-read by a reload**, so a
-/// user who raises it restarts.
+/// **32MB against the server's own 128MB.** PostgreSQL sizes this for a machine whose whole job is
+/// the database; a development cluster holds a schema and a seed, and the rest of the page cache is
+/// the operating system's anyway. **Not re-read by a reload**, so a user who raises it restarts.
 const SHARED_BUFFERS: &str = "shared_buffers";
 
 /// How many connections it accepts at once. PostgreSQL's own default. Not re-read by a reload.
@@ -195,17 +194,17 @@ impl Recipe for Postgres {
         Some(5432)
     }
 
-    /// `postgres` — the cluster's superuser, and not `root` — roadmap task **T82**.
+    /// `postgres` — the cluster's superuser, and not `root`.
     fn administrator(&self) -> Option<&'static str> {
         Some(SUPERUSER)
     }
 
-    /// PostgreSQL's protocol — T83.
+    /// PostgreSQL's protocol.
     fn protocol(&self) -> Option<mixengine_proto::DatabaseProtocol> {
         Some(mixengine_proto::DatabaseProtocol::Postgres)
     }
 
-    /// The eleven programs a person runs against a running cluster — roadmap task **T130**.
+    /// The eleven programs a person runs against a running cluster.
     ///
     /// **No aliases**, because nothing else on this machine is spelled `psql`.
     ///
@@ -340,7 +339,7 @@ impl Recipe for Postgres {
         })
     }
 
-    /// Its port, and the socket file inside the directory only this recipe may name — T70a's D4.
+    /// Its port, and the socket file inside the directory only this recipe may name.
     ///
     /// `unix_socket_directories` takes a *directory* and the server creates `.s.PGSQL.<port>`
     /// inside it. That convention belongs to this recipe and its own template — [`Endpoints`] says
@@ -359,20 +358,20 @@ impl Recipe for Postgres {
         Ok(held)
     }
 
-    /// An hour — T70a, design D9, and the number `resource-isolation.md` already publishes.
+    /// An hour — the number `resource-isolation.md` already publishes.
     ///
     /// **Longer than php-fpm's half hour on purpose.** A pool starts in tens of milliseconds; a
     /// server replays its log first, so a developer coming back to a project after fifty minutes
     /// would pay for the stop rather than benefit from it. What the extra half hour costs is one
     /// idle server's memory, which is the thing being traded and is worth naming.
     ///
-    /// **Answerable only now.** Until T70a the daemon could stop this and nothing could start it
-    /// again, and a default that idled it would have been a default that broke a home which changed
-    /// nothing — which is why the number arrives in the last commit of that task rather than the
-    /// first.
+    /// **Answerable only once a connection can start this server.** Before that the daemon could
+    /// stop it and nothing could start it again, and a default that idled it would have been a
+    /// default that broke a home which changed nothing — which is why the number arrived with the
+    /// last of that work rather than the first.
     ///
-    /// **Only while the home saves resources** — roadmap task **T167b**, ADR 0041. Until then this
-    /// number was the default for every home; now a service nobody set is never idle-stopped.
+    /// **Only while the home saves resources** (ADR 0041). Before that this number was the default
+    /// for every home; now a service nobody set is never idle-stopped.
     fn idle_when_saving(&self) -> Option<mixengine_proto::Millis> {
         Some(mixengine_proto::Millis::from_secs(60 * 60))
     }
@@ -408,7 +407,7 @@ impl Recipe for Postgres {
         let addr = address(context)?;
 
         Ok(ServiceSpec::builder(context.service().clone(), &server)
-            // As MariaDB's: the port a failed start is diagnosed against (T38).
+            // As MariaDB's: the port a failed start is diagnosed against.
             .ports([addr.port()])
             // **One option, and the cluster is not on it.** `data_directory` is stated inside this
             // file; naming it here as well would be two places for one path to drift.
@@ -478,14 +477,14 @@ impl Recipe for Postgres {
         })
     }
 
-    /// How a database and the role that owns it are made on this server — roadmap task **T77a**.
+    /// How a database and the role that owns it are made on this server.
     ///
-    /// **The role first, because the database is created owned by it** — the T77a design, D6. From
-    /// PostgreSQL 15 `GRANT ALL ON DATABASE` no longer carries `CREATE` on the `public` schema, so a
-    /// role granted everything a MySQL-shaped design would grant it still cannot make a table: the
-    /// Django blueprint of T79 would apply cleanly and die on its first migration. Ownership is the
-    /// fix, and ownership means the role exists first — which is why the order of these steps belongs
-    /// to the recipe rather than to a sequence shared with the MySQL family.
+    /// **The role first, because the database is created owned by it.** From PostgreSQL 15
+    /// `GRANT ALL ON DATABASE` no longer carries `CREATE` on the `public` schema, so a role granted
+    /// everything a MySQL-shaped design would grant it still cannot make a table: the gallery's
+    /// Django blueprint would apply cleanly and die on its first migration. Ownership is the fix,
+    /// and ownership means the role exists first — which is why the order of these steps belongs to
+    /// the recipe rather than to a sequence shared with the MySQL family.
     ///
     /// Neither object has an `IF NOT EXISTS` here and `CREATE DATABASE` cannot run inside a
     /// transaction, so the conditional is psql's own `\gexec`: the `SELECT` builds the statement and
@@ -527,11 +526,11 @@ impl Recipe for Postgres {
                      \n\\gexec\n"
                 );
 
-                // **A database that was already here does not change owner.** D3's deed is over the
-                // account, not the database, and `ALTER DATABASE … OWNER TO` would hand somebody
-                // else's database to this role. Granting is what is left, and what it does not buy
-                // on PostgreSQL 15 is `CREATE` on `public` — which the caller can see, because the
-                // answer reports the database as `existing`.
+                // **A database that was already here does not change owner.** A keyring entry is
+                // the deed to the account, not to the database, and `ALTER DATABASE … OWNER TO`
+                // would hand somebody else's database to this role. Granting is what is left, and
+                // what it does not buy on PostgreSQL 15 is `CREATE` on `public` — which the caller
+                // can see, because the answer reports the database as `existing`.
                 if found.database {
                     sql.push_str(&format!(
                         "GRANT ALL PRIVILEGES ON DATABASE \"{database}\" TO \"{user}\";\n"
@@ -552,9 +551,10 @@ impl Recipe for Postgres {
                     timeout: ADMIN_PATIENCE,
                 };
 
-                // **Design D13**, and a *real* table rather than a temporary one: a temp table lives
-                // in a schema of its own and would say nothing about whether this role can create in
-                // `public`, which is exactly what PostgreSQL 15 took away and D6 gets back.
+                // **The account proves itself**, and with a *real* table rather than a temporary
+                // one: a temp table lives in a schema of its own and would say nothing about
+                // whether this role can create in `public`, which is exactly what PostgreSQL 15
+                // took away and owning the database gives back.
                 let check = Step {
                     label: format!("log in as {user} and write to {database}"),
                     program: context.provided(PSQL)?,
@@ -632,7 +632,7 @@ fn socket_directory(context: &Context) -> Result<PathBuf> {
 /// provisioning step makes and drops to prove the role can write to `public`.
 const CHECK_TABLE: &str = "mixengine_check";
 
-/// How long a statement against a running server gets — roadmap task **T77a**.
+/// How long a statement against a running server gets.
 ///
 /// Milliseconds of work; this is the line past which the server is not answering at all.
 const ADMIN_PATIENCE: Millis = Millis(30_000);
@@ -646,7 +646,7 @@ fn as_superuser(addr: SocketAddr) -> Vec<String> {
     statements_as(addr, SUPERUSER, SUPERUSER)
 }
 
-/// What psql is told as the account that was just made, against its own database — design D13.
+/// What psql is told as the account that was just made, against its own database.
 fn as_account(addr: SocketAddr, user: &str, database: &str) -> Vec<String> {
     statements_as(addr, user, database)
 }
@@ -756,7 +756,7 @@ fn steps(context: &Context) -> Result<Vec<Step>> {
     ])
 }
 
-/// Set the superuser's password in a cluster that already exists — roadmap task **T127**.
+/// Set the superuser's password in a cluster that already exists.
 ///
 /// **[`set_the_password`] alone, and never `initdb`.** The ritual creates the cluster and then sets
 /// the password; a repair is the second half, against a cluster holding somebody's databases.
@@ -786,8 +786,8 @@ fn reset_steps(context: &Context) -> Result<Vec<Step>> {
 /// [`set_the_password`] is safe; an escaper here would be a second thing to get right for a case
 /// that cannot arise, and what it would hide is a credential in the wrong half of a statement.
 ///
-/// One function and not two copies since **T127**, so that the repair cannot end up with a weaker
-/// rule than the ritual it repairs.
+/// One function and not two copies, so that the repair cannot end up with a weaker rule than the
+/// ritual it repairs.
 ///
 /// # Errors
 ///

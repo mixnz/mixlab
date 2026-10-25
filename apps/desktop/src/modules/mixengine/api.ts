@@ -104,7 +104,7 @@ import type { BundleReport } from "@mixengine/api";
 export type Presence = "running" | "notAnswering" | "notRunning" | "notInstalled";
 
 /**
- * The state, with the directories searched for `mixengined` — in the order searched (T111).
+ * The state, with the directories searched for `mixengined` — in the order searched.
  *
  * `searched` only has content when `presence` is `notInstalled`; the other three states search
  * nothing.
@@ -116,7 +116,7 @@ export function presence(): Promise<PresenceReport> {
 }
 
 /**
- * Where the four growing directories go, and whether that can still be changed — T146.
+ * Where the four growing directories go, and whether that can still be changed.
  *
  * Answerable **before any daemon exists**: it runs `mixengined --storage`, a command that reads and
  * creates nothing. That is what makes asking not the thing that closes off the choice.
@@ -125,7 +125,7 @@ export function storage(): Promise<StorageReport> {
   return invoke<StorageReport>("mixengine_storage");
 }
 
-/** The four directories the user just picked, in the form the start command takes — T146. */
+/** The four directories the user just picked, in the form the start command takes. */
 export type ChosenPaths = {
   runtimes?: string;
   packages?: string;
@@ -161,13 +161,12 @@ export function serviceAction(id: string, action: ServiceAction): Promise<unknow
 }
 
 /**
- * `service.start` with a project scope — *every service this project needs*, in dependency order
- * (T125).
+ * `service.start` with a project scope — *every service this project needs*, in dependency order.
  *
  * That set is the daemon's answer: the services the project's sites declare, the php-fpm pools
- * they name, and the front end they are served through. Before T125 this sent an empty target,
- * meaning every service the home declares — a home with four PHP versions started all four to
- * bring up one site.
+ * they name, and the front end they are served through. Before the project scope this sent an
+ * empty target, meaning every service the home declares — a home with four PHP versions started all
+ * four to bring up one site.
  */
 export function serviceStartProject(project: string): Promise<unknown> {
   return invoke("mixengine_service_start_project", { project });
@@ -313,8 +312,9 @@ export function caStatus(): Promise<CaStatus> {
   return invoke<CaStatus>("mixengine_ca_status");
 }
 
-/** The two-pass T64 flow, like `doctorRepair`: `grant: false` to enqueue, read `elevation.status`,
- *  and only then `elevation.grant` once the user has seen the queue — see `CaBlock.tsx`. */
+/** The two passes every elevation takes, like `doctorRepair`: `grant: false` to enqueue, read
+ *  `elevation.status`, and only then `elevation.grant` once the user has seen the queue — see
+ *  `CaBlock.tsx`. */
 export function caRepair(input: DoctorRepair): Promise<unknown> {
   return invoke("mixengine_ca_repair", { params: input });
 }
@@ -363,17 +363,17 @@ export function runtimeSetExtension(choice: ExtensionChoice): Promise<ExtensionC
   return invoke<ExtensionChange>("mixengine_runtime_set_extension", { choice });
 }
 
-/** What updating one installed runtime within its line would do; changes nothing — T193b. */
+/** What updating one installed runtime within its line would do; changes nothing. */
 export function runtimeUpgradePlan(query: RuntimeUpgradeQuery): Promise<UpgradePlan> {
   return invoke<UpgradePlan>("mixengine_runtime_upgrade_plan", { query });
 }
 
-/** Starts the update; the job's result is the plan, marked with what was done — T193b. */
+/** Starts the update; the job's result is the plan, marked with what was done. */
 export function runtimeUpgrade(asked: RuntimeUpgrade): Promise<JobSummary> {
   return invoke<JobSummary>("mixengine_runtime_upgrade", { asked });
 }
 
-/** `runtimeUpgradePlan` for a server package — T193c. */
+/** `runtimeUpgradePlan` for a server package. */
 export function packageUpgradePlan(query: PackageUpgradeQuery): Promise<UpgradePlan> {
   return invoke<UpgradePlan>("mixengine_package_upgrade_plan", { query });
 }
@@ -427,8 +427,8 @@ export function serviceSetIdle(params: ServiceIdleSet): Promise<unknown> {
   return invoke("mixengine_service_set_idle", { params });
 }
 
-/** `service.save_resources` — whether this home stops services nobody is using ("Save battery",
- *  T167b). Off unless the user has turned it on (ADR 0041). */
+/** `service.save_resources` — whether this home stops services nobody is using ("Save battery").
+ *  Off unless the user has turned it on (ADR 0041). */
 export function saveResources(): Promise<SaveResources> {
   return invoke<SaveResources>("mixengine_service_save_resources");
 }
@@ -440,13 +440,13 @@ export function setSaveResources(on: boolean): Promise<SaveResources> {
   return invoke<SaveResources>("mixengine_service_set_save_resources", { params });
 }
 
-/** `daemon.set_credential_store` — where this home keeps its passwords from the next start (T194). */
+/** `daemon.set_credential_store` — where this home keeps its passwords from the next start. */
 export function setCredentialStore(store: CredentialStore): Promise<CredentialStoreChange> {
   const params: CredentialStoreSet = { store };
   return invoke<CredentialStoreChange>("mixengine_daemon_set_credential_store", { params });
 }
 
-/** `service.set_autostart` — whether this service starts along with MixEngine (T112).
+/** `service.set_autostart` — whether this service starts along with MixEngine.
  *  Starts nothing and stops nothing: what it changes is the walk at the next daemon start. */
 export function serviceSetAutostart(params: ServiceAutostartSet): Promise<ServiceSummary> {
   return invoke<ServiceSummary>("mixengine_service_set_autostart", { params });
@@ -477,7 +477,7 @@ export function databaseClient(service: string): Promise<DatabaseClientReport> {
 }
 
 /**
- * The password MixEngine holds for one account — `database.credentials`, T77b.
+ * The password MixEngine holds for one account — `database.credentials`.
  *
  * **The only answer in the whole API that carries the password itself** (ADR 0025); every other
  * `database.*` only returns its *address* in the credential store. An absent `user` means the
@@ -489,7 +489,7 @@ export function databaseCredentials(service: string, user?: string): Promise<Dat
 
 /**
  * Writes the administrator credential back into the database's own data directory —
- * `service.reset_credential`, T127.
+ * `service.reset_credential`.
  *
  * Stops this service and everything that depends on it, runs the recipe's offline set-password
  * step, then starts them again. **Every database in that directory is kept intact** — that is what
@@ -499,43 +499,44 @@ export function serviceResetCredential(service: string): Promise<ServiceWalk> {
   return invoke<ServiceWalk>("mixengine_service_reset_credential", { service });
 }
 
-/** What a copy of an earlier install's state in the kept folders holds — `home.previous`, T182h. */
+/** What a copy of an earlier install's state in the kept folders holds — `home.previous`. */
 export function homePrevious(): Promise<HomePrevious> {
   return invoke<HomePrevious>("mixengine_home_previous");
 }
 
-/** Bring that copy back into this home — `home.restore`, T182h. */
+/** Bring that copy back into this home — `home.restore`. */
 export function homeRestore(): Promise<HomeRestoreReport> {
   return invoke<HomeRestoreReport>("mixengine_home_restore");
 }
 
-/** Runtime directories on disk with no row, and the daemon's reason for each — `runtime.found`, T182i. */
+/** Runtime directories on disk with no row, and the daemon's reason for each — `runtime.found`. */
 export function runtimesFound(): Promise<RuntimeFoundList> {
   return invoke<RuntimeFoundList>("mixengine_runtime_found");
 }
 
-/** Record one runtime version that is on disk without a row — `runtime.adopt`, T182f. */
+/** Record one runtime version that is on disk without a row — `runtime.adopt`. */
 export function runtimeAdopt(kind: string, version: string): Promise<RuntimeSummary> {
   return invoke<RuntimeSummary>("mixengine_runtime_adopt", { kind, version });
 }
 
-/** Package directories on disk with no row, and the daemon's reason for each — `package.found`, T182i. */
+/** Package directories on disk with no row, and the daemon's reason for each — `package.found`. */
 export function packagesFound(): Promise<PackageFoundList> {
   return invoke<PackageFoundList>("mixengine_package_found");
 }
 
-/** Record one package version that is on disk without a row — `package.adopt`, T182f. */
+/** Record one package version that is on disk without a row — `package.adopt`. */
 export function packageAdopt(pkg: string, version: string): Promise<PackageSummary> {
   return invoke<PackageSummary>("mixengine_package_adopt", { package: pkg, version });
 }
 
-/** Service data an earlier install left under `data/`, and whether each can be adopted — `service.found`, T182g. */
+/** Service data an earlier install left under `data/`, and whether each can be adopted —
+ *  `service.found`. */
 export function serviceFound(): Promise<ServiceFoundList> {
   return invoke<ServiceFoundList>("mixengine_service_found");
 }
 
 /**
- * Turn one found data directory back into a service — `service.adopt`, T182g. The service is left
+ * Turn one found data directory back into a service — `service.adopt`. The service is left
  * stopped, with a new admin password; the databases and accounts in it are kept.
  */
 export function serviceAdopt(service: string): Promise<ServiceSummary> {
@@ -548,7 +549,7 @@ export function databaseExploreData(service: string, database?: string): Promise
   return invoke("mixengine_database_explore_data", { service, database });
 }
 
-/** Open a Terminal tab with a state the Terminal module validates (T205, D11). Returns nothing —
+/** Open a Terminal tab with a state the Terminal module validates. Returns nothing —
  *  success means the tab has been queued to open, as for `databaseExploreData`. */
 export function openTerminal(state: unknown): Promise<void> {
   return invoke("mixengine_open_terminal", { state });
@@ -630,14 +631,13 @@ export function extensionsAvailable(): Promise<ExtensionCatalogue> {
   return invoke<ExtensionCatalogue>("mixengine_extension_list_available");
 }
 
-/** The only step before installing — there is no `extensionInspect`; see Decision D2 in the
- *  spec. */
+/** The only step before installing — there is no `extensionInspect`. */
 export function extensionPlan(input: ExtensionPlanRequest): Promise<ExtensionPlan> {
   return invoke<ExtensionPlan>("mixengine_extension_plan", { params: input });
 }
 
-/** `input.consent` must be taken verbatim from the `ExtensionPlan` just received — see Decision D3
- *  in the spec. Answers the job the install runs as (T200, D3): the install is not done when this
+/** `input.consent` must be taken verbatim from the `ExtensionPlan` just received: what is agreed to
+ *  is what was shown. Answers the job the install runs as: the install is not done when this
  *  returns. */
 export function extensionInstall(input: ExtensionInstall): Promise<JobSummary> {
   return invoke<JobSummary>("mixengine_extension_install", { params: input });

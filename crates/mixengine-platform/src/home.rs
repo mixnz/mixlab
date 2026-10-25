@@ -1,10 +1,10 @@
 //! The home a development build suggests for itself, and whether it may take it.
 //!
-//! Roadmap task T166, ADR 0040. `.cargo/config.toml` sets [`DEV_HOME_VAR`] to the checkout's own
-//! `.mixengine-home` for everything cargo runs — the window's daemon, a terminal's `cargo run`, the
-//! window itself — so that they are one daemon. It used to set `MIXENGINE_HOME`, which is an
-//! override: a checkout on an external disk then put `run/` where macOS will not let the elevated
-//! helper read its own request, and every Allow on the prompt ended in *no report*.
+//! ADR 0040. `.cargo/config.toml` sets [`DEV_HOME_VAR`] to the checkout's own `.mixengine-home` for
+//! everything cargo runs — the window's daemon, a terminal's `cargo run`, the window itself — so
+//! that they are one daemon. It used to set `MIXENGINE_HOME`, which is an override: a checkout on
+//! an external disk then put `run/` where macOS will not let the elevated helper read its own
+//! request, and every Allow on the prompt ended in *no report*.
 //!
 //! So the checkout **suggests**, and the three places that resolve a home — `mix`, `mixengined`
 //! and the window — weigh the suggestion here, in one function, after `--home` and
@@ -119,7 +119,7 @@ mod tests {
         assert_eq!(decide(&host, Some(OsStr::new("")), false), None);
     }
 
-    /// The incident T166 comes from: a checkout on a volume TCC gates.
+    /// The incident this module comes from: a checkout on a volume TCC gates.
     #[test]
     fn a_suggestion_the_helper_could_not_read_is_passed_over() {
         let host = mock::Host::with_home("/default")

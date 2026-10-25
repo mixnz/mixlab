@@ -23,7 +23,7 @@ fn reading<'a>(
     }
 }
 
-/// T182a, D3: a `.pkg` copy whose removal was asked for plans the package, named by its receipt.
+/// A `.pkg` copy whose removal was asked for plans the package, named by its receipt.
 #[test]
 fn a_pkg_copy_asked_for_plans_the_package_row() {
     let placement = pkg_placement();
@@ -142,14 +142,14 @@ fn held(path: &str, movable: bool, holders: &[(u32, &str)]) -> HeldItem {
     }
 }
 
-/// T182e, D4: a movable item is not a row at all — the rename moves it.
+/// A movable item is not a row at all — the rename moves it.
 #[test]
 fn a_movable_item_is_not_a_row() {
     let rows = stuck_rows(&[held(r"C:\home\bin", true, &[(1200, "Code.exe")])], &[]);
     assert!(rows.is_empty(), "{rows:?}");
 }
 
-/// T182e, D4: a stuck item is a `Blocked` row naming the program, the path and what to do.
+/// A stuck item is a `Blocked` row naming the program, the path and what to do.
 #[test]
 fn a_stuck_item_is_a_blocked_row() {
     let rows = stuck_rows(&[held(r"C:\home\data", false, &[(7, "pwsh.exe")])], &[]);
@@ -309,7 +309,7 @@ fn a_store_that_refused_is_a_failed_row() {
     );
 }
 
-/// T185a: what the install added to itself is one planned row, listing the recorded names.
+/// What the install added to itself is one planned row, listing the recorded names.
 #[test]
 fn what_the_install_added_to_itself_is_one_planned_row() {
     let directory = tempfile::tempdir().expect("a directory");
@@ -350,7 +350,7 @@ fn query(keep_home: bool, keep_relocated: bool) -> mixengine_proto::UninstallQue
     }
 }
 
-/// T182, D2. The home answers `keep_home` and a relocated directory answers `keep_relocated`,
+/// The home answers `keep_home` and a relocated directory answers `keep_relocated`,
 /// in all four combinations.
 #[test]
 fn the_home_and_the_relocated_directories_are_kept_separately() {
@@ -381,8 +381,8 @@ fn the_home_and_the_relocated_directories_are_kept_separately() {
     }
 }
 
-/// T182, D6. A tombstone an earlier run could not delete is planned for removal, whatever is
-/// kept, under the id of the directory it was.
+/// A tombstone an earlier run could not delete is planned for removal, whatever is kept, under the
+/// id of the directory it was.
 #[test]
 fn an_old_tombstone_is_planned_for_removal_whatever_is_kept() {
     let place = tempfile::tempdir().expect("tempdir");
@@ -468,7 +468,7 @@ fn a_dangling_link_is_still_something_that_is_there() {
     assert!(there(&link));
 }
 
-/// **A helper a package placed is kept, and the row names the package** — the T88e design, D3.
+/// **A helper a package placed is kept, and the row names the package.**
 #[test]
 fn a_helper_a_package_placed_is_kept_and_names_the_package() {
     let row = helper_row(
@@ -504,8 +504,8 @@ fn a_helper_no_package_claims_is_planned_and_an_absent_one_is_absent() {
     assert_eq!(helper_row(None, false, None).outcome, Removal::Absent {});
 }
 
-/// T182b. The window's folders are this home's only when it is the one the installed window
-/// uses, what a person made follows the home, and the cache goes whatever is kept.
+/// The window's folders are this home's only when it is the one the installed window uses, what a
+/// person made follows the home, and the cache goes whatever is kept.
 #[test]
 fn the_windows_folders_follow_the_home_and_the_cache_always_goes() {
     let root = tempfile::tempdir().expect("a temporary directory");

@@ -27,10 +27,10 @@ pub(crate) struct Accepted {
     pub(crate) caller: Owner,
     /// `MIXENGINE_HOME`, spelled the way the filesystem spells it.
     ///
-    /// **Kept rather than recomputed by whoever needs it** — roadmap task **T88a**. [`in_full`] is
-    /// what makes `/tmp` on macOS and `/private/tmp` one directory, and an operation composing a
-    /// path from the *document's* spelling would be composing it from a string this binary has
-    /// already decided not to trust on its own.
+    /// **Kept rather than recomputed by whoever needs it.** [`in_full`] is what makes `/tmp` on
+    /// macOS and `/private/tmp` one directory, and an operation composing a path from the
+    /// *document's* spelling would be composing it from a string this binary has already decided
+    /// not to trust on its own.
     pub(crate) home: PathBuf,
 }
 
@@ -79,7 +79,7 @@ pub(crate) fn read(path: &Path) -> Result<Accepted, Rejected> {
         )));
     }
 
-    // D10: the existence of the answer is the anti-replay check. No clock, no nonce store, no state
+    // The existence of the answer is the anti-replay check. No clock, no nonce store, no state
     // that outlives the process — the daemon writes each request into a fresh single-use directory,
     // so this is the only thing that ever appears beside it. `symlink_metadata` rather than
     // `exists`, which answers `false` for a dangling link somebody planted.
@@ -97,11 +97,11 @@ pub(crate) fn read(path: &Path) -> Result<Accepted, Rejected> {
     let request: PrivilegedRequest = serde_json::from_str(&text)
         .map_err(|source| Rejected(format!("cannot parse {}: {source}", path.display())))?;
 
-    // **A window and not a point** — roadmap task T88a. This binary is excluded from auto-update, so
-    // a daemon newer than it is routine rather than a fault; refusing the whole request over the
-    // envelope's number would mean an old helper served nothing at all, where
-    // `docs/features/updates.md` asks that it go on serving everything it knows — and the
-    // per-operation tolerance in `crate::ops::decode` never gets a chance.
+    // **A window and not a point.** This binary is excluded from auto-update, so a daemon newer
+    // than it is routine rather than a fault; refusing the whole request over the envelope's number
+    // would mean an old helper served nothing at all, where `docs/features/updates.md` asks that it
+    // go on serving everything it knows — and the per-operation tolerance in `crate::ops::decode`
+    // never gets a chance.
     //
     // **Above the ceiling is refused too**, and that is not symmetry for its own sake: a fixed old
     // binary cannot be taught later what a newer protocol means, so the newer peer is the one that
@@ -192,7 +192,7 @@ mod tests {
         assert_eq!(
             accepted.caller,
             elevated::owner_of(&path).unwrap(),
-            "D4: the caller is the file's owner, never anything the document said about it"
+            "the caller is the file's owner, never anything the document said about it"
         );
     }
 
@@ -249,7 +249,7 @@ mod tests {
         assert!(read(&path).is_err());
     }
 
-    /// D10: a processed request cannot be processed twice, and the check costs one `stat`.
+    /// A processed request cannot be processed twice, and the check costs one `stat`.
     #[test]
     fn a_request_that_already_has_an_answer_is_refused() {
         let (home, path) = a_request("");
@@ -261,7 +261,7 @@ mod tests {
         assert!(rejected.to_string().contains("already"), "{rejected}");
     }
 
-    /// D4: without this, `--home C:\Windows\System32` is an escalation for every operation that
+    /// Without this, `--home C:\Windows\System32` is an escalation for every operation that
     /// takes a path. `/` and `C:\Windows` belong to an account this process is not.
     #[test]
     fn a_home_this_caller_does_not_own_is_refused() {
