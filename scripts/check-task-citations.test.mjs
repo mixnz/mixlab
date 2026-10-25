@@ -17,6 +17,23 @@ test('source files are checked; the scripts that read the roadmap and generated 
   }
 });
 
+test('the build configuration is checked too: every TOML manifest and all of .github/', () => {
+  for (const file of ['Cargo.toml', 'crates/a/Cargo.toml', '.cargo/config.toml', 'deny.toml',
+    '.github/workflows/ci.yml', '.github/actions/a/action.yml', '.github/scripts/a.sh',
+    '.github/scripts/a.ps1', '.github/elevate-dependencies.txt']) {
+    assert.equal(isChecked(file), true, file);
+  }
+});
+
+test('TOML that is data is not: fixtures, frozen templates and the published gallery', () => {
+  for (const file of ['crates/mixengine-testkit/fixtures/extensions/a.toml',
+    'crates/mixengine-cli/tests/fixtures/a.toml',
+    'crates/mixengine-core/tests/released-templates/a.toml',
+    'crates/mixengine-core/src/blueprints/gallery/a.toml']) {
+    assert.equal(isChecked(file), false, file);
+  }
+});
+
 test('a task number is found with its letters, wherever it sits; a generic or a word is not', () => {
   assert.deepEqual(tokens('// T32 and T182f, then roadmap task T4.4\n'), ['T32', 'T182f', 'T4']);
   assert.deepEqual(tokens('it("reads a daemon from before T206d", () => {});'), ['T206d']);

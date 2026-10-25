@@ -1,5 +1,5 @@
 # `test` on three systems, and `rustdoc` for Windows.
-# Called from ci.yml, never run on its own (T172e); the triggers, the `jobs` choice and
+# Called from ci.yml, never run on its own; the triggers, the `jobs` choice and
 # concurrency live there. `inputs.jobs` below is the caller's choice, passed through.
 name: test
 
@@ -17,7 +17,7 @@ env:
   CARGO_TERM_COLOR: always
   # CI builds are never incremental: it only costs cache size and hurts a cold runner.
   CARGO_INCREMENTAL: 0
-  # T170l: line tables only in debug builds. Set in every workflow rather than per job because
+  # Line tables only in debug builds. Set in every workflow rather than per job because
   # rust-cache hashes the `CARGO_*` environment into its key.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   RUST_BACKTRACE: 1
@@ -44,9 +44,9 @@ jobs:
         with:
           phase: start
 
-      # T2b: this leg holds an enabled `BUILTIN\Administrators` (a full token). Kept as an assertion
+      # This leg holds an enabled `BUILTIN\Administrators` (a full token). Kept as an assertion
       # because docs/standards/testing.md derives a rule from it.
-      - name: What this leg runs as (T2b)
+      - name: What this leg runs as
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -58,7 +58,7 @@ jobs:
             exit 1
           }
 
-      # T170k: the image turns Defender's real-time protection off; this records that it still does.
+      # The image turns Defender's real-time protection off; this records that it still does.
       # It warns and never fails: a scanner makes a leg slower, not wrong.
       - name: Defender's state
         if: runner.os == 'Windows'
@@ -83,8 +83,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: test
-          # T170a: only `master` writes the cache; branches and tags restore its entry. A run requested
-          # on `master` after a merge is what refreshes it.
+          # Only `master` writes the cache; branches and tags restore its entry. A run requested on
+          # `master` after a merge is what refreshes it.
           save-if: ${{ github.ref == 'refs/heads/master' }}
           # Saved by a `master` leg that failed or was cut off too — the action's default saves only
           # from a green job, which is how a cold cache and a timeout feed each other: the first cold
@@ -92,8 +92,8 @@ jobs:
           # record of what compiled, and a red test says nothing about that.
           cache-on-failure: true
 
-      # T170a: a leg that restored nothing says so. A cold build is the first explanation for a slow
-      # leg, and it belongs in the run summary rather than in a log line nobody reads. The action's
+      # A leg that restored nothing says so. A cold build is the first explanation for a slow leg,
+      # and it belongs in the run summary rather than in a log line nobody reads. The action's
       # `cache-hit` output cannot say it: it is true only for an exact key match, and a branch whose
       # `Cargo.lock` changed restores a partial one.
       - name: Say whether the cache was cold
@@ -111,8 +111,8 @@ jobs:
       - name: Fetch dependencies
         run: cargo fetch --locked
 
-      # The runner for the workspace step (T170f). Pinned, and installed while the network is still
-      # there: on Linux the suite runs in a namespace with no route out.
+      # The runner for the workspace step. Pinned, and installed while the network is still there:
+      # on Linux the suite runs in a namespace with no route out.
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.145
@@ -120,9 +120,9 @@ jobs:
       - name: Build tests
         run: cargo test --workspace --all-targets --all-features --locked --offline --no-run
 
-      # A D-Bus secret service so the keyring tests run rather than skip (T15b), and `libnss3-tools`
-      # for `certutil` (T49b). A job step because the suite runs with no route out; bounded, because
-      # a stalled mirror once cost a whole run.
+      # A D-Bus secret service so the keyring tests run rather than skip, and `libnss3-tools` for
+      # `certutil`. A job step because the suite runs with no route out; bounded, because a stalled
+      # mirror once cost a whole run.
       - name: Install the packages this leg's tests need
         if: runner.os == 'Linux'
         timeout-minutes: 6
@@ -141,28 +141,28 @@ jobs:
 
       # Linux is the leg that actually proves "no network in tests": the suite runs in a namespace
       # with nothing but loopback. The script runs the doc tests too, inside the same namespace. The
-      # real-program suites are the `services` job's, through the same script (T170e).
+      # real-program suites are the `services` job's, through the same script.
       - name: Test (no network)
         if: runner.os == 'Linux'
         env:
           CARGO_NET_OFFLINE: "true"
         run: bash .github/scripts/test-no-network.sh workspace
 
-      # T15b: takes the store away in three ways and asserts the answer. Outside the network
+      # Takes the store away in three ways and asserts the answer. Outside the network
       # namespace, because the script builds the D-Bus it needs.
       - name: Test the answer a machine with no secret service gets
         if: runner.os == 'Linux'
         run: bash .github/scripts/test-absent-secret-service.sh
 
-      # T49b: `#[ignore]`d, and run only on this leg, the one that has `libnss3-tools`.
+      # `#[ignore]`d, and run only on this leg, the one that has `libnss3-tools`.
       - name: Test against a real certutil
         if: runner.os == 'Linux'
         env:
           CARGO_NET_OFFLINE: "true"
         run: cargo test --workspace --all-features --test browsers --locked --offline -- --ignored
 
-      # Windows and macOS rely on the harness (T11) and offline cargo for isolation. Under
-      # cargo-nextest (T170f, `.config/nextest.toml`); plain `cargo test` stays the contract.
+      # Windows and macOS rely on the harness and offline cargo for isolation. Under
+      # cargo-nextest (`.config/nextest.toml`); plain `cargo test` stays the contract.
       - name: Test
         if: runner.os != 'Linux'
         env:
@@ -178,7 +178,7 @@ jobs:
         run: cargo test --workspace --all-features --locked --offline --doc
 
       # The only tool that resolves intra-doc links, once per OS because each OS directory of
-      # `mixengine-platform` builds only on its own OS. Windows runs it as `rustdoc` (T170d).
+      # `mixengine-platform` builds only on its own OS. Windows runs it as `rustdoc`.
       - name: rustdoc
         if: (success() || failure()) && runner.os != 'Windows'
         env:
@@ -195,12 +195,12 @@ jobs:
           target-minutes: "15"
           ceiling-minutes: "45"
 
-  # **rustdoc for Windows (T170d)**, split out of the Windows `test` leg, which is the run's critical
-  # path; macOS and Linux still run it as the last step of `test`. What it checks, and why once per
+  # **rustdoc for Windows**, split out of the Windows `test` leg, which is the run's critical path;
+  # macOS and Linux still run it as the last step of `test`. What it checks, and why once per
   # operating system, is the comment on that step.
   rustdoc:
-    # `jobs: test` answers "is test green yet", and after T170 that answer takes `test`, `services`
-    # and this job together, so the one option runs all three.
+    # `jobs: test` answers "is test green yet", and that answer takes `test`, `services` and this
+    # job together, so the one option runs all three.
     if: ${{ inputs.jobs == '' || inputs.jobs == 'all' || inputs.jobs == 'test' }}
     name: rustdoc (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -209,7 +209,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows only: the `rustdoc` step of `test` covers the other two (T170d).
+        # Windows only: the `rustdoc` step of `test` covers the other two.
         os: [windows-latest]
     steps:
       - uses: actions/checkout@v4
@@ -226,7 +226,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: rustdoc
-          # See the note on `test`'s cache (T170a).
+          # See the note on `test`'s cache.
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Fetch dependencies

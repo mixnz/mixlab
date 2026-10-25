@@ -41,5 +41,9 @@ fi
 # The same extensions scripts/check-file-sizes.mjs counts; its own exclusions apply inside it.
 if printf '%s\n' "$staged" | grep -qE '\.(rs|ts|tsx|js|mjs|css)$'; then
   node "$root/scripts/check-file-sizes.mjs"
+fi
+
+# Those extensions again, and the build's configuration the citation check also reads.
+if printf '%s\n' "$staged" | grep -qE '\.(rs|ts|tsx|js|mjs|css|toml)$|^\.github/'; then
   node "$root/scripts/check-task-citations.mjs"
 fi

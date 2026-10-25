@@ -18,8 +18,7 @@ serde = { workspace = true, features = ["derive"] }
 toml.workspace = true
 
 # The site generator, and only it. An **example** rather than a binary so these stay in
-# `[dev-dependencies]`, where cargo keeps them out of `mix` by construction rather than by review —
-# roadmap task T90, D11.
+# `[dev-dependencies]`, where cargo keeps them out of `mix` by construction rather than by review.
 [dev-dependencies]
 minijinja.workspace = true
 pulldown-cmark.workspace = true

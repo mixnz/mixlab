@@ -34,12 +34,12 @@ TS_RS_LARGE_INT = "number"
 # PHP and Node beside the sites and services that refer to them. `.gitignore` has carried
 # `/.mixengine-home/` for sandbox roots since before this file did.
 #
-# **A suggestion, not `MIXENGINE_HOME`** — ADR 0040, roadmap task T166. It was `MIXENGINE_HOME`
-# until a checkout on an external disk put `run/` where macOS will not let the elevated helper read
-# its own request, and every Allow on the prompt ended in *no report*. `mix`, `mixengined` and the
-# window now weigh this in `mixengine_platform::home::development_home`: taken unless an elevated
-# process could not read it there, in which case the default home (`MixEngine-dev`) is used and a
-# warning names what was passed over. A release build ignores it.
+# **A suggestion, not `MIXENGINE_HOME`** — ADR 0040. It was `MIXENGINE_HOME` until a checkout on an
+# external disk put `run/` where macOS will not let the elevated helper read its own request, and
+# every Allow on the prompt ended in *no report*. `mix`, `mixengined` and the window now weigh this
+# in `mixengine_platform::home::development_home`: taken unless an elevated process could not read
+# it there, in which case the default home (`MixEngine-dev`) is used and a warning names what was
+# passed over. A release build ignores it.
 #
 # `MIXENGINE_HOME` and `--home` still beat it, for a person who chose.
 MIXENGINE_DEV_HOME = { value = ".mixengine-home", relative = true }

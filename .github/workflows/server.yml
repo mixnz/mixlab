@@ -1,5 +1,5 @@
-# The sync server (T177b, T177h): `server/worker/`, `server/native/`, and the one conformance
-# suite both of them answer to.
+# The sync server: `server/worker/`, `server/native/`, and the one conformance suite both of them
+# answer to.
 #
 # **Why this is not a job family in `ci.yml`.** That workflow compiles the workspace for three
 # operating systems, and the reason every ref there asks for its run rather than getting one from a
@@ -130,8 +130,8 @@ jobs:
           cat "$RUNNER_TEMP/wrangler.log" || true
           cat "$RUNNER_TEMP/reaper.log" || true
 
-  # The second implementation (T177h). It is what makes `/v1` a protocol rather than a description
-  # of whichever server was written first — and it is a separate job rather than a step, so a Rust
+  # The second implementation. It is what makes `/v1` a protocol rather than a description of
+  # whichever server was written first — and it is a separate job rather than a step, so a Rust
   # compile does not sit in front of the Worker's answer.
   native:
     name: native

@@ -1,4 +1,4 @@
-# A weekly build of what a release is built with (T174).
+# A weekly build of what a release is built with.
 #
 # **Why this is its own file and not a `schedule:` in `ci.yml`.** With a `schedule` event
 # `inputs.jobs` is empty, and empty is the arm `ci.yml` wrote for a tag push — a schedule there
@@ -6,10 +6,10 @@
 # itself that every run is asked for; this is the one thing here that runs unasked, so it says so
 # in its own name.
 #
-# What it is for: off a tag, CI builds without LTO, at opt-level 0, and on one macOS slice
-# (T170h, T171c, T173a). None of that is what a release ships. This builds what a release ships,
-# every week, so a tag is never the first time that configuration is compiled. It does not sign
-# anything and does not upload a draft — "does it build", not "does it ship".
+# What it is for: off a tag, CI builds without LTO, at opt-level 0, and on one macOS slice. None
+# of that is what a release ships. This builds what a release ships, every week, so a tag is never
+# the first time that configuration is compiled. It does not sign anything and does not upload a
+# draft — "does it build", not "does it ship".
 name: release rehearsal
 
 on:

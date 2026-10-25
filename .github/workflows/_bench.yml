@@ -1,5 +1,5 @@
-# The performance budgets (T29).
-# Called from ci.yml, never run on its own (T172e); the triggers, the `jobs` choice and
+# The performance budgets.
+# Called from ci.yml, never run on its own; the triggers, the `jobs` choice and
 # concurrency live there. `inputs.jobs` below is the caller's choice, passed through.
 name: bench
 
@@ -17,13 +17,13 @@ env:
   CARGO_TERM_COLOR: always
   # CI builds are never incremental: it only costs cache size and hurts a cold runner.
   CARGO_INCREMENTAL: 0
-  # T170l: line tables only in debug builds. Set in every workflow rather than per job because
+  # Line tables only in debug builds. Set in every workflow rather than per job because
   # rust-cache hashes the `CARGO_*` environment into its key.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   RUST_BACKTRACE: 1
 
 jobs:
-  # T29: the performance budgets, in a release build, on all three systems because the shim's
+  # The performance budgets, in a release build, on all three systems because the shim's
   # hand-over differs (`exec` on Unix, a Job Object on Windows).
   bench:
     # **`inputs` is empty for a tag push**, which is what the first arm is for: a release
@@ -31,12 +31,13 @@ jobs:
     if: ${{ inputs.jobs == '' || inputs.jobs == 'all' || inputs.jobs == 'bench' }}
     name: bench (${{ matrix.os }}, ${{ matrix.group }})
     runs-on: ${{ matrix.os }}
-    # Ninety rather than the thirty this job started with: M3 added a release build of the
-    # daemon and the client, three archives to fetch, and a suite that starts three real servers
-    # eight times; T72a added three PHP archives and a suite that waits out a sweep before it
-    # can measure anything; and T73 added one that bootstraps two databases and settles each.
+    # Ninety rather than the thirty this job started with: M3 added a release build of the daemon
+    # and the client, three archives to fetch, and a suite that starts three real servers eight
+    # times; the cold path added three PHP archives and a suite that waits out a sweep before it can
+    # measure anything; and the tuned defaults added one that bootstraps two databases and settles
+    # each.
     timeout-minutes: 90
-    # T184: CI builds are not releases, so their daemons would keep credentials in a file. These
+    # CI builds are not releases, so their daemons would keep credentials in a file. These
     # suites run real servers against real credentials, and are where the OS store is exercised end
     # to end — so they ask for it. A runner has no person to prompt, and Linux unlocks its keyring.
     env:
@@ -46,7 +47,7 @@ jobs:
       # are only comparable when they were all taken.
       fail-fast: false
       matrix:
-        # **Windows runs as two legs (T170j)**: its measurements alone took 13.5 minutes in run
+        # **Windows runs as two legs**: its measurements alone took 13.5 minutes in run
         # 35430523430, on top of an 11-minute release build. macOS and Linux measure in about 7 and
         # stay one leg. A group is a set of measurements, and each leg builds only what its group
         # needs; the fetches are shared, because Caddy is in both and all of them cost seconds.
@@ -70,8 +71,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: bench
-          # See the note on `test`'s cache (T170a). The two Windows legs share one key, so one of
-          # them writes it (T170j).
+          # See the note on `test`'s cache. The two Windows legs share one key, so one of them
+          # writes it.
           save-if: ${{ github.ref == 'refs/heads/master' && matrix.group != 'footprint' }}
 
       - name: Fetch dependencies
@@ -86,8 +87,8 @@ jobs:
           bash .github/scripts/fetch-package.sh mariadb 11.4.12 MIXENGINE_MARIADB_PACKAGE
           bash .github/scripts/fetch-package.sh redis 8.10.0 MIXENGINE_REDIS_PACKAGE
 
-      # T72a: three cold pools need three versions. 7.0 and 7.4 predate `pm.status_listen`, which
-      # keeps T72a's status-page decision honest.
+      # Three cold pools need three versions. 7.0 and 7.4 predate `pm.status_listen`, which keeps
+      # the cold path's status-page decision honest.
       - name: Fetch the three PHPs the cold path wakes
         shell: bash
         run: |
@@ -124,7 +125,7 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: cargo build --release -p mixengine-testkit --bin fakeservice --locked --offline
 
-      # T185: on Windows `bin/` holds the trampoline, which is another package's binary, so a test
+      # On Windows `bin/` holds the trampoline, which is another package's binary, so a test
       # target of `mixengine-shim` does not build it either. Built everywhere, used on Windows.
       - name: Build the trampoline the shim is reached through on Windows
         if: contains(fromJSON('["budgets","all"]'), matrix.group)
@@ -163,7 +164,7 @@ jobs:
           cargo test --release -p mixengine-cli --test idle_footprint --locked --offline
           -- --ignored --nocapture
 
-      # T72a: the cold path. It waits for a sweep, not a clock (T70, D8). Before M3, as above.
+      # The cold path. It waits for a sweep, not a clock. Before M3, as above.
       - name: Cold path
         if: contains(fromJSON('["budgets","all"]'), matrix.group)
         timeout-minutes: 15
@@ -173,7 +174,7 @@ jobs:
           cargo test --release -p mixengine-cli --test cold_path --locked --offline
           -- --ignored --nocapture
 
-      # T73: gates the difference between tuned and default MariaDB, never either number. Before M3.
+      # Gates the difference between tuned and default MariaDB, never either number. Before M3.
       - name: What the tuned defaults save
         if: runner.os != 'Linux' && contains(fromJSON('["footprint","all"]'), matrix.group)
         timeout-minutes: 20
@@ -218,7 +219,7 @@ jobs:
             'printf "mixengine-ci" | gnome-keyring-daemon --unlock --components=secrets >/dev/null || exit 1
              exec cargo test --release -p mixengine-cli --test warm_start --locked --offline -- --ignored --nocapture'
 
-      # T91a: a stripped release daemon's crash report turns back into names, on every system. Last,
+      # A stripped release daemon's crash report turns back into names, on every system. Last,
       # because it builds the daemon again with the `crash-probe` feature — and on Windows with the
       # release's own flags, which compiles everything again. One leg per system.
       - name: A stripped daemon's crash report names its frames

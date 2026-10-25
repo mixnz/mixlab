@@ -1,5 +1,5 @@
 # The ubuntu-only checks: `lint`, `bindings`, `docs` and `desktop`.
-# Called from ci.yml, never run on its own (T172e); the triggers, the `jobs` choice and
+# Called from ci.yml, never run on its own; the triggers, the `jobs` choice and
 # concurrency live there. `inputs.jobs` below is the caller's choice, passed through.
 name: lint
 
@@ -17,7 +17,7 @@ env:
   CARGO_TERM_COLOR: always
   # CI builds are never incremental: it only costs cache size and hurts a cold runner.
   CARGO_INCREMENTAL: 0
-  # T170l: line tables only in debug builds. Set in every workflow rather than per job because
+  # Line tables only in debug builds. Set in every workflow rather than per job because
   # rust-cache hashes the `CARGO_*` environment into its key.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   RUST_BACKTRACE: 1
@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # T169, ADR 0043. Every link into the documentation resolves, every spec's status header is
+      # ADR 0043. Every link into the documentation resolves, every spec's status header is
       # valid and agrees with the roadmap, and docs/specs/README.md is what the script generates.
       # First because it needs no toolchain: ubuntu-latest ships Node.
       - name: Documentation links and spec status
@@ -42,8 +42,8 @@ jobs:
           node --test scripts/check-docs.test.mjs
           node scripts/check-docs.mjs
 
-      # T207: no source file grows past 1,000 lines, and none of the files already past it grows at
-      # all — scripts/file-size-baseline.json only ever goes down. Needs only Node.
+      # No source file grows past 1,000 lines, and none of the files already past it grows at all —
+      # scripts/file-size-baseline.json only ever goes down. Needs only Node.
       - name: File sizes
         run: |
           node --test scripts/check-file-sizes.test.mjs
@@ -70,7 +70,7 @@ jobs:
           node --test scripts/check-client-surface.test.mjs
           node scripts/check-client-surface.mjs
 
-      # T91a: the script that turns a crash report's offsets back into names reads three object
+      # The script that turns a crash report's offsets back into names reads three object
       # formats and undoes two manglings by hand, so its parsers are tested on their own. The `bench`
       # job proves it against a real stripped daemon on every system. Needs only Node.
       - name: Crash report symbolisation
@@ -87,7 +87,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: lint
-          # See the note on `test`'s cache (T170a).
+          # See the note on `test`'s cache.
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: rustfmt
@@ -96,10 +96,10 @@ jobs:
       - name: clippy
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
-      # T40, D8: the helper runs as root, so its dependency tree is a security decision. A change
-      # here means reading the diff and committing the updated list in the same change.
-      # Clippy rather than `check`, and with warnings denied: the workspace step above unifies the
-      # platform's features, so an item only `host` reaches looks used there and dead here.
+      # The helper runs as root, so its dependency tree is a security decision. A change here means
+      # reading the diff and committing the updated list in the same change. Clippy rather than
+      # `check`, and with warnings denied: the workspace step above unifies the platform's features,
+      # so an item only `host` reaches looks used there and dead here.
       - name: The elevated helper builds without the rest of the platform
         run: cargo clippy -p mixengine-elevate --all-targets --locked -- -D warnings
 
@@ -118,10 +118,10 @@ jobs:
           cargo tree -p mixengine-elevate --no-default-features --edges normal             --prefix none --format '{p}' | sed 's/ v[0-9].*//' | sort -u > /tmp/elevate-dependencies.txt
           grep -v '^#' .github/elevate-dependencies.txt | diff -u - /tmp/elevate-dependencies.txt
 
-      # T182b, D1: what goes into the helper changed since the last release, and HELPER_VERSION did
-      # not. The pre-commit hook and the local gate catch it first; this is the net for anybody
-      # without them, still before a merge and never at a release. Three targets, because the
-      # fingerprint is every source any of the three systems compiles into the helper.
+      # What goes into the helper changed since the last release, and HELPER_VERSION did not. The
+      # pre-commit hook and the local gate catch it first; this is the net for anybody without them,
+      # still before a merge and never at a release. Three targets, because the fingerprint is every
+      # source any of the three systems compiles into the helper.
       - name: The helper's version moved with what goes into it
         run: |
           rustup target add x86_64-pc-windows-msvc x86_64-unknown-linux-gnu aarch64-apple-darwin
@@ -137,7 +137,7 @@ jobs:
           echo "$found"
           test "$(printf '%s\n' "$found" | grep -c .)" -eq 1
 
-      # T14: `--check` fails when a query changed without `cargo sqlx prepare`. Prebuilt, and pinned
+      # `--check` fails when a query changed without `cargo sqlx prepare`. Prebuilt, and pinned
       # to Cargo.lock's sqlx, because `.sqlx/` is a version-specific format.
       - name: Install sqlx-cli
         uses: taiki-e/install-action@v2
@@ -165,8 +165,8 @@ jobs:
           arguments: --all-features
           command-arguments: advisories bans licenses sources
 
-      # T86, D9: `packaging/sign.sh` would otherwise only ever run in a release, so it runs here,
-      # against a throwaway key.
+      # `packaging/sign.sh` would otherwise only ever run in a release, so it runs here, against a
+      # throwaway key.
       - name: Install minisign
         run: |
           sudo apt-get update
@@ -175,13 +175,13 @@ jobs:
       - name: The signing script signs everything, and refuses a key that is not the product's
         run: bash .github/scripts/test-sign.sh
 
-      # T88. The other half of what a release depends on and no ordinary run exercises: the document
+      # The other half of what a release depends on and no ordinary run exercises: the document
       # every installed copy reads to find out that a newer one exists. Same reasoning as the step
       # above — the only other thing that would ever run `feed.sh` is a release.
       - name: The feed describes the archives beside it
         run: bash .github/scripts/test-feed.sh
 
-  # T56: regenerates the TypeScript contract and fails on drift. Ubuntu alone: generation is
+  # Regenerates the TypeScript contract and fails on drift. Ubuntu alone: generation is
   # OS-independent, and `test` runs the exporter on all three.
   bindings:
     # **`inputs` is empty for a tag push**, which is what the first arm is for: a release
@@ -201,7 +201,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: bindings
-          # See the note on `test`'s cache (T170a).
+          # See the note on `test`'s cache.
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Fetch dependencies
@@ -224,7 +224,7 @@ jobs:
       - name: The archive a release publishes can be built
         run: bash packaging/bindings.sh --pack
 
-  # T90: builds the handbook's site and holds the command reference against what `mix` prints.
+  # Builds the handbook's site and holds the command reference against what `mix` prints.
   docs:
     # **`inputs` is empty for a tag push**, which is what the first arm is for: a release
     # runs every job whatever a dispatch might once have narrowed.
@@ -243,7 +243,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: docs
-          # See the note on `test`'s cache (T170a).
+          # See the note on `test`'s cache.
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Fetch dependencies
@@ -252,7 +252,7 @@ jobs:
       - name: The corpus builds a site, and the committed command reference is current
         run: bash packaging/docs.sh --check
 
-  # T103, ADR 0027: the desktop application, on one OS; `build` proves the window links on all
+  # ADR 0027: the desktop application, on one OS; `build` proves the window links on all
   # three. `cargo audit` is here because this workflow runs when somebody is looking.
   desktop:
     # **`inputs` is empty for a tag push**, which is what the first arm is for: a release
@@ -303,7 +303,7 @@ jobs:
         with:
           key: desktop
           workspaces: "apps/desktop/src-tauri -> target"
-          # See the note on `test`'s cache (T170a).
+          # See the note on `test`'s cache.
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
       # A workspace of its own, so the root's `cargo fmt --all` never reaches it; the root's

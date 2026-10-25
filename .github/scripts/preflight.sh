@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `preflight` (T86): the tag, the version, the key and the secrets agree, checked in seconds and
+# `preflight`: the tag, the version, the key and the secrets agree, checked in seconds and
 # before anything is built, so a release that cannot work fails at once. Reads `GITHUB_REF_NAME`
 # and the two signing secrets, which the step passes in as `UPDATE_SECRET_KEY` and
 # `UPDATE_PASSWORD`; nothing here prints either.

@@ -1,5 +1,5 @@
 #!/bin/sh
-# T197: the install script's choices, checked without a network or an installer.
+# The install script's choices, checked without a network or an installer.
 #
 # Sourced with MIXLAB_INSTALL_SOURCED=1, so `main` does not run and each function is called on its
 # own. Runs under whatever `sh` is: dash on the Linux runner, which is the strict one.

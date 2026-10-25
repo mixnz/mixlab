@@ -172,6 +172,19 @@ Then `git grep` for `task-citation-baseline` finds nothing outside released hist
 - `bash scripts/gate.sh` green, then CI requested on the branch (`scripts/ask-ci.sh`), then the PR,
   squash-merged with `(#id)` once CI is green.
 
+**D9. The build's configuration, decided after D6 was built.** The comments in every `Cargo.toml`
+and the rest of the workspace's TOML (`.cargo/config.toml`, `.config/nextest.toml`, `deny.toml`)
+and everything under `.github/` (workflows, actions, scripts, `elevate-dependencies.txt`) carried
+about 340 citations that D6's file list did not read. They are rewritten the same way, as a tenth
+commit, and `isChecked` reads those files from then on, with `.githooks/pre-commit` running the
+check when one is staged. Left out as data: anything under a `fixtures/` directory (the
+`mixengine-testkit` extension manifests are copies of what `mixengine-packages` publishes), the
+frozen templates in `crates/mixengine-core/tests/released-templates/`, and the gallery under
+`crates/mixengine-core/src/blueprints/gallery/`, published elsewhere as signed bytes. SQL
+migrations stay excluded: sqlx checksums them. The workflow step names that ended in a task number
+(`What this leg runs as`, twice, and `Every file the install scripts can choose is in this
+release`) and the CI annotations and step-summary lines that carried one lose it.
+
 ## MixLab
 
 No screen changes. The window's code is cleaned like the rest: comments in `apps/desktop/src` and
@@ -184,3 +197,4 @@ their comments do. No string a MixLab user reads changes.
 - Whether a pre-letter citation (`T2.7`) names the screen or the feature it meant; the roadmap's
   phase files say which.
 - `.github/workflows/*.yml` comments are not counted; any found while there are cleaned too.
+  (Superseded by D9: they are counted now.)

@@ -2,9 +2,9 @@ name: Release profile
 description: >-
   How `window`, `binaries` and `build` build, chosen from the ref and written to the step summary.
   A tag builds exactly as `[profile.release]` says. Any other ref builds without LTO, with 16
-  codegen units (T170h) and at opt-level 0 (T173a), and any ref other than `master` builds the
-  aarch64 macOS slice alone (T171c). These artifacts are not releases — unless the caller asks for
-  `release-exact`, which builds a tag's profile from any ref (T174a).
+  codegen units and at opt-level 0, and any ref other than `master` builds the aarch64 macOS slice
+  alone. These artifacts are not releases — unless the caller asks for `release-exact`, which
+  builds a tag's profile from any ref.
 inputs:
   profile:
     description: "`branch` (the default) or `release-exact`, which builds what a tag builds."
@@ -17,7 +17,7 @@ runs:
       env:
         MIX_PROFILE: ${{ inputs.profile }}
       run: |
-        # **A branch builds without LTO (T170h) and at opt-level 0 (T173a).** `lto = "thin"`,
+        # **A branch builds without LTO and at opt-level 0.** `lto = "thin"`,
         # `codegen-units = 1` and `opt-level = 3` make the binary a user gets smaller and faster,
         # and they are the slowest settings cargo has. A branch's `build` proves that every artifact
         # packages, installs and is probed, which depends on none of the three, and only a tag run
@@ -26,23 +26,23 @@ runs:
         # untouched: they are what makes an artifact a release. `packaging/common.sh` forwards all
         # three variables into the manylinux container.
         #
-        # **T174a: `release-exact` takes the tag's arm from any ref.** Four axes now separate a
+        # **`release-exact` takes the tag's arm from any ref.** Four axes now separate a
         # branch build from a release build and two of them are covered by nothing else, so the
         # configuration a release ships has to be built before the release rather than during it.
         # The two conditions are one `if` because writing nothing *is* the tag's profile.
         if [[ "$GITHUB_REF" == refs/tags/* || "$MIX_PROFILE" == "release-exact" ]]; then
-          echo "Profile: Cargo.toml's [profile.release], unchanged ($([[ "$GITHUB_REF" == refs/tags/* ]] && echo "a tag" || echo "a rehearsal, T174"))." | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Profile: Cargo.toml's [profile.release], unchanged ($([[ "$GITHUB_REF" == refs/tags/* ]] && echo "a tag" || echo "a rehearsal"))." | tee -a "$GITHUB_STEP_SUMMARY"
         else
           echo "CARGO_PROFILE_RELEASE_LTO=false" >> "$GITHUB_ENV"
           echo "CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16" >> "$GITHUB_ENV"
           echo "CARGO_PROFILE_RELEASE_OPT_LEVEL=0" >> "$GITHUB_ENV"
-          echo "Profile: [profile.release] without LTO, 16 codegen units, opt-level 0 (a branch, T170h/T173a). These artifacts are not releases." | tee -a "$GITHUB_STEP_SUMMARY"
-          # T171c: `master` stays universal, so every merge proves `lipo` and the x86_64 release
+          echo "Profile: [profile.release] without LTO, 16 codegen units, opt-level 0 (a branch). These artifacts are not releases." | tee -a "$GITHUB_STEP_SUMMARY"
+          # `master` stays universal, so every merge proves `lipo` and the x86_64 release
           # build before a tag does; any other branch builds `aarch64` and checks x86_64.
           if [ "$GITHUB_REF" != "refs/heads/master" ]; then
             echo "MIX_MACOS_SLICES=aarch64" >> "$GITHUB_ENV"
             if [ "$RUNNER_OS" = "macOS" ]; then
-              echo "macOS: the aarch64 slice alone, x86_64 checked but not built (a branch, T171c)." | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "macOS: the aarch64 slice alone, x86_64 checked but not built (a branch)." | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           fi
         fi

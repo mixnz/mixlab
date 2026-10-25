@@ -1,8 +1,8 @@
 name: gallery
 
 # **The gallery lives here and is published from somewhere else**, and until now nothing joined the
-# two. `mixengine-packages` cuts `crates/mixengine-core/src/blueprints/gallery` into a signed release
-# (T79a) by checking this repository out at a ref, so every edit on this side leaves that release
+# two. `mixengine-packages` cuts `crates/mixengine-core/src/blueprints/gallery` into a signed
+# release by checking this repository out at a ref, so every edit on this side leaves that release
 # holding the previous set — and the repository able to notice is the one nobody has open at the
 # time.
 #
@@ -36,7 +36,7 @@ on:
       # binary and only mirrored over there, so a rotation on this side invalidates every file
       # published under the old one without touching a single manifest.
       - 'crates/mixengine-core/src/blueprints/trust.rs'
-      # The starters `publish-blueprints` zips beside the gallery (T205b).
+      # The starters `publish-blueprints` zips beside the gallery.
       - 'crates/mixengine-core/src/blueprints/starters/**'
       # A workflow that stopped working should say so on the commit that broke it.
       - '.github/workflows/gallery.yml'

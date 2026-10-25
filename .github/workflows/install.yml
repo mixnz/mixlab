@@ -1,4 +1,4 @@
-# The one-command installers, installed for real (T197a).
+# The one-command installers, installed for real.
 #
 # **Why this is its own file and not a job in `ci.yml`.** Every check in `_install.yml` runs the
 # script from the checkout against the newest *published* release, never against what the run

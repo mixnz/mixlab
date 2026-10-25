@@ -2,15 +2,15 @@ name: Defender aside
 description: >-
   Takes the workspace and CARGO_HOME out of Windows Defender's real-time scanning, so a release
   build that writes tens of thousands of object files is not read a second time as it writes them.
-  Nothing on a runner that is not Windows. T170k has `test` and `services` report Defender's state
+  Nothing on a runner that is not Windows. `test` and `services` report Defender's state
   for the same reason; `window` and `binaries` write far more than either.
 runs:
   using: composite
   steps:
     # **A refusal is reported, never fatal.** `Add-MpPreference` needs a privilege the runner may
     # not grant, and tampering protection can refuse it outright. An exclusion that silently did not
-    # apply would make the next measurement of this job a lie (T173b, E3), so the log says which of
-    # the two happened either way.
+    # apply would make the next measurement of this job a lie, so the log says which of the two
+    # happened either way.
     - if: runner.os == 'Windows'
       shell: pwsh
       run: |

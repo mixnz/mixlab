@@ -138,7 +138,8 @@ from somebody else's manifest, and write the reason as the edge, not as "upstrea
   message, where `git log -S` and `git blame` find it. A number in a comment sends the reader to
   another file, and it goes wrong when the task is split, lettered or moved. Where a reader really
   needs the longer argument, link the ADR or the spec under `docs/specs/` by file name. Never link
-  a plan under `docs/plans/`. The rule holds for the window's TypeScript too.
+  a plan under `docs/plans/`. The rule holds for the window's TypeScript too, and for the build's
+  configuration: every TOML manifest and everything under `.github/`.
   `node scripts/check-task-citations.mjs`, in `scripts/gate.sh` and CI's `lint` job, fails on any
   citation.
 - Where the claim is about **another crate's behaviour** — that `sqlx` reports this as that, that

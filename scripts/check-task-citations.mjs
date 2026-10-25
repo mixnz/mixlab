@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Keep roadmap task numbers (`T182f`, "roadmap task T32") out of source files.
+// Keep roadmap task numbers (`T182f`, "roadmap task T32") out of source files and the build's
+// configuration.
 //
 //   node scripts/check-task-citations.mjs
 //
@@ -27,11 +28,24 @@ const READERS_OF_THE_ROADMAP = new Set([
   'scripts/check-task-citations.test.mjs',
 ]);
 
+// Beyond the source files `check-file-sizes.mjs` counts: the build's own configuration, every
+// TOML manifest and the whole of `.github/`, where a number goes stale the same way. Not the TOML
+// that is data: fixtures, the frozen templates the upgrade test compares, and the gallery, which
+// is published elsewhere as signed bytes.
+const CONFIGURATION = /(\.toml$|^\.github\/)/;
+const DATA = [
+  /(^|\/)fixtures\//,
+  /^crates\/mixengine-core\/tests\/released-templates\//,
+  /^crates\/mixengine-core\/src\/blueprints\/gallery\//,
+];
+
 // `T` and a number, with the letters a split task takes: T32, T182f, T4 of "T4.4".
 const CITATION = /\bT\d+[a-z]*\b/g;
 
 export function isChecked(file) {
-  return isCounted(file) && !READERS_OF_THE_ROADMAP.has(file);
+  if (READERS_OF_THE_ROADMAP.has(file)) return false;
+  const configuration = CONFIGURATION.test(file) && !DATA.some((pattern) => pattern.test(file));
+  return isCounted(file) || configuration;
 }
 
 /** Every citation in `text`, in order, with the line (from 1) it sits on. */

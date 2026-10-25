@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# T86's D9: exercise `packaging/sign.sh` on every CI run, with a key nobody has to protect.
+# Exercise `packaging/sign.sh` on every CI run, with a key nobody has to protect.
 #
 # The script it tests is the only thing standing between a release and an unsigned artifact, and the
 # only other thing that would ever run it is a release. So it is run here instead, against a
@@ -21,7 +21,7 @@ printf '%s\n%s\n' "$password" "$password" | minisign -G -p "$work/other.pub" -s 
 mine="$(sed -n '2p' "$work/mine.pub" | tr -d '\r')"
 other="$(sed -n '2p' "$work/other.pub" | tr -d '\r')"
 
-# The helper is named and stamped by its own version, not the release's — T182b, D1.
+# The helper is named and stamped by its own version, not the release's.
 helper_version="$(sed -n 's/^pub const HELPER_VERSION: &str = "\(.*\)";$/\1/p' \
   "$root/crates/mixengine-proto/src/privileged.rs" | head -1)"
 test -n "$helper_version" || {
@@ -55,8 +55,8 @@ test ! -f "$dist/mixlab_0.0.0-1_amd64.deb.sha256.minisig" || {
   exit 1
 }
 
-# **The trusted comment on the helper, which is the one signature a *program* reads back** — roadmap
-# task T88a. `mixengine_proto::privileged::HelperStamp` refuses anything that is not
+# **The trusted comment on the helper, which is the one signature a *program* reads back.**
+# `mixengine_proto::privileged::HelperStamp` refuses anything that is not
 # `mixengine-elevate <version> <os> <arch>`, and a helper signed without it would verify perfectly
 # and then be refused by every machine that fetched it. Nothing else in CI would notice.
 comment="$(sed -n '3p' "$dist/$helper.minisig")"

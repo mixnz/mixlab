@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# T88's D13: exercise `packaging/feed.sh` on every CI run, against a fixture distribution directory.
+# Exercise `packaging/feed.sh` on every CI run, against a fixture distribution directory.
 #
 # The script it tests writes the one document an installed MixEngine reads to find out that a newer
 # one exists, and the only other thing that would ever run it is a release. So it is run here
@@ -7,7 +7,7 @@
 # beside them, `provides` is read out of the archive rather than assumed, and a universal macOS file
 # produces two rows — one per architecture — pointing at the same URL.
 #
-# **Since T182b, D5 the one payload is the Windows zip**; macOS and Linux are updated by their
+# **The one payload is the Windows zip**; macOS and Linux are updated by their
 # installers, which the feed lists under `installers`, two flavours each.
 
 set -euo pipefail
@@ -42,8 +42,8 @@ PY
 # one, and a hand-assembled directory may not.
 (cd "$dist" && sha256sum "$windows" >"$windows.sha256")
 
-# The installers — T88f and T182b, D5. Both flavours on both systems, and the unversioned Linux
-# aliases the handbook links, which must not become rows of their own.
+# The installers. Both flavours on both systems, and the unversioned Linux aliases the handbook
+# links, which must not become rows of their own.
 pkg="mixlab-$version-macos-universal.pkg"
 pkg_headless="mixengine-$version-macos-universal-headless.pkg"
 deb="mixlab_$version-1_amd64.deb"
@@ -55,8 +55,8 @@ for name in "$pkg" "$pkg_headless" "$deb" "$deb_headless" "$rpm" "$rpm_headless"
   echo "not really an installer: $name" >"$dist/$name"
 done
 
-# The privileged helper of each leg, published as its own asset — roadmap task T88a, named by the
-# helper's own version since T182b, D1. `feed.sh` refuses a distribution with none.
+# The privileged helper of each leg, published as its own asset and named by the helper's own
+# version. `feed.sh` refuses a distribution with none.
 helper_linux="mixengine-elevate-$helper_version-linux-x86_64"
 helper_macos="mixengine-elevate-$helper_version-macos-universal"
 helper_windows="mixengine-elevate-$helper_version-windows-x86_64.exe"
@@ -119,9 +119,9 @@ assert row["provides"] == {
     "mixengine-elevate": "mixengine/mixengine-elevate.exe",
 }, row["provides"]
 
-# T88a. Four helper rows out of three files: macOS publishes one universal helper and is listed
-# under both architectures. Each row carries the helper's own version (T182b, D1), and no `sha256` —
-# the helper is checked inside the elevated process against a detached signature (T88a, D6).
+# Four helper rows out of three files: macOS publishes one universal helper and is listed under
+# both architectures. Each row carries the helper's own version, and no `sha256` — the helper is
+# checked inside the elevated process against a detached signature.
 helpers = {(row["os"], row["arch"]): row for row in feed["helpers"]}
 assert set(helpers) == {
     ("linux", "x86_64"),
@@ -136,7 +136,7 @@ for row in feed["helpers"]:
     name = row["url"].rsplit("/", 1)[1]
     assert row["size"] == size(name), row
 
-# T88f and T182b, D5. One row per (os, arch, kind, flavour), bound by its SHA-256, and never an
+# One row per (os, arch, kind, flavour), bound by its SHA-256, and never an
 # unversioned alias.
 installers = {
     (row["os"], row["arch"], row["kind"], row["flavour"]): row for row in feed["installers"]
@@ -176,8 +176,8 @@ if bash "$root/packaging/feed.sh" --dist "$empty" --version "$version" --tag "v$
 fi
 
 # **And a distribution with payloads but no privileged helper is a failure too.** That is a release
-# whose helper no machine could ever be offered, which is the state T88a exists to make impossible —
-# and it is the shape a leg that forgot `mix_publish_helper` would produce.
+# whose helper no machine could ever be offered, which is the state the helper's update path exists
+# to make impossible — and it is the shape a leg that forgot `mix_publish_helper` would produce.
 helperless="$work/helperless"
 mkdir -p "$helperless"
 cp "$dist/$windows" "$helperless/"
@@ -187,7 +187,7 @@ if bash "$root/packaging/feed.sh" --dist "$helperless" --version "$version" --ta
   exit 1
 fi
 
-# **And a helper for macOS or Linux with no installer beside it is a failure** — T88f, T182b D5.
+# **And a helper for macOS or Linux with no installer beside it is a failure.**
 # Every such machine would be offered nothing by that release, and nothing else would notice.
 for system in macos linux; do
   installerless="$work/installerless-$system"

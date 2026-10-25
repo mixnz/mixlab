@@ -1,4 +1,4 @@
-# The user handbook, published at https://mixnz.github.io/mixlab/ — roadmap task T90.
+# The user handbook, published at https://mixnz.github.io/mixlab/.
 #
 # A workflow of its own rather than a job in `ci.yml`, because deploying needs `pages: write` and
 # `id-token: write` and a `github-pages` environment, and `ci.yml` is `contents: read` and should
@@ -51,7 +51,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: pages
-          # Only `master` writes, as in ci.yml (T170a). This workflow runs on `master`, so it keeps
+          # Only `master` writes, as in ci.yml. This workflow runs on `master`, so it keeps
           # writing; a dispatch from a branch reads it and adds nothing to the quota.
           save-if: ${{ github.ref == 'refs/heads/master' }}
 
@@ -73,7 +73,7 @@ jobs:
         with:
           path: target/site
 
-  # T197: the install scripts are served from this site, so a script that fails its checks or its
+  # The install scripts are served from this site, so a script that fails its checks or its
   # dry run against the newest release is never deployed. The real installs run when CI is asked.
   install:
     uses: ./.github/workflows/_install.yml
