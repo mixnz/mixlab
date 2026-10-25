@@ -44,6 +44,9 @@ impl Api {
             .with_hint("`mix service set <service> --port <port>`"));
         };
 
+        // Held to the end, rollback included — see `Api::moving`.
+        let _one_move_at_a_time = self.moving.lock().await;
+
         let id = &asked.service;
         let catalogue = services::catalogue();
         let record = mixengine_core::services::record(&self.store, id)
@@ -97,9 +100,16 @@ impl Api {
             }
         };
 
-        // D4 step 5: a `web-app` whose generated file names this database. Logged, never fatal,
+        // D4 step 5: a `web-app` whose generated file names this database. Only for a database —
+        // the same question `extensions::config` asks of a service before it writes it into a
+        // file, so a cache or a server no web-app can name rewrites nothing. Logged, never fatal,
         // on `configure`'s own rule — the move has happened either way.
-        self.extensions.configure().await;
+        if matches!(
+            mixengine_core::extensions::database::endpoint(&self.store, id).await,
+            Ok(Some(_))
+        ) {
+            self.extensions.configure().await;
+        }
 
         Ok(ServiceSetResult {
             service: self.moved_summary(&catalogue, id).await?,

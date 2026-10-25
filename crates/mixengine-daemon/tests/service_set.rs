@@ -252,3 +252,91 @@ async fn a_request_with_nothing_to_set_is_refused() {
         "{answer}"
     );
 }
+
+/// **Two moves of one service at once are taken one after the other.** Each is a stop and a start;
+/// interleaved, the second reads a service the first is halfway through restarting and is refused,
+/// or the row ends on one port while the process listens on the other.
+#[tokio::test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "the fakeservice recipe is compiled into debug builds only"
+)]
+async fn two_moves_at_once_are_taken_in_turn() {
+    let (home, _daemon) = declared(&[Service::new(SERVICE).ready_after(300)]).await;
+    let mut client = Client::connect(&home).await;
+    started(&mut client, SERVICE).await;
+    let first = a_free_port(27_900);
+    let second = a_free_port(first + 1);
+
+    let mut one = Client::connect(&home).await;
+    let mut two = Client::connect(&home).await;
+    let (a, b) = tokio::join!(
+        one.ask(
+            method::SERVICE_SET,
+            json!({ "service": SERVICE, "port": first })
+        ),
+        two.ask(
+            method::SERVICE_SET,
+            json!({ "service": SERVICE, "port": second })
+        ),
+    );
+
+    assert!(a["error"].is_null(), "the first move was refused: {a}");
+    assert!(b["error"].is_null(), "the second move was refused: {b}");
+
+    let after = status(&mut client, SERVICE).await;
+    assert_eq!(after["state"], "running", "{after}");
+    assert!(
+        after["port"] == first || after["port"] == second,
+        "the row ended on neither port: {after}"
+    );
+}
+
+/// **A move that fails and goes back does not undo a move that succeeded beside it.** Without the
+/// two being taken in turn, the failed one's put-back lands after the other's write, and the
+/// service ends on its first port while `mix` was told it moved.
+#[tokio::test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "the fakeservice recipe is compiled into debug builds only"
+)]
+async fn a_failed_move_does_not_undo_one_beside_it() {
+    let refused = a_free_port(28_100);
+    let accepted = a_free_port(refused + 1);
+    let (home, _daemon) = declared(&[Service::new(SERVICE)
+        .refuse_port(refused)
+        .ready_timeout(1_500)])
+    .await;
+    let mut client = Client::connect(&home).await;
+    started(&mut client, SERVICE).await;
+
+    let mut one = Client::connect(&home).await;
+    let mut two = Client::connect(&home).await;
+    let (a, b) = tokio::join!(
+        one.ask(
+            method::SERVICE_SET,
+            json!({ "service": SERVICE, "port": refused })
+        ),
+        async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            two.ask(
+                method::SERVICE_SET,
+                json!({ "service": SERVICE, "port": accepted }),
+            )
+            .await
+        },
+    );
+
+    assert!(
+        !a["error"].is_null(),
+        "a port that does not start was reported as a move: {a}"
+    );
+    assert!(b["error"].is_null(), "the second move was refused: {b}");
+
+    let after = status(&mut client, SERVICE).await;
+    assert_eq!(
+        after["port"], accepted,
+        "the move that succeeded was undone: {after}"
+    );
+    assert_eq!(after["state"], "running", "{after}");
+}

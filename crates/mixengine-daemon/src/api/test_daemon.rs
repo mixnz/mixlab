@@ -430,6 +430,7 @@ where
             crate::background::Background::new(),
         ),
         front_end: tokio::sync::Mutex::new(()),
+        moving: tokio::sync::Mutex::new(()),
         upgrading: tokio::sync::Mutex::new(std::collections::BTreeMap::new()),
     });
 
