@@ -84,8 +84,12 @@ from somebody else's manifest, and write the reason as the edge, not as "upstrea
   held by something shutdown waits for (a `TaskTracker`, a `JoinSet`, a kept `JoinHandle`), and
   stops on a `CancellationToken` derived from the daemon's root token. A task that writes state is
   never dropped unjoined. `tokio::task::Builder` is not how a task is named here: it needs
-  `--cfg tokio_unstable`, which this workspace does not set. Existing `tokio::spawn` calls whose
-  handle nobody keeps are listed and fixed by T209h.
+  `--cfg tokio_unstable`, which this workspace does not set. In the daemon such a task is spawned
+  into `background::Background`, with a name for the log — reached through
+  `api.shutdown().background()` from a handler and `services.background()` from the registry — and
+  the shutdown drains it beside the clients. A bare `tokio::spawn` whose handle nobody keeps is
+  allowed only for a task that touches no state and ends on its own, and a comment at the spawn
+  beginning **Detached, and safe to drop** says why.
 - Timeouts on everything that touches the network, a child process, or a socket. A missing timeout is
   a review blocker.
 

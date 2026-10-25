@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 date: 2026-10-25
 task: T209h
 ---
@@ -99,8 +99,10 @@ on, detached, into `Store::close`. `services/shutdown.rs:441`, `services/start.r
 Decided: the handler is spawned into `Background` (name `"rpc handler"`) and the connection awaits
 its answer through a oneshot. A `JoinSet` hands back no result, so the panic is caught inside the
 task with `futures_util::FutureExt::catch_unwind` (the daemon's `futures-util` gains its `std`
-feature) and sent as a value; a sender dropped without an answer — the task stopped by the shutdown,
-or refused because the set was already closed — is answered `internal` as well. After the grace a
+feature) and sent as a value. A sender dropped without an answer — the task stopped by the
+shutdown, or refused because the set was already closed — is answered `conflict`, saying the daemon
+is stopping: `internal` would tell a client polling `daemon.status` through a stop that it had met
+a bug. After the grace a
 handler still running is aborted with the rest: the same treatment a connection gets today, now
 reaching the work the connection was waiting on. The three guards stay; their comments change from
 "a spawn nothing joins" to what is now true.

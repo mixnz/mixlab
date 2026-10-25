@@ -254,7 +254,7 @@ them on: a flat routing table scores as badly as a tangled walk, and only the wa
       Proving the output unchanged took 36 golden files of 9,100 lines and a 397-line test. That
       is more repository than the copies it removes, so the branch was dropped and the recipes
       stay as they are. A helper that has to change in all nine is the moment to share it.
-- [ ] **T209h** Detached tasks that outlive shutdown. `docs/standards/rust.md`, *Async*, already
+- [x] **T209h** Detached tasks that outlive shutdown. `docs/standards/rust.md`, *Async*, already
       says a task that outlives its call is held by something shutdown waits for, with "no
       detached tasks that outlive shutdown". The daemon still has `tokio::spawn` calls whose
       handle nobody keeps, for example `api/service.rs:392`, `api/uninstall.rs:47`,
