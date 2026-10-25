@@ -115,7 +115,7 @@ pub(super) async fn stop_everything(
     shutdown_grace: Duration,
     connections: tokio::task::JoinSet<()>,
     mut on_the_os_clock: bool,
-    background: &mut background::Background,
+    background: &background::Background,
 ) {
     let mut stopping = std::pin::pin!(async {
         tokio::join!(services.shut_down(), jobs.shut_down(shutdown_grace));

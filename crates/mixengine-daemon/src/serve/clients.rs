@@ -29,7 +29,7 @@ pub(super) async fn build_clients(
     sources: &Sources,
     daemon_exe: &Path,
     adopted: &mixengine_core::adopt::walk::Walked,
-    background: &mut background::Background,
+    background: &background::Background,
 ) -> anyhow::Result<Clients> {
     let Shared {
         paths,

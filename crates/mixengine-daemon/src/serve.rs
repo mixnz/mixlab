@@ -309,7 +309,7 @@ pub(crate) async fn serve(
 
     // The work a start leaves running behind it, owned so that none of it outlives the store it
     // reads — see `background`. Stopped beside the clients, before `serve` returns.
-    let mut background = background::Background::new();
+    let background = background::Background::new();
 
     // Made here rather than inside the API, because the API is no longer the only publisher: the
     // registry announces every state change it persists, from tasks that outlive any one request.
@@ -414,18 +414,18 @@ pub(crate) async fn serve(
 
     machine::ask_for_grants(&elevation, &services).await;
 
-    machine::certificates(&shared, &mut background).await;
+    machine::certificates(&shared, &background).await;
 
     let metrics = clocks::start_clocks(&shared);
 
-    let adopted = repairs::repair_home(&shared, &mut background).await;
+    let adopted = repairs::repair_home(&shared, &background).await;
 
     let clients::Clients {
         registry,
         runtimes,
         packages,
         updates,
-    } = clients::build_clients(&shared, sources, &daemon_exe, &adopted, &mut background).await?;
+    } = clients::build_clients(&shared, sources, &daemon_exe, &adopted, &background).await?;
 
     // Built after the listener rather than before it, so `daemon.status` reports the endpoint that
     // was actually bound instead of the one that would be computed again now.
@@ -455,9 +455,9 @@ pub(crate) async fn serve(
         api::Shutdown::new(shutdown.clone(), shutdown_grace),
     );
 
-    started::after_the_api(&api, &elevation, config, &shutdown, &mut background).await;
+    started::after_the_api(&api, &elevation, config, &shutdown, &background).await;
 
-    started::after_an_update(&updates, &services, &elevation, paths, &mut background);
+    started::after_an_update(&updates, &services, &elevation, paths, &background);
 
     // **No check at start and no clock** — ADR 0056 rule 8. The feed is read only when somebody
     // asks: `mix self-update`, `mix self-update --check`, or `update.check` from a client. A
@@ -496,7 +496,7 @@ pub(crate) async fn serve(
         shutdown_grace,
         connections,
         on_the_os_clock,
-        &mut background,
+        &background,
     )
     .await;
 

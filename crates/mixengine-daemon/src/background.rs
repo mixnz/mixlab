@@ -1,4 +1,4 @@
-//! The work a start leaves running behind it, owned until shutdown — CI run 37679651605.
+//! The work this daemon leaves running behind a call, owned until shutdown — CI run 37679651605.
 //!
 //! **Why this exists rather than `tokio::spawn`.** A start hands several slow jobs to the runtime so
 //! that none of them stands between the bind and the first `accept`: the trust bundle, the JDKs, the
@@ -6,6 +6,15 @@
 //! the trust bundle's `conf.d` pass met a store that had already been closed, and a daemon asked to
 //! stop 60 ms after it started was still alive forty seconds later. `docs/standards/rust.md` says it
 //! in one line: no detached task outlives shutdown.
+//!
+//! **Not only the start's.** The clocks, a walk nobody waits for, every request's handler and every
+//! connection an activator carries run here too, reached through `api::Shutdown::background` and
+//! `services::Registry::background`. One handle, cloned: there is one set, and one shutdown that
+//! drains it.
+//!
+//! **Reaped as it goes.** A request or a proxied connection is an entry, so a set emptied only at
+//! shutdown would grow for as long as the daemon runs. Every [`Background::spawn`] first collects
+//! what has already finished.
 //!
 //! **Waited for beside the clients, not after them.** A shutdown's arithmetic has one slot for the
 //! wait between the services and `Store::close`, sized by `CLIENT_GRACE` or `SIGNAL_CLIENT_GRACE`;
@@ -16,15 +25,24 @@
 
 use std::collections::HashMap;
 use std::future::Future;
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
-use tokio::task::{Id, JoinSet};
+use tokio::task::{Id, JoinError, JoinSet};
 
-/// The tasks a start left running, each with a name for the log.
+/// The tasks this daemon left running, each with a name for the log.
+///
+/// A handle: clones share one set.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Background(Arc<Mutex<Inner>>);
+
 #[derive(Debug, Default)]
-pub(crate) struct Background {
+struct Inner {
     tasks: JoinSet<()>,
     names: HashMap<Id, &'static str>,
+
+    /// Set by [`Background::shut_down`]; nothing spawned afterwards runs.
+    closed: bool,
 }
 
 impl Background {
@@ -37,13 +55,28 @@ impl Background {
     ///
     /// `name` is what the log calls it if it is still running when the daemon stops — the one fact
     /// the next unreadable shutdown needs.
-    pub(crate) fn spawn<F>(&mut self, name: &'static str, work: F)
+    ///
+    /// **Once the shutdown has begun, `work` is dropped unstarted.** The root token is cancelled by
+    /// then, so it would end at its first `select!`; starting it would only reopen the race with
+    /// `Store::close` this set exists to close.
+    pub(crate) fn spawn<F>(&self, name: &'static str, work: F)
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        let id = self.tasks.spawn(work).id();
+        let mut inner = self.lock();
 
-        self.names.insert(id, name);
+        if inner.closed {
+            tracing::debug!(task = name, "not started: this daemon is already stopping");
+            return;
+        }
+
+        while let Some(outcome) = inner.tasks.try_join_next_with_id() {
+            finished(&mut inner.names, outcome);
+        }
+
+        let id = inner.tasks.spawn(work).id();
+
+        inner.names.insert(id, name);
     }
 
     /// Wait up to `grace` for what is still running, then stop the rest and say which they were.
@@ -51,38 +84,69 @@ impl Background {
     /// Returns the names it stopped, in no particular order. **Stopping is dropping**: a task is
     /// ended at its next `.await`, and whatever it held — a connection to the store above all — is
     /// released by that drop.
-    pub(crate) async fn shut_down(&mut self, grace: Duration) -> Vec<&'static str> {
+    pub(crate) async fn shut_down(&self, grace: Duration) -> Vec<&'static str> {
+        // Taken out of the lock rather than joined inside it: the lock is a `std` one, and is never
+        // held across an `.await`.
+        let (mut tasks, mut names) = {
+            let mut inner = self.lock();
+            inner.closed = true;
+
+            (
+                std::mem::take(&mut inner.tasks),
+                std::mem::take(&mut inner.names),
+            )
+        };
+
         let _ = tokio::time::timeout(grace, async {
-            while let Some(finished) = self.tasks.join_next_with_id().await {
-                match finished {
-                    Ok((id, ())) => {
-                        self.names.remove(&id);
-                    }
-
-                    Err(error) => {
-                        let name = self.names.remove(&error.id()).unwrap_or("unnamed");
-
-                        tracing::warn!(task = name, %error, "a task left running at start did not finish cleanly");
-                    }
-                }
+            while let Some(outcome) = tasks.join_next_with_id().await {
+                finished(&mut names, outcome);
             }
         })
         .await;
 
-        let stopped: Vec<&'static str> = self.names.drain().map(|(_, name)| name).collect();
+        let stopped: Vec<&'static str> = names.drain().map(|(_, name)| name).collect();
 
         if !stopped.is_empty() {
             tracing::warn!(
                 tasks = ?stopped,
                 ?grace,
-                "work left running at start was still running when this daemon stopped; it is \
-                 stopped here, before the database closes"
+                "work left running was still running when this daemon stopped; it is stopped \
+                 here, before the database closes"
             );
         }
 
-        self.tasks.shutdown().await;
+        tasks.shutdown().await;
 
         stopped
+    }
+
+    /// How many tasks the set still holds.
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.lock().tasks.len()
+    }
+
+    /// The set, whoever panicked while holding it: nothing in it is left half-written by a panic,
+    /// since every change is one insert or one `take`.
+    fn lock(&self) -> MutexGuard<'_, Inner> {
+        self.0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+}
+
+/// Forget a finished task's name, and say so if it did not finish cleanly.
+fn finished(names: &mut HashMap<Id, &'static str>, outcome: Result<(Id, ()), JoinError>) {
+    match outcome {
+        Ok((id, ())) => {
+            names.remove(&id);
+        }
+
+        Err(error) => {
+            let name = names.remove(&error.id()).unwrap_or("unnamed");
+
+            tracing::warn!(task = name, %error, "a task left running did not finish cleanly");
+        }
     }
 }
 
@@ -90,6 +154,7 @@ impl Background {
 mod tests {
     use super::*;
 
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::time::Instant;
 
     use mixengine_core::Store;
@@ -97,7 +162,7 @@ mod tests {
     /// What finishes in time is not named, and what does not is — and is stopped.
     #[tokio::test]
     async fn a_task_still_running_at_shutdown_is_named_and_stopped() {
-        let mut background = Background::new();
+        let background = Background::new();
 
         background.spawn("finishes", async {});
         background.spawn("never finishes", std::future::pending());
@@ -113,6 +178,40 @@ mod tests {
         );
     }
 
+    /// A task spawned once the shutdown has begun never runs: the root token is already cancelled,
+    /// and running it would only reopen the race with `Store::close`.
+    #[tokio::test]
+    async fn a_task_spawned_after_the_shutdown_began_never_runs() {
+        let background = Background::new();
+        background.shut_down(Duration::from_millis(50)).await;
+
+        let ran = Arc::new(AtomicBool::new(false));
+        background.spawn("too late", {
+            let ran = Arc::clone(&ran);
+
+            async move { ran.store(true, Ordering::SeqCst) }
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(
+            !ran.load(Ordering::SeqCst),
+            "a spawn after the shutdown ran"
+        );
+    }
+
+    /// A finished task is gone from the set by the next spawn, so a daemon that serves requests all
+    /// day does not hold one completed task per request.
+    #[tokio::test]
+    async fn a_finished_task_is_reaped_by_the_next_spawn() {
+        let background = Background::new();
+
+        background.spawn("finishes", async {});
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        background.spawn("never finishes", std::future::pending());
+
+        assert_eq!(background.len(), 1);
+    }
+
     /// **The defect itself**: a task holding a connection kept `Store::close` waiting.
     ///
     /// `Pool::close` waits for every checked-out connection to come back. A start's task that held
@@ -126,7 +225,7 @@ mod tests {
             .expect("a store");
 
         let (holding, held) = tokio::sync::oneshot::channel();
-        let mut background = Background::new();
+        let background = Background::new();
 
         background.spawn("holds a connection", {
             let store = store.clone();

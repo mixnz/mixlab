@@ -20,7 +20,7 @@ pub(super) async fn after_the_api(
     elevation: &elevation::Elevation,
     config: &config::Config,
     shutdown: &CancellationToken,
-    background: &mut background::Background,
+    background: &background::Background,
 ) {
     if let Err(error) = api.sites.advertises_what_it_declares().await {
         tracing::warn!(%error, "this home's shared sites are reachable by address only");
@@ -81,7 +81,7 @@ pub(super) fn after_an_update(
     services: &Arc<services::Registry>,
     elevation: &Arc<elevation::Elevation>,
     paths: &Paths,
-    background: &mut background::Background,
+    background: &background::Background,
 ) {
     background.spawn("restore after update", {
         let updates = Arc::clone(updates);

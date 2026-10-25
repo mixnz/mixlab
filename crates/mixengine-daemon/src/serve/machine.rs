@@ -71,7 +71,7 @@ pub(super) async fn ask_for_grants(
 /// block around it follows — a home with no authority is one command away from having one, where
 /// a daemon that refuses to start leaves the user with nothing at all.
 #[warn(clippy::cognitive_complexity)]
-pub(super) async fn certificates(shared: &Shared<'_>, background: &mut background::Background) {
+pub(super) async fn certificates(shared: &Shared<'_>, background: &background::Background) {
     discard_an_uncommitted_rotation(shared.paths);
     the_authority_and_who_trusts_it(shared).await;
     trust_bundle_in_background(shared, background);
@@ -165,7 +165,7 @@ async fn trust_in_browsers(shared: &Shared<'_>, state: &mixengine_proto::CaState
 ///
 /// Nothing about it can fail the start, on the rule the authority follows.
 #[warn(clippy::cognitive_complexity)]
-fn trust_bundle_in_background(shared: &Shared<'_>, background: &mut background::Background) {
+fn trust_bundle_in_background(shared: &Shared<'_>, background: &background::Background) {
     background.spawn(
         "trust bundle",
         write_the_trust_bundle(
@@ -208,7 +208,7 @@ async fn write_the_trust_bundle(
 /// installed JDK, each of them a JVM start, and none of it may stand between the bind and
 /// `accept`. A home with no Java spends one query on it.
 #[warn(clippy::cognitive_complexity)]
-fn jdk_trust_stores_in_background(shared: &Shared<'_>, background: &mut background::Background) {
+fn jdk_trust_stores_in_background(shared: &Shared<'_>, background: &background::Background) {
     let store = shared.store.clone();
     let certs = shared.paths.certs().to_path_buf();
 

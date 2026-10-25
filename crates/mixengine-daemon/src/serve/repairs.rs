@@ -15,7 +15,7 @@ use crate::{adopt, background, services};
 #[warn(clippy::cognitive_complexity)]
 pub(super) async fn repair_home(
     shared: &Shared<'_>,
-    background: &mut background::Background,
+    background: &background::Background,
 ) -> mixengine_core::adopt::walk::Walked {
     let adopted = record_what_an_earlier_home_left(shared).await;
 
@@ -67,7 +67,7 @@ async fn record_what_an_earlier_home_left(
 /// Being a moment late costs nothing it could cost: nothing dials an activator until a site is
 /// being served, and a site is served by a front end this daemon has not started yet.
 #[warn(clippy::cognitive_complexity)]
-fn hold_activation_in_background(shared: &Shared<'_>, background: &mut background::Background) {
+fn hold_activation_in_background(shared: &Shared<'_>, background: &background::Background) {
     background.spawn(
         "activation ports",
         wake_what_was_left_down(
