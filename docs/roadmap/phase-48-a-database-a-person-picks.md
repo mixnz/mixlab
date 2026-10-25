@@ -1,7 +1,7 @@
 # Phase 48 — A database a person picks
 
-*Goal: a person decides which database their terminal's clients talk to, and which port an
-instance listens on. Neither is left to an order of creation they cannot change afterwards.*
+*Goal: a person decides which port an instance listens on, and through it which database their
+terminal's clients talk to. Neither is left to an order of creation they cannot change afterwards.*
 
 Part of the [build plan](todo.md). Legend: `[ ]` todo · `[~]` in progress · `[x]` done · **(P)** =
 has a platform-layer component and needs verification on Windows + macOS + Linux.
@@ -41,7 +41,7 @@ follows the other.
         check's refusal inline. Needs a design with its `## MixLab` section, the
         `client-surface.md` entry, and the *Ports* paragraph of `services.md` rewritten to say a
         port moves only when a person moves it.
-- [ ] **T210a** A default instance for a package's clients. With two MySQL instances, which one a
+- [x] **T210a** A default instance for a package's clients. With two MySQL instances, which one a
       bare `mysql --version` or `mysqldump` runs is decided by a fixed order in
       `crates/mixengine-core/src/services/client.rs`: `MIXENGINE_MYSQL`, then the only instance,
       then the one on the product's own port, then the lowest port. With no instance and several
@@ -67,9 +67,23 @@ follows the other.
         instance's menu offers "Use for terminal clients". Needs a design with its `## MixLab`
         section, the `client-surface.md` entry, and *The commands a package brings with it* in
         `services.md` updated with the new step.
+      **Weighed, and not done.** Decided on 2026-10-25, after T210 landed. What the task asked for
+      is already within reach:
+      - The MySQL case that opened this phase is T210's: moving `mysql@8` onto 3306 makes it the
+        instance `mysql` picks, by the product's-own-port rule, with nothing stored.
+      - A default that lasts is `MIXENGINE_MYSQL=mysql@8` in a shell profile or the user's
+        environment. That variable is step one of the order and is read without a daemon.
+      - For Redis and Memcached a default would choose only the binary, since their clients read no
+        environment, so it matters only when two instances run different versions.
+
+      What is left undone is choosing from MixLab, and `mix path status` and `mix doctor` naming a
+      stored choice. That is not where anyone is blocked. If it is picked up later, it needs no
+      migration: the choice fits in one `settings` key mapping a package to an instance or a version,
+      stored by name so that a deleted instance reads as stale rather than as an error. And
+      `claims()` in `services/client.rs` then has to work out `on_preferred_port` from every
+      instance of the package rather than from the chosen one, so that a default cannot change which
+      package owns `mysql`.
 
 **M48** On a home with `mysql@57` on 3306 and `mysql@8` on 3307, deleting `mysql@57` and
 running `mix service set mysql@8 --port 3306` leaves `mysql@8`'s data intact and a bare `mysql`
-connected to it. On a home with two Redis instances, `mix service default redis redis@cache`
-makes `redis-cli --version` answer from that instance's version. Both are done from MixLab as well
-as from `mix`, on all three systems.
+connected to it, done from MixLab as well as from `mix`, on all three systems.
