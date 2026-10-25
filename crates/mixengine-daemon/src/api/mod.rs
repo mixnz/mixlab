@@ -489,9 +489,9 @@ impl Shutdown {
 /// A shutdown that has been ordered, held for as long as the handler performing it runs.
 ///
 /// **A guard rather than a last statement, because a handler does not only end by returning.** The
-/// future serving a request is dropped where it stands when its connection goes — hyper is built
-/// with its default `half_close`, so a client that is interrupted mid-request takes the handler
-/// with it — and a panic anywhere inside the walk does the same. `daemon.shutdown` cannot survive
+/// future serving a request is dropped where it stands if it is still running when a shutdown's
+/// client grace runs out — handlers run in the daemon's `Background`, which stops whatever is left
+/// then — and a panic anywhere inside the walk does the same. `daemon.shutdown` cannot survive
 /// either: [`Registry::stopping_within`](crate::services::Registry::stopping_within) latches the
 /// registry shut on its first line and nothing ever clears that, so a shutdown that got that far
 /// and no further leaves a daemon that is still listening, still answering, refusing every start it

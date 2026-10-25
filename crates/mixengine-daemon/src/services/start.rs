@@ -158,8 +158,8 @@ impl Registry {
     /// attempt that request causes rather than the one before it.
     ///
     /// **A daemon on its way out starts nothing, and that answer is taken under the registration
-    /// lock like the other two.** `api/rpc.rs` runs every handler in a `tokio::spawn` nothing joins,
-    /// so a `service.start` outlives the connection that asked for it: one landing beside a
+    /// lock like the other two.** `api/rpc.rs` runs every handler in the daemon's `Background`,
+    /// which outlives the connection that asked, so a `service.start` outlives that connection too: one landing beside a
     /// `mix daemon stop` used to walk past the place the shutdown had already been, register a fresh
     /// runner into a map [`Registry::shut_down`] had already drained, and spawn a process nothing
     /// was left to wait for — killed a moment later by

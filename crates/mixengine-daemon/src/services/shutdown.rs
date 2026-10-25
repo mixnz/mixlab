@@ -438,8 +438,9 @@ mod tests {
     /// **A daemon on its way out starts nothing** — the other half of the same collision, and the
     /// one that leaves a process behind rather than a wrong sentence.
     ///
-    /// `api/rpc.rs` runs every handler in a `tokio::spawn` nothing joins, so a `service.start` that
-    /// lands while `mix daemon stop` is walking outlives the connection that asked for it. It used
+    /// `api/rpc.rs` runs every handler in the daemon's `Background`, which outlives the connection,
+    /// so a `service.start` that lands while `mix daemon stop` is walking outlives the connection
+    /// that asked for it. It used
     /// to walk past the place the shutdown had already been, register a runner into a map
     /// `shut_down` had already drained, and spawn a process nothing was left to wait for: killed by
     /// `Supervised`'s destructor as the runtime came down, leaving a row mid-write for the next

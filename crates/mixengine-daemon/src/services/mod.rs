@@ -233,8 +233,8 @@ struct Running {
 /// One stop of one service, held for exactly as long as that stop is in flight.
 ///
 /// **A guard rather than two statements, because a stop does not only end by returning.** An
-/// `api/rpc.rs` handler is a `tokio::spawn` nothing joins, so the future performing a stop can be
-/// dropped where it stands when its connection goes — and a runner task that panicked mid-tidy-up
+/// `api/rpc.rs` handler runs in the daemon's `Background`, so the future performing a stop can be
+/// dropped where it stands when a shutdown's grace runs out under it — and a runner task that panicked mid-tidy-up
 /// takes its caller's frame with it. Whatever ends the stop, the entry has to leave the map and
 /// everybody waiting on it has to be released: a marker left behind would make every later stop of
 /// that service wait for a stop that is not happening, and then report it as done.
