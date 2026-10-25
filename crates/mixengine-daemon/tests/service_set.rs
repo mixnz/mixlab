@@ -182,10 +182,18 @@ async fn a_port_another_service_holds_is_refused_by_name() {
 }
 
 /// Review focus: a service on its way down is not moved under the stop.
+///
+/// **Not on Windows**, where there is no way down to be on: ADR 0008 makes a `Signal` stop a kill
+/// there, so the row goes from `running` to `stopped` with no `stopping` a move could meet. The
+/// refusal itself is `api::service_set::tests::a_stopping_service_is_refused`, on every system.
 #[tokio::test]
 #[cfg_attr(
     not(debug_assertions),
     ignore = "the fakeservice recipe is compiled into debug builds only"
+)]
+#[cfg_attr(
+    windows,
+    ignore = "a Signal stop is a kill on Windows (ADR 0008), so no service is ever seen stopping"
 )]
 async fn a_stopping_service_is_refused() {
     let (home, _daemon) = declared(&[Service::new(SERVICE).ignore_stop().stop_grace(20_000)]).await;
@@ -199,13 +207,19 @@ async fn a_stopping_service_is_refused() {
         )
         .await;
 
-    // The stop is under way once the row says so.
+    // The stop is under way once the row says so — and the test means nothing until it does.
+    let mut seen = false;
     for _ in 0..100 {
         if status(&mut client, SERVICE).await["state"] == "stopping" {
+            seen = true;
             break;
         }
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }
+    assert!(
+        seen,
+        "the service was never seen stopping, so nothing below is about a stop"
+    );
 
     let answer = client
         .ask(
