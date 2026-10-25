@@ -128,7 +128,7 @@ where
         .map_err(|e| err!("error.mixengineProtocol", message = e))?;
 
     // The connection has to be driven while the request is in flight; it ends when `sender` is
-    // dropped.
+    // dropped. Detached, and safe to drop: it writes nothing.
     tauri::async_runtime::spawn(async move {
         let _ = connection.await;
     });

@@ -138,10 +138,12 @@ pub fn run() {
 
             // An update that stopped MixEngine and was interrupted is finished here, and `.old`
             // files an earlier update left are removed. Then every download but the release on
-            // offer goes.
+            // offer goes. Kept rather than detached: it writes state, so `RunEvent::Exit` waits for
+            // it (`finish_recovery`).
             {
+                use tauri::Manager as _;
                 let handle = app.handle().clone();
-                tauri::async_runtime::spawn(async move {
+                let recovery = tauri::async_runtime::spawn(async move {
                     updater::install::recover(&handle).await;
                     if let Ok(updates) = updater::install::updates_dir(&handle) {
                         let offered = updater::feed::Cache::new(updates.clone())
@@ -150,6 +152,7 @@ pub fn run() {
                         updater::ready::discard_stale(&updates, offered.as_deref());
                     }
                 });
+                app.manage(updater::install::UpdateRecovery::new(recovery));
             }
 
             {
@@ -204,6 +207,7 @@ pub fn run() {
                 use tauri::Manager as _;
                 app.state::<modules::tunnel::state::Tunnels>().stop_all();
                 launch::stop(app);
+                updater::install::finish_recovery(app);
             }
             /* macOS never starts a second MixLab: opening it from Finder, Launchpad or Spotlight
             while it runs reopens this process instead, so a start after closing to the tray lands

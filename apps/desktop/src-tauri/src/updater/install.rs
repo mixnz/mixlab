@@ -180,6 +180,49 @@ pub async fn install_staged<R: Runtime>(
     crate::relaunch::restart(app)
 }
 
+/// How long a quit waits for [`recover`] before it goes anyway.
+///
+/// A quit the person asked for should feel like one; two seconds covers removing `.old` files and
+/// clearing a record, and a recovery still starting MixEngine after that is finished by the next
+/// start, which runs `recover` again.
+const RECOVERY_AT_EXIT: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// The start's [`recover`], kept so that a quit waits for it rather than ending it half way.
+///
+/// It writes state — it removes files and clears the update record — so it is never simply dropped
+/// with the process. Managed in `setup`; [`finish_recovery`] is the other half.
+pub struct UpdateRecovery(std::sync::Mutex<Option<tauri::async_runtime::JoinHandle<()>>>);
+
+impl UpdateRecovery {
+    pub fn new(running: tauri::async_runtime::JoinHandle<()>) -> Self {
+        Self(std::sync::Mutex::new(Some(running)))
+    }
+}
+
+/// At exit: wait up to [`RECOVERY_AT_EXIT`] for the start's recovery, if it is still running.
+pub fn finish_recovery<R: Runtime>(app: &AppHandle<R>) {
+    use tauri::Manager as _;
+
+    let Some(state) = app.try_state::<UpdateRecovery>() else {
+        return;
+    };
+    let running = state
+        .0
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .take();
+    let Some(running) = running else {
+        return;
+    };
+
+    let finished = tauri::async_runtime::block_on(tokio::time::timeout(RECOVERY_AT_EXIT, running));
+    if finished.is_err() {
+        log::warn!(
+            "MixLab quit while finishing an earlier update; the next start finishes it instead"
+        );
+    }
+}
+
 /// At every start: remove `.old` files, and finish what a window that died half way left behind.
 pub async fn recover<R: Runtime>(app: &AppHandle<R>) {
     // Only where this updater swaps: elsewhere the window's directory is `/Applications` or
