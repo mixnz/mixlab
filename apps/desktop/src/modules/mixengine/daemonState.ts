@@ -30,6 +30,9 @@ export interface ServiceRow {
    *  a daemon that does not send it. An event moving the state does not carry it, so only rereading
    *  `service.list` fills it in. */
   lastFailure: string | null;
+  /** Whether the daemon accepts a new port for it. `null` from a daemon too old to say, which is
+   *  offered no move at all. */
+  portMovable: boolean | null;
 }
 
 /** A `service.list` answer, as rows. */
@@ -42,6 +45,7 @@ export function rowsFrom(list: ServiceSummary[]): ServiceRow[] {
     stoppedBy: service.stopped_by ?? null,
     version: service.version ?? null,
     lastFailure: service.state === "failed" ? (service.last_failure?.detail ?? null) : null,
+    portMovable: service.port_movable ?? null,
   }));
 }
 

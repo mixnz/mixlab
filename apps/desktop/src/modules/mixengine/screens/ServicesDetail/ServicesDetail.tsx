@@ -21,6 +21,7 @@ import ServiceForm from "../../components/ServiceForm";
 import AutostartPanel from "./AutostartPanel";
 import DatabasePanel from "./DatabasePanel";
 import IdlePanel from "./IdlePanel";
+import PortPanel from "./PortPanel";
 import LimitsPanel from "./LimitsPanel";
 import styles from "./ServicesDetail.module.css";
 
@@ -323,6 +324,9 @@ export default function ServicesDetail({ active }: { active: boolean }) {
                   down", idle answers "what keeps running when I am not using it". Two different
                   questions about one service, and anyone turning both on has to see both at once. */}
               <AutostartPanel service={selected} />
+              {/* Where clients connect, beside the other settings of this one service; draws
+                  nothing for a service with no port. */}
+              <PortPanel service={selected} />
               <IdlePanel service={selected} />
               <LimitsPanel service={selected} />
             </Fragment>

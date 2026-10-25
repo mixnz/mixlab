@@ -55,6 +55,7 @@ import type { SaveResources, SaveResourcesSet, ServiceAutostartSet } from "@mixe
 import type { CredentialStore, CredentialStoreChange, CredentialStoreSet } from "@mixengine/api";
 import type { ServiceIdleSet } from "@mixengine/api";
 import type { ServiceSummary } from "@mixengine/api";
+import type { ServiceSet, ServiceSetResult } from "@mixengine/api";
 import type { ServiceFoundList } from "@mixengine/api";
 import type { PackageFoundList, RuntimeFoundList } from "@mixengine/api";
 import type { HomePrevious, HomeRestoreReport } from "@mixengine/api";
@@ -444,6 +445,14 @@ export function setSaveResources(on: boolean): Promise<SaveResources> {
 export function setCredentialStore(store: CredentialStore): Promise<CredentialStoreChange> {
   const params: CredentialStoreSet = { store };
   return invoke<CredentialStoreChange>("mixengine_daemon_set_credential_store", { params });
+}
+
+/** `service.set` — moves a service to another port. The daemon checks the port, renders the
+ *  configuration again, and restarts a running service (putting it back on its old port if the new
+ *  one does not start); a stopped one stays stopped. A refusal is the daemon's sentence. */
+export function serviceSet(service: string, port: number): Promise<ServiceSetResult> {
+  const params: ServiceSet = { service, port };
+  return invoke<ServiceSetResult>("mixengine_service_set", { params });
 }
 
 /** `service.set_autostart` — whether this service starts along with MixEngine.

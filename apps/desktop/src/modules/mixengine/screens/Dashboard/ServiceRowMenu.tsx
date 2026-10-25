@@ -3,9 +3,10 @@ import ContextMenu from "../../../../components/ContextMenu";
 import { copyText } from "../../../../core/clipboard";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
-import { CopyIcon, DatabaseGenericIcon, LockIcon, LogIcon, PowerIcon, ReloadIcon } from "../../../../icons";
+import { CopyIcon, DatabaseGenericIcon, LockIcon, LogIcon, PencilIcon, PowerIcon, ReloadIcon } from "../../../../icons";
 import * as api from "../../api";
 import type { ServiceRow } from "../../daemonState";
+import { canChangePort } from "../../portDialogState";
 import { DATABASE_MODULE_ID, openChoices, opensADatabase } from "../ServicesDetail/openChoices";
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
   isModuleVisible: (moduleId: string) => boolean;
   onClose: () => void;
   onViewLogs: (serviceId: string) => void;
+  /** Opens the Change port dialog on one service. */
+  onChangePort: (serviceId: string) => void;
   setAutostart: (id: string, autostart: boolean) => Promise<void>;
   showCredentials: (id: string) => Promise<void>;
   setResetTarget: (id: string | null) => void;
@@ -30,6 +33,7 @@ export default function ServiceRowMenu({
   isModuleVisible,
   onClose,
   onViewLogs,
+  onChangePort,
   setAutostart,
   showCredentials,
   setResetTarget,
@@ -80,6 +84,22 @@ export default function ServiceRowMenu({
         >
           <CopyIcon size={14} />
           {t("mixengine.dashboard.copyPort")}
+        </button>
+      )}
+
+      {/* Only where the daemon said this service may move: an item that can only be refused is
+          not drawn. The ellipsis says it opens a question, as *Reset credential…* does. */}
+      {menuRow !== undefined && canChangePort(menuRow) && (
+        <button
+          type="button"
+          onClick={() => {
+            const id = menuRow.id;
+            onClose();
+            onChangePort(id);
+          }}
+        >
+          <PencilIcon size={14} />
+          {t("mixengine.port.menuItem")}
         </button>
       )}
 

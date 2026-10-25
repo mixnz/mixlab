@@ -1,0 +1,20 @@
+/** Moving a service to another port: the dialog, the Port panel and the row menu's entry. */
+export default {
+  menuItem: "Change port…",
+  title: "Change port of {{service}}",
+  label: "Port",
+  invalid: "Enter a port from 1 to 65535.",
+  running: "{{service}} is running. Changing its port restarts it and drops open connections.",
+  change: "Change port",
+  changeAndRestart: "Change and restart",
+  moved: "{{service}} now listens on {{to}}.",
+  movedRestarted: "{{service}} now listens on {{to}} and was restarted.",
+  unchanged: "{{service}} is already on {{to}}.",
+  notFollowed: "MixEngine did not change these, and they may still use {{from}}:",
+  done: "Done",
+  panelTitle: "Port",
+  panelAbout: "Where clients connect to this service.",
+  current: "Listens on {{port}}",
+  changeButton: "Change…",
+  notMovable: "This service's port is fixed.",
+};

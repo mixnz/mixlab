@@ -13,8 +13,8 @@ import {
 } from "./daemonState";
 
 const rows: ServiceRow[] = [
-  { id: "mariadb@main", state: "running", port: 3306, autostart: true, stoppedBy: null, version: "11.4.3", lastFailure: null },
-  { id: "caddy@main", state: "stopped", port: null, autostart: false, stoppedBy: null, version: null, lastFailure: null },
+  { id: "mariadb@main", state: "running", port: 3306, autostart: true, stoppedBy: null, version: "11.4.3", lastFailure: null, portMovable: null },
+  { id: "caddy@main", state: "stopped", port: null, autostart: false, stoppedBy: null, version: null, lastFailure: null, portMovable: null },
 ];
 
 describe("rowsFrom", () => {
@@ -36,8 +36,25 @@ describe("rowsFrom", () => {
     ]);
 
     expect(made).toEqual([
-      { id: "redis@main", state: "stopped", port: null, autostart: true, stoppedBy: null, version: null, lastFailure: null },
+      { id: "redis@main", state: "stopped", port: null, autostart: true, stoppedBy: null, version: null, lastFailure: null, portMovable: null },
     ]);
+  });
+
+  /* Whether a service may move to another port is the daemon's answer; an old daemon that does
+     not send it is read as null, which offers no move at all. */
+  it("carries whether a service may change port, and null when the daemon did not say", () => {
+    const base = {
+      id: "mysql@8",
+      state: "stopped" as const,
+      supervised: false,
+      pid: null,
+      last_started_at: null,
+      last_exit_code: null,
+      depends_on: [],
+      autostart: false,
+    };
+    expect(rowsFrom([{ ...base, port_movable: true }])[0].portMovable).toBe(true);
+    expect(rowsFrom([base])[0].portMovable).toBeNull();
   });
 
   /* The version is what the user reads next to the id. An old daemon does not send this
@@ -260,7 +277,7 @@ describe("stoppedBy from a transition", () => {
     expect(stoppedByReason({ kind: 3 })).toBeNull();
 
     const started = applyEvent(
-      [{ id: "caddy@main", state: "stopped", port: null, autostart: false, stoppedBy: "daemon", version: null, lastFailure: null }],
+      [{ id: "caddy@main", state: "stopped", port: null, autostart: false, stoppedBy: "daemon", version: null, lastFailure: null, portMovable: null }],
       JSON.stringify({ type: "service_state_changed", service: "caddy@main", to: "starting", reason: { kind: "requested" } }),
     ).rows[0];
     expect(started.stoppedBy).toBeNull();
@@ -276,6 +293,7 @@ describe("applyEvent and why a service failed", () => {
     stoppedBy: null,
     version: null,
     lastFailure: "old reason",
+    portMovable: null,
   };
   const moved = (to: string) =>
     JSON.stringify({ type: "service_state_changed", service: "php-fpm@phpmyadmin", from: "starting", to, reason: { kind: "requested" } });
