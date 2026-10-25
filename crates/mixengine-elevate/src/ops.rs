@@ -38,7 +38,7 @@ pub(crate) fn apply(
     home: &std::path::Path,
 ) -> OpOutcome {
     if op.requires_elevation() && !elevated {
-        // The first operation to reach this branch arrives with T41; `Probe` never does, by design.
+        // `Probe` never reaches this branch, by design.
         return OpOutcome::Refused {
             reason: format!(
                 "{} needs an administrative token and this process does not have one",
@@ -55,41 +55,41 @@ pub(crate) fn apply(
         },
 
         // The first operation with an effect. What it may write is decided next door, in forty lines
-        // with nothing else in them — the T41 design, D3.
+        // with nothing else in them.
         PrivilegedOp::HostsApply { home: tag, entries } => {
             crate::hosts::apply(tag.as_deref(), entries, home)
         }
 
-        // Roadmap task T42. What may be granted is decided next door, in one module with nothing
-        // else in it — the T42 design, D5, on `hosts.rs`' pattern.
+        // Port access. What may be granted is decided next door, in one module with nothing else
+        // in it, on `hosts.rs`' pattern.
         PrivilegedOp::PortAccessGrant { plan } => crate::port_access::grant(plan, caller),
         PrivilegedOp::PortAccessRevoke { target } => crate::port_access::revoke(target, caller),
 
-        // Roadmap task T45. What may be routed where is decided next door, in one module with
-        // nothing else in it — the T45 design, D5, on `hosts.rs`' pattern.
+        // The resolver. What may be routed where is decided next door, in one module with nothing
+        // else in it, on `hosts.rs`' pattern.
         PrivilegedOp::ResolverApply { plan } => crate::resolver::wire(plan),
         PrivilegedOp::ResolverRevoke { target } => crate::resolver::unwire(target),
 
-        // Roadmap task T49a. What may be installed, and what may be removed, is decided next door —
-        // the T49a design, D4 and D5, on `hosts.rs`' pattern.
+        // The system trust store. What may be installed, and what may be removed, is decided next
+        // door, on `hosts.rs`' pattern.
         PrivilegedOp::TrustCaInstall { plan } => crate::trust::install(plan, caller),
         PrivilegedOp::TrustCaRemove { target } => crate::trust::remove(target),
 
-        // Roadmap task T74. What ports may be opened is decided next door, on `hosts.rs`' pattern
-        // — and with the one difference that shapes that module: this is the first operation whose
-        // central question cannot be answered from a table compiled in here, so it refuses what is
-        // provably not a web port instead of accepting what is provably one.
+        // LAN sharing's firewall. What ports may be opened is decided next door, on `hosts.rs`'
+        // pattern — and with the one difference that shapes that module: this is the first
+        // operation whose central question cannot be answered from a table compiled in here, so it
+        // refuses what is provably not a web port instead of accepting what is provably one.
         PrivilegedOp::FirewallApply { plan } => crate::firewall::apply(plan),
 
-        // Roadmap task T85, and the only operation whose source and destination are both this
+        // The helper's install, and the only operation whose source and destination are both this
         // binary's own business — see `crate::helper` for why it carries no field to aim.
         PrivilegedOp::HelperInstall {} => crate::helper::install(),
 
-        // Roadmap task T88a, and the only operation whose decision is a signature rather than a
+        // The helper's update, and the only operation whose decision is a signature rather than a
         // shape — see `crate::candidate` for why that check is made here and not in the daemon.
         PrivilegedOp::HelperReplace {} => crate::helper::replace(home),
 
-        // Roadmap task T87, and the two operations whose target is this binary's own business —
+        // An uninstall, and the two operations whose target is this binary's own business —
         // see `crate::helper` and `crate::audit` for why neither carries a field to aim.
         PrivilegedOp::HelperRemove {} => crate::helper::remove(),
         PrivilegedOp::PackageRemove {} => crate::package::remove(),
@@ -136,8 +136,9 @@ mod tests {
     fn probe_applies_under_any_token() {
         let (directory, _binary, caller) = a_caller();
 
-        // D5's payoff: the operation whose job includes reporting whether the token is elevated has
-        // to work when it is not, or it could never report `false`.
+        // The payoff of elevation being the operation's property: the operation whose job includes
+        // reporting whether the token is elevated has to work when it is not, or it could never
+        // report `false`.
         assert!(matches!(
             apply(&PrivilegedOp::Probe {}, false, &caller, directory.path()),
             OpOutcome::Applied { .. }
@@ -167,8 +168,9 @@ mod tests {
 
     #[test]
     fn an_operation_this_build_has_never_heard_of_is_unsupported() {
-        // **Was `trust-ca-install` until T49a made it real.** The firewall is the next operation
-        // this binary does not have, and a name that stays unknown is the whole point of the test.
+        // **Was `trust-ca-install` until the system trust store made it real.** The firewall is the
+        // next operation this binary does not have, and a name that stays unknown is the whole
+        // point of the test.
         let value = serde_json::json!({ "op": "firewall-allow", "ports": [1, 2, 3] });
 
         let outcome = decode(&value).unwrap_err();
@@ -176,9 +178,9 @@ mod tests {
         assert!(matches!(outcome, OpOutcome::Unsupported { .. }));
     }
 
-    /// D3's intolerant half. An older helper must not silently ignore a field inside an operation it
-    /// thinks it understands: that is how a weaker version of an operation gets applied and nobody
-    /// finds out.
+    /// The intolerant half of decoding one at a time. An older helper must not silently ignore a
+    /// field inside an operation it thinks it understands: that is how a weaker version of an
+    /// operation gets applied and nobody finds out.
     #[test]
     fn a_known_operation_with_a_field_this_build_does_not_know_is_unsupported() {
         let value = serde_json::json!({ "op": "probe", "only-if": "something new" });
@@ -206,8 +208,8 @@ mod tests {
         assert_eq!(named(&serde_json::json!(7)), "unrecognised");
     }
 
-    /// The gate, from the side T41 added: an operation that needs a token and does not have one is
-    /// refused before it can touch anything.
+    /// The gate, from the hosts file's side: an operation that needs a token and does not have one
+    /// is refused before it can touch anything.
     #[test]
     fn a_hosts_change_under_an_ordinary_token_is_refused_before_it_writes() {
         let (directory, _binary, caller) = a_caller();
@@ -229,8 +231,8 @@ mod tests {
         );
     }
 
-    /// The gate, from T45's side: both directions of resolver wiring need a token, and neither
-    /// touches a file or the registry without one.
+    /// The gate, from the resolver's side: both directions of resolver wiring need a token, and
+    /// neither touches a file or the registry without one.
     #[test]
     fn resolver_operations_under_an_ordinary_token_are_refused_before_they_write() {
         use mixengine_proto::privileged::{ResolverPlan, ResolverTarget};
@@ -262,10 +264,10 @@ mod tests {
         }
     }
 
-    /// The gate, from T74's side. **Including the plan that asks for nothing**, which is the one a
-    /// careless reading would exempt: an empty plan removes rules, removing a rule needs a token,
-    /// and a helper that skipped the check for it would be deciding policy from the request's own
-    /// contents.
+    /// The gate, from the firewall's side. **Including the plan that asks for nothing**, which is
+    /// the one a careless reading would exempt: an empty plan removes rules, removing a rule needs
+    /// a token, and a helper that skipped the check for it would be deciding policy from the
+    /// request's own contents.
     #[test]
     fn a_firewall_change_under_an_ordinary_token_is_refused_before_it_writes() {
         use mixengine_proto::privileged::{FIREWALL_LABEL, FirewallPlan};
@@ -289,10 +291,10 @@ mod tests {
         }
     }
 
-    /// The gate, from T87's side: both removals need a token, and neither touches a file without
-    /// one. **Including the audit log's**, which is the one a careless reading would exempt — the
-    /// log is world-readable, and the directory it sits in is not world-writable, which is the whole
-    /// reason the log is out there.
+    /// The gate, from an uninstall's side: both removals need a token, and neither touches a file
+    /// without one. **Including the audit log's**, which is the one a careless reading would exempt
+    /// — the log is world-readable, and the directory it sits in is not world-writable, which is
+    /// the whole reason the log is out there.
     #[test]
     fn the_uninstall_removals_under_an_ordinary_token_are_refused_before_they_write() {
         let (directory, _binary, caller) = a_caller();
@@ -345,9 +347,10 @@ mod tests {
         }
     }
 
-    /// The gate, from T88a's side: nothing is written into a root-owned directory by a process that
-    /// does not hold an administrative token — including the operation whose other checks are a
-    /// signature's, which a careless reading would exempt because "the signature decides".
+    /// The gate, from the helper update's side: nothing is written into a root-owned directory by a
+    /// process that does not hold an administrative token — including the operation whose other
+    /// checks are a signature's, which a careless reading would exempt because "the signature
+    /// decides".
     #[test]
     fn replacing_the_helper_needs_an_administrative_token() {
         let (directory, _binary, caller) = a_caller();

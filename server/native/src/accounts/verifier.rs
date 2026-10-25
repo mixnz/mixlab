@@ -57,8 +57,8 @@ fn prove_verifier(
     Ok(None)
 }
 
-/// `POST /v1/account/check`: whether `A` is this account's (T178c, C3). A move asks before it
-/// registers anywhere with it, where a typo is still a typo.
+/// `POST /v1/account/check`: whether `A` is this account's. A move asks before it registers
+/// anywhere with it, where a typo is still a typo.
 pub async fn check_verifier(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

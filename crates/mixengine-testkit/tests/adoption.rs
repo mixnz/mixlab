@@ -1,4 +1,4 @@
-//! A pid is not an identity. A pid and a start time are — roadmap task **T18**.
+//! A pid is not an identity. A pid and a start time are.
 //!
 //! `mixengine_platform::process::started_at` and [`Adopted`] are what a daemon uses to decide, at
 //! its next start, whether the process a `services` row names is still the one that row was written

@@ -117,7 +117,8 @@ fn a_service_records_the_pid_a_test_will_have_to_find_it_by() {
 fn an_orphan_outlives_the_process_that_left_it_behind() {
     // The case the supervisor exists to prevent: a child that is still running after its parent is
     // gone. Nothing here supervises anything, so what is proved is that the fixture can *produce*
-    // one — a Job Object taking it down with its parent is what T13 will assert on top of this.
+    // one — a Job Object taking it down with its parent is what `supervision.rs` asserts on top of
+    // this.
     let directory = tempfile::tempdir().expect("a directory to record a pid in");
     let pid_file = directory.path().join("orphan.pid");
 
@@ -134,10 +135,10 @@ fn an_orphan_outlives_the_process_that_left_it_behind() {
     );
 
     // Timed, because the failure this guards against is a hang rather than a wrong answer: a
-    // `fakeservice` that had spawned its orphan with a plain `Command` would leave it holding a copy
-    // of the parent's stdout, and reading the parent to end-of-file would then wait for the *orphan*
-    // — the whole of roadmap tasks T9 and T10, one process further out. Without this the suite would
-    // sit here for `CHILD_LIFETIME` and then pass.
+    // `fakeservice` that had spawned its orphan with a plain `Command` would leave it holding a
+    // copy of the parent's stdout, and reading the parent to end-of-file would then wait for the
+    // *orphan* — the hazard `mixengined --detach` met, one process further out. Without this the
+    // suite would sit here for `CHILD_LIFETIME` and then pass.
     let waited = Instant::now();
     let parent = service.finish();
 
@@ -192,7 +193,7 @@ impl Drop for Orphan {
 /// itself — `crates/mixengine-daemon/tests/lifecycle.rs` explains the same limitation at length, and
 /// `try_stop` is a `taskkill /F` there precisely because there is nothing gentler to send. The
 /// Windows half of this behaviour is proved by the supervisor instead, which sends the event to a
-/// group it owns (roadmap task T15).
+/// group it owns.
 #[cfg(unix)]
 #[test]
 fn a_service_can_be_told_to_ignore_being_asked_to_stop() {

@@ -1,12 +1,11 @@
 //! What may be written into the hosts file, decided by the binary that will write it.
 //!
 //! **The helper validates the request itself rather than trusting the daemon** —
-//! `docs/architecture/security-model.md`, and the T41 design, D3. If the daemon is compromised it
-//! *is* the attacker, so nothing the request asserts can be believed: not the address, not the
-//! domain, not the size of the list. This module is the whole of that decision and is meant to be
-//! read in one sitting.
+//! `docs/architecture/security-model.md`. If the daemon is compromised it *is* the attacker, so
+//! nothing the request asserts can be believed: not the address, not the domain, not the size of
+//! the list. This module is the whole of that decision and is meant to be read in one sitting.
 //!
-//! The table it reads is a compile-time constant shared through `mixengine-proto` (D4). Being handed
+//! The table it reads is a compile-time constant shared through `mixengine-proto`. Being handed
 //! a list of permitted TLDs *in the request* would be the trust this rules out; sharing a constant
 //! is not. This binary is excluded from auto-update, so its table can be older than the daemon's —
 //! and that is the correct failure: a TLD a future build manages is refused here, loudly, at its own
@@ -20,7 +19,7 @@ use mixengine_platform::hosts::{self, Change};
 use mixengine_proto::domains::{MANAGED_TLDS, is_domain_syntax};
 use mixengine_proto::privileged::{HomesLedger, HostEntry, OpOutcome};
 
-/// The two addresses a managed name may point at — the T41 design, D5.
+/// The two addresses a managed name may point at.
 ///
 /// Not `IpAddr::is_loopback`, which would accept `127.0.0.2`: nothing MixEngine does needs one, and
 /// an address this file did not name is precisely the hosts-file hijack Defender has a heuristic for.
@@ -89,7 +88,7 @@ pub(crate) fn apply(tag: Option<&str>, entries: &[HostEntry], home: &Path) -> Op
     }
 }
 
-/// Why this block is not the requesting home's to write, or [`None`] — ADR 0066 and D5.
+/// Why this block is not the requesting home's to write, or [`None`] — ADR 0066.
 ///
 /// `ours` is the requesting home's tag. Another tag is accepted only to empty a block whose home
 /// `ledger` names and `alive` says is gone; the legacy block (`None`) only ever to empty it.
@@ -229,7 +228,7 @@ mod tests {
             entry("127.0.0.1", "api.blog.test"),
             entry("127.0.0.1", "x.localhost"),
             entry("127.0.0.1", "printer.local"),
-            // Permitted so T43 can start emitting it without touching this audited binary — D5.
+            // Permitted so the daemon can start emitting it without touching this audited binary.
             entry("::1", "blog.test"),
         ];
 

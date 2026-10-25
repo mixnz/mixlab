@@ -14,7 +14,7 @@ export function randomToken(): string {
   return hex(crypto.getRandomValues(new Uint8Array(32)));
 }
 
-/** 16 random bytes as hex: an account's id on the wire (`accountId`), never reused (T178c, C4). */
+/** 16 random bytes as hex: an account's id on the wire (`accountId`), never reused. */
 export function randomPublicId(): string {
   return hex(crypto.getRandomValues(new Uint8Array(16)));
 }

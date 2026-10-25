@@ -1,4 +1,4 @@
-//! `php.exe`, `node.exe`, `npm.exe` … in `<root>/bin` on Windows — roadmap task **T185**.
+//! `php.exe`, `node.exe`, `npm.exe` … in `<root>/bin` on Windows.
 //!
 //! A shim on Windows cannot `exec`: it stays as the parent of the program it starts, for as long
 //! as that program runs, so the file it was started from stays open. Each name in `bin/` is

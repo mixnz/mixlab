@@ -12,7 +12,7 @@ export const SCHEMA = [
      account_key          TEXT    NOT NULL,
      -- The account's id on the wire, accountId: random at registration, never reused. An
      -- object made before it existed gets the column by migration, which is why it may be null
-     -- here (T178c, C4).
+     -- here.
      public_id            TEXT,
      email                TEXT    NOT NULL,
      verifier             TEXT    NOT NULL,
@@ -59,7 +59,7 @@ export const SCHEMA = [
    )`,
   // What `since` reads, and the order every answer is in.
   `CREATE INDEX IF NOT EXISTS record_by_seq ON record (seq)`,
-  // What `heads` reads: one collection's rows above a cursor, without walking the others (T189).
+  // What `heads` reads: one collection's rows above a cursor, without walking the others.
   `CREATE INDEX IF NOT EXISTS record_by_collection_seq ON record (collection, seq)`,
 
   `CREATE TABLE IF NOT EXISTS device (

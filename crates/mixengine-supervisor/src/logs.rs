@@ -2,25 +2,25 @@
 //! read back.
 //!
 //! Three readers of one stream, and deliberately not three copies of it. The ring and the
-//! subscription came with T15, which needed them for the crash-loop tail — that is the difference
-//! between a GUI saying "failed" and one saying "address already in use" — and for
-//! `ReadyCheck::LogPattern`, a service announcing itself on a stream nobody can poll. T16 added the
-//! third: the file under `logs/services/<service-id>/`, written from the same place the other two
-//! are fed from and under the same lock, so all three agree on what was printed and in what order.
-//! The one way a line reaches fewer than three is a disk that refuses it, and that is reported
-//! through `tracing` — into `daemon.log`, where the supervisor's own voice belongs — rather than
-//! passed over in silence.
+//! subscription came with the restart policy, which needed them for the crash-loop tail — that is
+//! the difference between a GUI saying "failed" and one saying "address already in use" — and for
+//! `ReadyCheck::LogPattern`, a service announcing itself on a stream nobody can poll. The third
+//! came after them: the file under `logs/services/<service-id>/`, written from the same place the
+//! other two are fed from and under the same lock, so all three agree on what was printed and in
+//! what order. The one way a line reaches fewer than three is a disk that refuses it, and that is
+//! reported through `tracing` — into `daemon.log`, where the supervisor's own voice belongs —
+//! rather than passed over in silence.
 //!
-//! **T16b took the third out of this crate rather than into it.** Publishing
+//! **The log endpoint took the third out of this crate rather than into it.** Publishing
 //! `DaemonEvent::LogLine` and serving `GET /logs/{id}?follow=1` both start from a `ServiceId` and
 //! have to find the [`Capture`] it belongs to, and that registry is the daemon's; what it does is
 //! forward this capture into a log of its own, keyed by service and outliving any one run of the
 //! process.
 //!
-//! **What that forwarding needs is [`Capture::read`] and not [`Capture::subscribe`]** — T16c, and
-//! the correction to the sentence that used to stand here. A subscription begins when it is made,
-//! and [`Capture::start`] has the reader threads on the pipes before it returns: a service printing
-//! in that window filled this ring and the file, and reached a later subscriber never. `read` hands
+//! **What that forwarding needs is [`Capture::read`] and not [`Capture::subscribe`]** — the
+//! correction to the sentence that used to stand here. A subscription begins when it is made, and
+//! [`Capture::start`] has the reader threads on the pipes before it returns: a service printing in
+//! that window filled this ring and the file, and reached a later subscriber never. `read` hands
 //! over what is already here together with the subscription, under the lock the reader threads
 //! publish on, so the forwarded log holds every line exactly once.
 //!
@@ -46,7 +46,7 @@
 //! stream or a polling loop that would either add latency to every line or spin; a blocking read on
 //! a thread is what `docs/standards/rust.md` means by "a dedicated task".
 //!
-//! **Since T16 that thread also writes the file, unbuffered, one line per call.** Said plainly
+//! **That thread also writes the file, unbuffered, one line per call.** Said plainly
 //! because it cuts against the paragraph above: the reason to drain a pipe promptly is that a
 //! service blocks on a full one, and a disk that stalls now stalls the drain. It is still the right
 //! way round — a buffered write is a `current.log` missing exactly the lines that explain a crash,
@@ -77,9 +77,9 @@ use rotating::RotatingFile;
 
 /// The live log file inside a service's log directory.
 ///
-/// Public because the endpoint that serves it (T16b) and anything that tells a user where to look
-/// have to name the same file the reader threads write, and a second spelling of `current.log`
-/// somewhere else is a second spelling that can be wrong.
+/// Public because the endpoint that serves it and anything that tells a user where to look have to
+/// name the same file the reader threads write, and a second spelling of `current.log` somewhere
+/// else is a second spelling that can be wrong.
 pub const CURRENT_LOG_FILE_NAME: &str = "current.log";
 
 /// The longest run of bytes that becomes one line.
@@ -146,9 +146,9 @@ impl Capture {
     ///
     /// `subject` names whose output this is in the tracing context of the reader threads, so a
     /// decoding or I/O failure inside one is attributable without a line of its own to look at. A
-    /// string rather than a `ServiceId` since roadmap task **T78a**: a job running a blueprint's own
-    /// command is captured the same way, and a type that could only spell a service would have
-    /// meant a second copy of these readers.
+    /// string rather than a `ServiceId`: a job running a blueprint's own command is captured the
+    /// same way, and a type that could only spell a service would have meant a second copy of these
+    /// readers.
     ///
     /// `directory` is where this service's [`CURRENT_LOG_FILE_NAME`] goes —
     /// `logs/services/<service-id>/`, which the caller knows and this crate cannot ask for: `Paths`
@@ -296,8 +296,8 @@ impl Capture {
 
     /// Everything this capture is holding **and** every line after it, taken together.
     ///
-    /// Roadmap task **T16c**, and the method every forwarding reader should use instead of
-    /// [`subscribe`](Self::subscribe) on its own.
+    /// The method every forwarding reader should use instead of [`subscribe`](Self::subscribe) on
+    /// its own.
     ///
     /// **A subscription alone has a beginning, and the beginning is not the service's.**
     /// [`start`](Self::start) puts the reader threads on the pipes before it returns, so a service
@@ -530,12 +530,12 @@ impl Sink {
             file.write(&line.text);
         }
 
-        // **Held across the send, and that is the whole of what makes [`Capture::read`] safe** —
-        // roadmap task T16c. The ring and the stream are two halves of one answer, so a reader that
-        // takes both under this lock must find each line in exactly one of them. Published outside
-        // it, a line that had reached the ring but not yet the channel would be handed over twice:
-        // once in the tail and once again a moment later. The daemon's `ServiceLog::record` has
-        // always done it this way, for the same reason and about the same pair.
+        // **Held across the send, and that is the whole of what makes [`Capture::read`] safe.** The
+        // ring and the stream are two halves of one answer, so a reader that takes both under this
+        // lock must find each line in exactly one of them. Published outside it, a line that had
+        // reached the ring but not yet the channel would be handed over twice: once in the tail and
+        // once again a moment later. The daemon's `ServiceLog::record` has always done it this way,
+        // for the same reason and about the same pair.
         //
         // Costs nothing worth measuring: `broadcast::Sender::send` never waits for a receiver — a
         // subscriber that has fallen behind is told it lagged rather than blocking this thread — so
@@ -745,11 +745,11 @@ mod tests {
 
     /// **The tail and the stream are taken together, so a line is in exactly one of them.**
     ///
-    /// Roadmap task **T16c**. A reader that called `recent` and then `subscribe` would have two
-    /// answers taken at two moments: a line printed in between reaches neither, and one printed
-    /// between the ring's push and the broadcast reaches both. The daemon's relay had the first of
-    /// those — it only ever subscribed — so every line a service printed before the relay's task was
-    /// first polled went to `current.log` and never to the ring, permanently.
+    /// A reader that called `recent` and then `subscribe` would have two answers taken at two
+    /// moments: a line printed in between reaches neither, and one printed between the ring's push
+    /// and the broadcast reaches both. The daemon's relay had the first of those — it only ever
+    /// subscribed — so every line a service printed before the relay's task was first polled went
+    /// to `current.log` and never to the ring, permanently.
     #[test]
     fn a_reader_takes_the_tail_and_the_stream_with_no_line_falling_between_them() {
         let capture = Capture::detached();

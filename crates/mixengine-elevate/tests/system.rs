@@ -213,8 +213,9 @@ fn windows_repairs_an_acl_it_finds_inherited() {
     );
 }
 
-/// D4, and only reachable here: producing a file owned by somebody else needs a privilege the
-/// ordinary suite does not have. Running as root, this test's own request *is* root's.
+/// The caller is the request file's owner, and this case is only reachable here: producing a file
+/// owned by somebody else needs a privilege the ordinary suite does not have. Running as root, this
+/// test's own request *is* root's.
 #[cfg(unix)]
 #[test]
 #[ignore = "needs an administrative token; run in CI's system job, with MIXENGINE_SYSTEM_TESTS=1"]
@@ -275,7 +276,7 @@ fn lines(log: &Path) -> usize {
     std::fs::read_to_string(log).map_or(0, |text| text.lines().count())
 }
 
-/// The whole of T49a against a real trust store: in, idempotent, out, idempotent.
+/// The whole of the trust-store operations against a real store: in, idempotent, out, idempotent.
 ///
 /// **One test rather than four**, so a runner is never left holding a certificate a later job would
 /// find. The four assertions are stages of one round trip and the removal runs whatever the install
@@ -403,8 +404,8 @@ fn method() -> &'static str {
 fn an_authority() -> (Vec<u8>, String) {
     use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair, KeyUsagePurpose};
 
-    // Not T48's own derivation: this suite never has a daemon's key, and what the helper checks is
-    // the *shape* of the name rather than its relationship to the key — the T49a design, D4.
+    // Not the authority's own derivation: this suite never has a daemon's key, and what the helper
+    // checks is the *shape* of the name rather than its relationship to the key.
     let key_id = "5ec0de5a".to_owned();
 
     let key = KeyPair::generate().expect("a key pair");
@@ -453,7 +454,7 @@ fn helper() -> std::path::PathBuf {
     std::path::PathBuf::from(HELPER)
 }
 
-/// T85: the helper puts itself where only an administrator can rewrite it, once.
+/// The helper puts itself where only an administrator can rewrite it, once.
 ///
 /// **Two assertions in one test deliberately.** The second run's `AlreadyDone` is only meaningful
 /// immediately after the first, and splitting them would make the order a coincidence that
@@ -529,7 +530,7 @@ fn the_staged_copy_is_not_left_behind() {
     assert!(!staged.exists(), "{} was left behind", staged.display());
 }
 
-/// T88a: a helper that is not the installed one replaces nothing, whatever token it holds.
+/// A helper that is not the installed one replaces nothing, whatever token it holds.
 ///
 /// **Only observable under a token.** Without one the elevation gate refuses first, so the sentence
 /// this test is about — *a copy anything running as the user could replace is not one whose
@@ -549,7 +550,7 @@ fn a_helper_that_is_not_the_installed_one_refuses_to_replace_anything() {
     );
 }
 
-/// T88a: the *installed* helper refuses a candidate that is not MixEngine's, and is still there.
+/// The *installed* helper refuses a candidate that is not MixEngine's, and is still there.
 ///
 /// **The positive path cannot be tested anywhere**, here or in a unit test: a real replacement needs
 /// a signature under the release's private key, which no test has and none should. What can be

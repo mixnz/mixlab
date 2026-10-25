@@ -1,4 +1,4 @@
-//! Keeping a Go to the release a directory resolved to — roadmap task **T27d**.
+//! Keeping a Go to the release a directory resolved to.
 //!
 //! The archive's `go.env` says `GOTOOLCHAIN=auto`, which lets a `go.mod` asking for a newer Go
 //! download that Go and run it instead of the one installed. What is asserted here is what the
@@ -82,7 +82,7 @@ fn a_toolchain_somebody_exported_is_left_alone() {
     assert_eq!(recorded.recorded("GOTOOLCHAIN"), Some("go1.27.1+auto"));
 }
 
-/// **Go is told nothing about trust** — the design's D7: it reads the operating system's store,
+/// **Go is told nothing about trust**: it reads the operating system's store,
 /// which is where this home's authority already is.
 #[test]
 fn go_is_handed_no_trust_variable() {

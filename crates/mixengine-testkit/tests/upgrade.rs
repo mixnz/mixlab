@@ -1,4 +1,4 @@
-//! The fixture set is well formed — roadmap task **T89**.
+//! The fixture set is well formed.
 //!
 //! What the suite in `mixengine-core` cannot say about itself: that there is anything in the
 //! directory at all, that each blob has the readable rendering beside it that makes it reviewable,

@@ -195,9 +195,10 @@ pub(crate) fn run(request: &Path) -> Ran {
 /// Run a *different* helper against a request — the one installed on this machine, rather than the
 /// one cargo just built.
 ///
-/// The only test that needs it is T88a's: `helper-replace` refuses outright unless the process
-/// applying it **is** the installed copy, which is the whole property that makes the signature check
-/// worth anything, so proving what the installed one does means running the installed one.
+/// The only test that needs it is the helper update's: `helper-replace` refuses outright unless the
+/// process applying it **is** the installed copy, which is the whole property that makes the
+/// signature check worth anything, so proving what the installed one does means running the
+/// installed one.
 pub(crate) fn run_installed(binary: &Path, request: &Path) -> Ran {
     let output = Command::new(binary)
         .arg(request)

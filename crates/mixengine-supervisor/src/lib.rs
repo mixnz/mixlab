@@ -1,9 +1,8 @@
 //! Process supervision: spawn, watch, restart, health-check, capture logs.
 //!
-//! The supervisor knows nothing about PHP, Caddy or MariaDB — it only understands a `ServiceSpec`
-//! (roadmap task T12). Everything above it is built on the guarantees made here: no orphaned
-//! children when the daemon dies, and an honest state machine that distinguishes `Degraded` from
-//! `Failed`.
+//! The supervisor knows nothing about PHP, Caddy or MariaDB — it only understands a `ServiceSpec`.
+//! Everything above it is built on the guarantees made here: no orphaned children when the daemon
+//! dies, and an honest state machine that distinguishes `Degraded` from `Failed`.
 
 #![warn(missing_docs)]
 

@@ -1,11 +1,10 @@
 //! The shim as a user meets it: a file in `bin/`, run from a directory, with no daemon anywhere.
 //!
-//! Roadmap task **T25**, and the claim this suite exists for is Phase 2's milestone — `php -v` in
-//! one directory and `php -v` in another are two different programs, with no shell hook installed
-//! and nothing running in the background. Everything here drives the **real binary** as a child
-//! process, because the two things worth proving about a shim are exactly the two an in-process
-//! test cannot reach: that it reads the name it was invoked by, and that the exit code a shell sees
-//! is the program's own.
+//! The claim this suite exists for is Phase 2's milestone — `php -v` in one directory and `php -v`
+//! in another are two different programs, with no shell hook installed and nothing running in the
+//! background. Everything here drives the **real binary** as a child process, because the two
+//! things worth proving about a shim are exactly the two an in-process test cannot reach: that it
+//! reads the name it was invoked by, and that the exit code a shell sees is the program's own.
 //!
 //! `fakeservice` stands in for every runtime here, as it does for the install tests: the real
 //! artifacts are tens of megabytes each, and downloading one to find out which of two directories a
@@ -20,9 +19,9 @@
 //! parallel: `std::env::set_var` is process-global, and two homes in one binary would overwrite each
 //! other.
 //!
-//! The home itself is in [`harness`], shared with `overhead.rs` — T29 measures what a shim costs
-//! and this file measures what it does, and the two must be asking about the same installation or
-//! the budget is a number about a home nobody has.
+//! The home itself is in [`harness`], shared with `overhead.rs` — that file measures what a shim
+//! costs and this file measures what it does, and the two must be asking about the same
+//! installation or the budget is a number about a home nobody has.
 
 use std::collections::BTreeMap;
 use std::process::Command;
@@ -71,7 +70,7 @@ fn the_same_command_runs_a_different_version_in_a_different_directory() {
     );
 }
 
-/// **A home with two languages in it** — roadmap task T27, where Node.js becomes the second.
+/// **A home with two languages in it**, Node.js being the second.
 ///
 /// Everything above this point is one runtime kind, which cannot tell apart a shim that dispatches
 /// on the *command* from one that would have worked just as well hard-wired to PHP. Here `bin/`
@@ -110,12 +109,12 @@ fn a_second_language_in_the_same_home_resolves_on_its_own() {
     );
 }
 
-/// **Two commands, one executable** — the half of T27 that Python and Ruby are the first to reach.
+/// **Two commands, one executable** — a case Python and Ruby were the first to reach.
 ///
-/// [`shims::Command`] has carried a `name` the user types and an `executable` the artifact publishes
-/// since T25, and until now nothing could tell them apart: every published artifact happened to name
-/// its executables exactly as its commands are typed, so a shim that looked the invoked name up in
-/// `provides` would have passed every test in this file.
+/// [`shims::Command`] has carried a `name` the user types and an `executable` the artifact
+/// publishes since the first shim, and before Python and Ruby nothing could tell them apart: every
+/// published artifact happened to name its executables exactly as its commands are typed, so a shim
+/// that looked the invoked name up in `provides` would have passed every test in this file.
 ///
 /// Python is where that stops. `python-build-standalone` publishes one interpreter, the index calls
 /// it `python`, and `python3` — which is what most projects' scripts actually invoke — is a second
@@ -226,7 +225,7 @@ fn a_shim_fronts_a_batch_file_because_that_is_what_npm_is_on_windows() {
     );
 }
 
-/// **The other half of that milestone** — roadmap task T26.
+/// **The other half of that milestone.**
 ///
 /// The case above proves a shim in `bin/` becomes the right PHP. This one proves the directory a
 /// person's PATH points at has every command in it and nothing else, and that starting again does
@@ -369,9 +368,9 @@ fn a_home_with_no_database_is_refused_rather_than_created() {
     );
 }
 
-/// **A command run through another kind hands its file to that kind's program** — roadmap task
-/// **T27c**, its design's D4. `composer` resolves a Composer for the file and a PHP for the program,
-/// each on its own, and the PHP is what runs — from the directory the manifest pinned.
+/// **A command run through another kind hands its file to that kind's program.** `composer`
+/// resolves a Composer for the file and a PHP for the program, each on its own, and the PHP is what
+/// runs — from the directory the manifest pinned.
 #[test]
 fn a_command_run_through_another_kind_hands_its_file_to_that_kinds_program() {
     let home = Home::with(&["8.1.30", "8.3.33"]);
@@ -435,7 +434,7 @@ fn a_command_run_through_a_kind_that_is_not_installed_names_that_kinds_install_c
     );
 }
 
-/// T185: asked by a trampoline, the resolver says what it would have become and becomes nothing.
+/// Asked by a trampoline, the resolver says what it would have become and becomes nothing.
 /// The fake runtime is never started, so nothing on stdout but the record.
 #[test]
 fn asked_by_a_trampoline_the_resolver_writes_a_record_and_starts_nothing() {
@@ -472,7 +471,7 @@ fn asked_by_a_trampoline_the_resolver_writes_a_record_and_starts_nothing() {
     );
 }
 
-/// T185: a refusal is the same sentence and the same code whoever asked, and writes no record.
+/// A refusal is the same sentence and the same code whoever asked, and writes no record.
 #[test]
 fn asked_by_a_trampoline_a_refusal_is_unchanged_and_writes_no_record() {
     use mixengine_platform::handover::SHIM_AS_ENV;
@@ -494,7 +493,7 @@ fn asked_by_a_trampoline_a_refusal_is_unchanged_and_writes_no_record() {
     assert!(said.contains("8.1.30"), "{said}");
 }
 
-/// **The property T185 rests on.** A program started through `bin/` is still running, and the
+/// **The property trampolines rest on.** A program started through `bin/` is still running, and the
 /// resolver — the file an upgrade replaces — is not held by it. On Windows the trampoline is the
 /// one that waits; on Unix the shim has `exec`ed away. Either way the resolver is nobody's.
 #[test]

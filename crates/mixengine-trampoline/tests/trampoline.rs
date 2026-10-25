@@ -1,4 +1,4 @@
-//! The trampoline on its own, with no shim and no home behind it — roadmap task **T185**.
+//! The trampoline on its own, with no shim and no home behind it.
 //!
 //! What it does *with* a shim is `crates/mixengine-shim/tests/shim.rs`', which fills a real `bin/`
 //! and runs every case through it. This file is for the one thing it answers by itself: a `bin/`
@@ -7,7 +7,7 @@
 //! **It is also what gets the binary built.** `cargo test --workspace --all-targets` puts a
 //! package's binary in `target/<profile>/` only for a package with an integration test, and the
 //! shim's and the CLI's suites look for `mixengine-trampoline` there; without this file a clean CI
-//! build never made one (found by the first CI run of T185).
+//! build never made one (found by the trampoline's first CI run).
 
 use std::process::Command;
 

@@ -10,10 +10,10 @@
 //! 2  which version does it mean?   `core::resolve`, in this process — no daemon, no IPC
 //! 3  which file is that?           the `provides` map recorded when it was installed
 //! 4  become it                     exec on Unix, a Job Object child on Windows — carrying `PATH`
-//!                                  and the generated ini set (T28), and nothing else
+//!                                  and the generated ini set, and nothing else
 //!
 //! For `composer`, steps 2 and 3 run twice — once for the file, once for the PHP that runs it —
-//! and step 4 starts the PHP with the file first (roadmap task T27c).
+//! and step 4 starts the PHP with the file first.
 //! ```
 //!
 //! # It has no arguments of its own, and cannot have
@@ -30,9 +30,9 @@
 //! `mix` avoids that edge because it can ask a daemon, and a bundled SQLite is a poor trade for
 //! finding out where a socket lives. Here there is nothing to ask: the whole promise is that a
 //! version resolves **without a daemon** — with one stopped, still starting, or never installed —
-//! and in a budget (15 ms, T29) that a connection, a request and a response would spend before the
-//! query even started. So the resolution is the same `core::resolve` the daemon and the GUI call,
-//! run in this process against the database opened read-only.
+//! and in a budget (15 ms) that a connection, a request and a response would spend before the query
+//! even started. So the resolution is the same `core::resolve` the daemon and the GUI call, run in
+//! this process against the database opened read-only.
 //!
 //! # What it is not allowed to do to the home
 //!
@@ -66,7 +66,7 @@ fn main() {
     // `current_exe` follows a symlink back to `mixengine-shim`, which would make every command in
     // `bin/` the same unknown one.
     //
-    // **Unless a trampoline asked (T185).** On Windows `bin/php.exe` is `mixengine-trampoline`,
+    // **Unless a trampoline asked.** On Windows `bin/php.exe` is `mixengine-trampoline`,
     // which runs this file under its own name and says in this variable which command it is.
     let invoked = match std::env::var_os(handover::SHIM_AS_ENV) {
         Some(name) => name,
@@ -100,19 +100,19 @@ fn main() {
 /// Answers a status only on Windows, where the shim outlives the program it started; on Unix the
 /// hand-over is an `exec` and the only way back here is the [`Refusal`].
 fn run(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
-    // **The compiled table first, and nothing new happens on this path** — roadmap task T29's
-    // budget is fifteen milliseconds for `php -v`, and every arm added below is an arm a runtime
-    // command never reaches.
+    // **The compiled table first, and nothing new happens on this path** — the shim's budget is
+    // fifteen milliseconds for `php -v`, and every arm added below is an arm a runtime command
+    // never reaches.
     let Some(command) = shims::dispatch(invoked) else {
         return client(invoked, arguments);
     };
 
     let own = resolved(command.kind, command.executable)?;
 
-    // **A file for another kind's program** — roadmap task **T27c**, its design's D4. The command's
-    // kind named the file; the `via` kind names what runs it, resolved for the same directory and
-    // under its own override variable, so `MIXENGINE_PHP=8.1 composer install` means what it says.
-    // The environment is the program's: PHP's own directory on the PATH, PHP's generated ini set.
+    // **A file for another kind's program.** The command's kind named the file; the `via` kind
+    // names what runs it, resolved for the same directory and under its own override variable, so
+    // `MIXENGINE_PHP=8.1 composer install` means what it says. The environment is the program's:
+    // PHP's own directory on the PATH, PHP's generated ini set.
     let (program, root, kind, version, arguments, java, devkit_path) = match command.via {
         None => (
             own.program,
@@ -157,11 +157,11 @@ fn run(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
     become_program(&program, &arguments, &environment)
 }
 
-/// Hand over, or — asked by a trampoline — say what would have been handed over (T185).
+/// Hand over, or — asked by a trampoline — say what would have been handed over.
 ///
 /// The trampoline runs this with none of the user's arguments, so `arguments` here is only what
-/// this shim puts *before* them (`composer.phar`, T27c). The trampoline appends its own, which is
-/// why they never make the round trip through a pipe and back.
+/// this shim puts *before* them (`composer.phar`). The trampoline appends its own, which is why
+/// they never make the round trip through a pipe and back.
 fn become_program(
     program: &Path,
     arguments: &[OsString],
@@ -190,7 +190,7 @@ fn become_program(
     Ok(0)
 }
 
-/// A client of an installed service package — roadmap task **T130**.
+/// A client of an installed service package.
 ///
 /// `mysqldump`, `psql`, `redis-cli`: not a runtime, so there is no directory to resolve against and
 /// no default version to fall back on. What decides is the **instance** —
@@ -258,7 +258,7 @@ fn client(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
             shims::Origin::Global { .. } => None,
         });
 
-        // **No package claims it, so the third arm** — roadmap task T131. A tool somebody installed
+        // **No package claims it, so the third arm.** A tool somebody installed
         // into a runtime, whose language `bin_commands` recorded when the pass that found it wrote
         // `bin/`. One row, because a shim is handed nothing but the name it was invoked by.
         let Some(package) = package else {
@@ -303,9 +303,9 @@ fn client(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
             environment.insert("PATH".to_owned(), ahead_of_the_path(directory));
         }
 
-        // **And where its own instance listens** — the design's D4. Only where the person has not
-        // said: somebody who exported `MYSQL_TCP_PORT` for a tunnel meant it, and a tool that
-        // overrode it would be one that cannot be used against anything but itself.
+        // **And where its own instance listens.** Only where the person has not said: somebody who
+        // exported `MYSQL_TCP_PORT` for a tunnel meant it, and a tool that overrode it would be one
+        // that cannot be used against anything but itself.
         if let Some(listen) = &chosen.listen {
             for (variable, value) in recipe.client_env(listen) {
                 if std::env::var_os(variable).is_none() {
@@ -320,7 +320,7 @@ fn client(invoked: &Path, arguments: &[OsString]) -> Result<i32, Refusal> {
     become_program(&program, arguments, &environment)
 }
 
-/// A tool somebody installed into a runtime — roadmap task **T131**.
+/// A tool somebody installed into a runtime.
 ///
 /// **It follows the version the way `npm` does**, which is the whole of the design: `yarn` is
 /// resolved for *this* directory, and the file is looked for inside that version's own bindir. A
@@ -467,12 +467,12 @@ struct Resolution {
     /// Which version this directory meant, which is what names the ini set.
     version: PackageVersion,
 
-    /// `provides.java` of the same install, for a Java command — what `JAVA_HOME` is derived from
-    /// (roadmap task **T27e**, its design's D5). [`None`] for every other kind.
+    /// `provides.java` of the same install, for a Java command — what `JAVA_HOME` is derived from.
+    /// [`None`] for every other kind.
     java: Option<PathBuf>,
 
-    /// The newest installed `msys2`, for a Ruby command — what `MSYS2_PATH` names (roadmap task
-    /// **T206a**, D6). [`None`] for every other kind, and where none is installed.
+    /// The newest installed `msys2`, for a Ruby command — what `MSYS2_PATH` names. [`None`] for
+    /// every other kind, and where none is installed.
     devkit: Option<PathBuf>,
 }
 
@@ -533,7 +533,7 @@ fn surroundings(
     environment
 }
 
-/// The variable RubyInstaller looks at first for an MSYS2 — roadmap task **T206a**, D6.
+/// The variable RubyInstaller looks at first for an MSYS2.
 const MSYS2_PATH: &str = "MSYS2_PATH";
 
 /// Point a Ruby at the installed devkit, unless the person's session already points it somewhere.
@@ -567,7 +567,7 @@ fn newest_devkit(installed: &[(&str, &str)]) -> Option<PathBuf> {
         .map(|(_, path)| PathBuf::from(path))
 }
 
-/// The devkit a Ruby command should be pointed at, read from this home — roadmap task **T206a**.
+/// The devkit a Ruby command should be pointed at, read from this home.
 ///
 /// **A read that fails is no devkit, never a refusal**: the shim's job is to start the program, and
 /// a Ruby that cannot build a native gem is still a Ruby.
@@ -579,7 +579,7 @@ async fn installed_devkit(store: &Store, kind: RuntimeKind) -> Option<PathBuf> {
     let installed = mixengine_core::packages::records(store, Some("msys2"))
         .await
         .unwrap_or_default();
-    // **A devkit whose folder is gone is no devkit** — roadmap task **T206d**, D2.
+    // **A devkit whose folder is gone is no devkit.**
     let pairs: Vec<(&str, &str)> = installed
         .iter()
         .filter(|row| !row.is_missing())
@@ -592,12 +592,12 @@ async fn installed_devkit(store: &Store, kind: RuntimeKind) -> Option<PathBuf> {
 /// The variable Maven, Gradle and a JVM's own children read to find a JDK.
 const JAVA_HOME: &str = "JAVA_HOME";
 
-/// Name the JDK a Java command resolved to — roadmap task **T27e**, its design's D5.
+/// Name the JDK a Java command resolved to.
 ///
 /// **Always, over a value the session carries.** That is the opposite of [`toolchain`]'s rule, and
-/// for T27d's `go env -w` reason: `JAVA_HOME` is usually a machine-wide setting an installer wrote
-/// before MixEngine was here. A shim reaches only what it starts, so `mvn` typed in a terminal still
-/// reads the session's value — `mix doctor` says so.
+/// for the reason [`toolchain`] overrides `go env -w`: `JAVA_HOME` is usually a machine-wide
+/// setting an installer wrote before MixEngine was here. A shim reaches only what it starts, so
+/// `mvn` typed in a terminal still reads the session's value — `mix doctor` says so.
 fn java_home(java: Option<&Path>, environment: &mut BTreeMap<String, OsString>) {
     let Some(home) = java.and_then(mixengine_core::runtimes::java::home) else {
         return;
@@ -609,7 +609,7 @@ fn java_home(java: Option<&Path>, environment: &mut BTreeMap<String, OsString>) 
 /// The variable that decides whether `go` may run a toolchain other than itself.
 const GOTOOLCHAIN: &str = "GOTOOLCHAIN";
 
-/// Keep a Go to the release this directory resolved to — roadmap task **T27d**, its design's D5.
+/// Keep a Go to the release this directory resolved to.
 ///
 /// **The archive's `go.env` says `GOTOOLCHAIN=auto`**, kept byte for byte by the packaging
 /// repository. With `auto`, a `go` meeting a `go.mod` that asks for a newer release downloads that
@@ -639,7 +639,7 @@ fn toolchain(
     environment.insert(GOTOOLCHAIN.to_owned(), OsString::from("local"));
 }
 
-/// Tell this runtime about the authority MixEngine's own sites are signed by — task **T132**.
+/// Tell this runtime about the authority MixEngine's own sites are signed by.
 ///
 /// **One mechanism per language, and the difference between them is the whole design.**
 /// `NODE_EXTRA_CA_CERTS` *adds* to what Node already trusts, so Node is handed the authority itself
@@ -654,16 +654,16 @@ fn toolchain(
 /// | Ruby | `SSL_CERT_FILE` | `etc/ca/bundle.pem` |
 /// | PHP, Composer | — | the generated ini set says it instead |
 /// | Go | — | it reads the operating system's store already |
-/// | Java | — | its own `cacerts`, written by the daemon (T27e, ADR 0039) |
+/// | Java | — | its own `cacerts`, written by the daemon (ADR 0039) |
 ///
-/// Go is absent because it needs nothing (roadmap task **T27d**, its design's D7): it verifies
-/// through the operating system on Windows and macOS, and on Linux it reads the system bundle that
-/// installing this home's authority regenerates.
+/// Go is absent because it needs nothing: it verifies through the operating system on Windows and
+/// macOS, and on Linux it reads the system bundle that installing this home's authority
+/// regenerates.
 ///
 /// PHP is absent on purpose. Its answer is `openssl.cafile` and `curl.cainfo` in the `conf.d` set
 /// above, which the **pool** reads too — so `php -r` in a terminal and `curl_exec()` in a browser
-/// get the same answer, which is the property T28 exists to hold. Composer runs through a PHP and
-/// inherits it.
+/// get the same answer, which is the property the generated ini set exists to hold. Composer runs
+/// through a PHP and inherits it.
 ///
 /// Two rules, both of them [`surroundings`]' own:
 ///
@@ -889,8 +889,7 @@ fn unknown_command() -> Refusal {
     }
 }
 
-/// A name `bin/` holds and nothing in this home claims any more — roadmap tasks **T130** and
-/// **T131**.
+/// A name `bin/` holds and nothing in this home claims any more.
 ///
 /// [`unknown_command`]'s sibling and a different sentence, because the situation is different and
 /// the old one reads as a bug. `bin/` is a projection of installed state now, so a `mysqldump`

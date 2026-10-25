@@ -133,7 +133,7 @@ describe("tombstones", () => {
   it("let a read from 0 page to its end with resync=1", async ({ skip }) => {
     // Past one page, a resync's cursor is the first page's last seq, which can sit below the reap
     // mark: expired again, the client starts over for ever. `resync=1` says the cursor came from a
-    // read that began at 0, which has missed nothing (T178b, M4).
+    // read that began at 0, which has missed nothing.
     const limits = (await call<Capabilities>("/v1/capabilities")).body;
     if (limits.tombstoneRetentionDays !== 0) {
       skip(

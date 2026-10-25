@@ -50,7 +50,7 @@ pub fn random_token() -> String {
 }
 
 /// 16 random bytes as hex: an account's id on the wire (`accountId`), made once at registration
-/// and never reused (T178c, C4).
+/// and never reused.
 pub fn random_public_id() -> String {
     let mut bytes = [0u8; 16];
     rand::rng().fill_bytes(&mut bytes);

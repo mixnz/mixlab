@@ -3,12 +3,12 @@
 //! Seven things live here: a home directory that exists only for the test that made it, a way to
 //! stop a process this test is not the parent of, the `fakeservice` binary the supervisor is
 //! tested against (`docs/standards/testing.md`,
-//! `docs/architecture/process-supervision.md`), the `services` row a test has to write for
-//! itself until T30 can create one, a signed package index over a real socket, and a real archive
-//! to install from it.
+//! `docs/architecture/process-supervision.md`), the rows a test has to write for itself because
+//! no method produces them, a signed package index over a real socket, and a real archive to
+//! install from it.
 //! The first two were each written twice somewhere else before they were written once here; the third arrives here first, because the four crates that will spawn it
-//! could not have shared it anywhere but a package of its own; the fourth is scaffolding with an
-//! expiry date on it — see [`mod@declare`]; the next two exist because the network is forbidden in
+//! could not have shared it anywhere but a package of its own; the fourth is what no call can do
+//! for a test — see [`mod@declare`]; the next two exist because the network is forbidden in
 //! tests and what they stand in for is a network; and the seventh is a FastCGI client, because a
 //! test that proves php-fpm is up by connecting to its socket proves only that something is
 //! listening — see [`mod@fastcgi`].

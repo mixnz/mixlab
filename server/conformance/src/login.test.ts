@@ -23,7 +23,7 @@ describe("POST /v1/auth/login", () => {
 
   it("names the account with an id a new registration never reuses", async () => {
     // A move A → B → A registers the same address on A again, under the same MK. A client that
-    // told the two accounts apart by address alone kept the first one's cursor (T178c, C4).
+    // told the two accounts apart by address alone kept the first one's cursor.
     const { account, session } = await signedUp();
     expect(session.accountId).toMatch(/^[0-9a-f]{32}$/);
     expect((await login(account)).accountId).toBe(session.accountId);

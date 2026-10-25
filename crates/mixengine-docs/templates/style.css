@@ -1,6 +1,6 @@
 /* The whole of the site's presentation. One file, no import, no font fetched from anywhere, and no
-   script — roadmap task T90, D9. A documentation site that phoned a third party would be asking its
-   readers to accept something they never chose. */
+   script. A documentation site that phoned a third party would be asking its readers to accept
+   something they never chose. */
 
 :root {
   color-scheme: light dark;

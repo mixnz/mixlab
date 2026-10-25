@@ -126,8 +126,8 @@ function naming(pathspecs) {
 
 // `common.sh` and the packaging README walk `0.0.1-beta.1` through Debian's and RPM's version
 // ordering as a worked example, and `macos/uninstall-check.md` records which released `.pkg` the
-// removal was walked over by hand (T182a). Both are prose about one particular past tag, and the
-// reason they are named here rather than discovered again every release.
+// removal was walked over by hand. Both are prose about one particular past tag, and the reason
+// they are named here rather than discovered again every release.
 const typedOut = naming([
   "packaging",
   ".github",
@@ -170,7 +170,7 @@ if (dryRun) {
     fail("cargo update --workspace failed — Cargo.lock still names the old version");
   }
 
-  // **MixLab carries the workspace's version too, in four files of its own** (T104): the window
+  // **MixLab carries the workspace's version too, in four files of its own**: the window
   // reports it in Settings, sends it to the sync server, and stamps it into its bundle. It sits in a
   // Cargo workspace and an npm project this manifest cannot reach, so nothing above carried it, and
   // v0.0.7 found MixLab still saying 0.0.6. Each `version` is the first one at a known indent — the
@@ -264,9 +264,9 @@ if (dryRun) {
     console.log(`docs/guide/vi/${name}: restamped against en/${name}`);
   }
 
-  // **And record the helper this release ships as the next baseline** — roadmap task T182b, D1.
-  // From here on, `helper-lock --check` asks for a bump only when the helper changes again. Node
-  // and not the `.sh` beside it, for the `bash` reason above.
+  // **And record the helper this release ships as the next baseline.** From here on,
+  // `helper-lock --check` asks for a bump only when the helper changes again. Node and not the
+  // `.sh` beside it, for the `bash` reason above.
   execFileSync("node", [join(ROOT, "packaging", "helper-lock.mjs"), "--release"], {
     cwd: ROOT,
     stdio: "inherit",

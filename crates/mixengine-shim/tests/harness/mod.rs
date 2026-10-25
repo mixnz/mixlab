@@ -113,11 +113,11 @@ impl Home {
 
     /// Fill `bin/` the way a daemon start does — **through the product's own function**.
     ///
-    /// Roadmap task T26. It used to copy one file under one name, which proved the shim reads
-    /// `argv[0]` and proved nothing whatever about how a real `bin/` comes to exist. Going through
-    /// [`shims::refresh`] is what makes this suite the end-to-end claim of Phase 2's milestone
-    /// rather than half of it: the directory a person's PATH points at is filled by the code that
-    /// fills it, and the `php` run below is the file that code put there.
+    /// It used to copy one file under one name, which proved the shim reads `argv[0]` and proved
+    /// nothing whatever about how a real `bin/` comes to exist. Going through [`shims::refresh`] is
+    /// what makes this suite the end-to-end claim of Phase 2's milestone rather than half of it:
+    /// the directory a person's PATH points at is filled by the code that fills it, and the `php`
+    /// run below is the file that code put there.
     pub(crate) fn fill_bin(&self) -> shims::Refreshed {
         self.fill_bin_also_fronting(&[])
     }
@@ -131,7 +131,7 @@ impl Home {
         self.fill_bin_also_fronting(&[name]);
     }
 
-    /// Fill `bin/` from copies of this build's shim and trampoline put in `install` — T185.
+    /// Fill `bin/` from copies of this build's shim and trampoline put in `install`.
     ///
     /// For a test that replaces the resolver while a program is running, which it may not do to the
     /// build directory every other test is reading from.
@@ -180,7 +180,7 @@ impl Home {
         .expect("bin/ can be filled in a temporary home")
     }
 
-    /// The client commands of the installed service packages — roadmap task **T130**.
+    /// The client commands of the installed service packages.
     ///
     /// **The daemon's own walk**, through the same two functions `crate::shims::Shims::extras` uses,
     /// for [`fill_bin`](Self::fill_bin)'s reason one step further along: what this suite claims is
@@ -212,7 +212,7 @@ impl Home {
         })
     }
 
-    /// What `npm install -g` leaves behind, and the pass that notices it — roadmap task **T131**.
+    /// What `npm install -g` leaves behind, and the pass that notices it.
     ///
     /// The program is written into the runtime's own bindir (on Windows under every spelling npm
     /// really writes, so the case that one command comes out of three files is exercised rather
@@ -264,7 +264,7 @@ impl Home {
         self.rescan();
     }
 
-    /// This home's certificate authority, where `certs::ca` puts one — roadmap task **T133**.
+    /// This home's certificate authority, where `certs::ca` puts one.
     ///
     /// **Not a real certificate**, because nothing in the shim parses it: what is being asserted is
     /// *which file a runtime is pointed at*, and the only property that matters is that the file
@@ -621,13 +621,13 @@ impl Home {
 
     /// The same, with variables the user's session would have exported.
     /// The same as [`record_command`](Self::record_command), with `cleared` taken *out* of the
-    /// child's environment first — roadmap task **T133**.
+    /// child's environment first.
     ///
     /// **Because a runner is a machine somebody set up.** `ubuntu-latest` exports
-    /// `SSL_CERT_FILE=/usr/lib/ssl/cert.pem`, so a shim running there correctly leaves it alone —
-    /// the design's D11 — and a case asserting that MixEngine's own value arrives was asserting
-    /// about this machine rather than about the shim. The case that a person's value *wins* is a
-    /// separate one below, and it is the more valuable of the two.
+    /// `SSL_CERT_FILE=/usr/lib/ssl/cert.pem`, so a shim running there correctly leaves it alone,
+    /// and a case asserting that MixEngine's own value arrives was asserting about this machine
+    /// rather than about the shim. The case that a person's value *wins* is a separate one below,
+    /// and it is the more valuable of the two.
     pub(crate) fn record_without(
         &self,
         command: &str,
@@ -786,7 +786,7 @@ fn dumped(path: &Path) -> BTreeMap<String, String> {
         .collect()
 }
 
-/// What this build fills `bin/` from: the shim, and on Windows the trampoline beside it (T185).
+/// What this build fills `bin/` from: the shim, and on Windows the trampoline beside it.
 ///
 /// `cargo test -p mixengine-shim` builds this package's binary and no other, so on Windows the
 /// trampoline is there only after a workspace build or its own — the message says which.
@@ -795,7 +795,7 @@ pub(crate) fn built_source() -> shims::Source {
         .unwrap_or_else(|error| panic!("{error}"));
 
     // `shims::source` falls back to the shim when there is no trampoline, which is right for an
-    // updated install and wrong here: this suite would then test the layout T185 replaced.
+    // updated install and wrong here: this suite would then test the layout trampolines replaced.
     assert!(
         !cfg!(windows) || source.placed != source.resolver,
         "no mixengine-trampoline beside {} — run `cargo build -p mixengine-trampoline` first, or \

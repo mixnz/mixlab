@@ -126,7 +126,7 @@ describe("deleting a record", () => {
   it("keeps the time the deletion was made", async () => {
     // A tombstone is an edit with a time: D4 weighs it against an edit made elsewhere, and a
     // tombstone that kept the replaced version's time would lose to any later edit, or win, by
-    // arrival order alone (T178c, C1).
+    // arrival order alone.
     const { collection, id, stored } = await seed(session.accessToken);
     const deleted = await remove(session.accessToken, collection, id, stored.version, 1_900_000_000);
     expect(deleted.status).toBe(200);
@@ -186,7 +186,7 @@ describe("what a record may be", () => {
 describe("GET /v1/records", () => {
   it("ends the last page of a collection at the account's latest seq", async () => {
     // A cursor stopped at a quiet collection's own last row sits below every later write in the
-    // account, where one reaped tombstone expires it for good (T178b, M3).
+    // account, where one reaped tombstone expires it for good.
     const { session: own } = await signedUp();
     const quiet = await seed(own.accessToken);
     const later = await seed(own.accessToken);

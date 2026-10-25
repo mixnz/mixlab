@@ -45,8 +45,8 @@ struct Published {
     /// does for any other server.
     extensions: Option<(Vec<u8>, String)>,
 
-    /// Index schema 2, encoded from the same value as `document` — roadmap task **T196**. `None`
-    /// when that value is not an index at all, which is a registry started only for its assets.
+    /// Index schema 2, encoded from the same value as `document`. `None` when that value is not an
+    /// index at all, which is a registry started only for its assets.
     set: Option<Set>,
 
     /// Kinds whose file answers `404`.
@@ -318,7 +318,7 @@ impl MockRegistry {
         published.set = set;
     }
 
-    /// Serve the signature of a new root beside the old root — roadmap task **T196**.
+    /// Serve the signature of a new root beside the old root.
     ///
     /// Not a state the publisher passes through — it uploads the signature last — and exactly what
     /// a client behind a cache that refreshed one file and not the other sees.

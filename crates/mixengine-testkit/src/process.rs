@@ -3,12 +3,11 @@
 //! **The one `#[cfg]` outside `mixengine-platform` that decides what a program *does*.** Test
 //! functions elsewhere are gated to the systems they can run on — `tests/fakeservice.rs` has two —
 //! and that is a different thing: it says where a claim is checkable, not how it is answered. This
-//! is a body that differs by OS. It is here rather than
-//! behind a platform trait because nothing in the *product* stops a process by pid yet — that
-//! arrives with the supervisor (roadmap task T15), and is where this belongs once it exists. A test
-//! cannot wait for it: what several of them prove is precisely that a daemon somebody *else* stopped
-//! shuts down properly, and a daemon a client autostarted is nobody's child to be killed through a
-//! `std::process::Child`.
+//! is a body that differs by OS. It is here rather than behind a platform trait because what the
+//! *product* stops is a process it can name: a child it supervises, or one it adopted by pid and
+//! start time (`mixengine_platform::process::Adopted`). A test needs something else: what several
+//! of them prove is precisely that a daemon somebody *else* stopped shuts down properly, and a
+//! daemon a client autostarted is nobody's child to be killed through a `std::process::Child`.
 //!
 //! It is affordable because this crate is a dev-dependency and ships to nobody. The rule it bends is
 //! about the code that runs on a user's machine; obeying it here would mean adding a capability to

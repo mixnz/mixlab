@@ -31,7 +31,7 @@ const methods = ['runtime.adopt', 'service.list', 'update.check'];
 test('every method is called, or listed with a reason', () => {
   const found = problems(methods, new Set(['service.list']), {
     cliOnly: { 'update.check': 'ADR 0056: MixLab updates itself' },
-    knownGaps: { 'runtime.adopt': 'T182f: the Runtimes screen has no Adopt yet' },
+    knownGaps: { 'runtime.adopt': 'the Runtimes screen has no Adopt yet' },
   });
   assert.deepEqual(found, []);
 });
@@ -57,7 +57,7 @@ test('a listed method with no reason is a problem', () => {
 test('a listed method the window now calls is a stale entry', () => {
   const found = problems(methods, new Set(['service.list', 'runtime.adopt', 'update.check']), {
     cliOnly: { 'update.check': 'ADR 0056' },
-    knownGaps: { 'runtime.adopt': 'T182f' },
+    knownGaps: { 'runtime.adopt': 'no Adopt yet' },
   });
   assert.equal(found.length, 2);
   assert.ok(found.every((line) => /now calls/.test(line)), found.join('\n'));

@@ -180,7 +180,7 @@ export interface Session {
   refreshToken: string;
   deviceId: string;
   expiresIn: number;
-  /** The account's own id: random at registration, never reused (T178c, C4). */
+  /** The account's own id: random at registration, never reused. */
   accountId: string;
 }
 
@@ -272,7 +272,7 @@ export function since(
   return call(`/v1/records?${query}`, { token });
 }
 
-/** `POST /v1/records/heads` (T189). */
+/** `POST /v1/records/heads`: the collections a pull would bring news of. */
 export interface Heads {
   stale: string[];
   nextSince: number;

@@ -72,8 +72,8 @@ export class Account implements DurableObject {
     // connection is served.
     state.blockConcurrencyWhile(async () => {
       for (const statement of SCHEMA) this.sql.exec(statement);
-      // An object made before `public_id` existed gets the column, and its account an id
-      // (T178c, C4). `CREATE TABLE IF NOT EXISTS` leaves an existing table as it was.
+      // An object made before `public_id` existed gets the column, and its account an id.
+      // `CREATE TABLE IF NOT EXISTS` leaves an existing table as it was.
       const columns = this.sql.exec<{ name: string }>(`PRAGMA table_info(account)`).toArray();
       if (!columns.some((column) => column.name === "public_id")) {
         this.sql.exec(`ALTER TABLE account ADD COLUMN public_id TEXT`);
@@ -227,7 +227,7 @@ export class Account implements DurableObject {
     return null;
   }
 
-  /** Whether `A` is this account's (T178c, C3): a move asks before it registers anywhere with it. */
+  /** Whether `A` is this account's: a move asks before it registers anywhere with it. */
   private async checkVerifier(config: Config, request: Request, body: unknown): Promise<Response> {
     const session = await this.authenticate(request);
     if (!session) return fail(401, "invalid-token", "That token is invalid or has expired.");
@@ -726,7 +726,7 @@ export class Account implements DurableObject {
   }
 
   private async readBody(request: Request): Promise<unknown> {
-    // A record's DELETE carries its time (T178c, C1); a device's has no body and reads as null.
+    // A record's DELETE carries its time; a device's has no body and reads as null.
     if (request.method === "GET") return null;
     const text = await request.text();
     if (text.length === 0) return null;

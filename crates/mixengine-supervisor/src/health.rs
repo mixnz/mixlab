@@ -154,8 +154,8 @@ impl Health {
                 Ok(endpoint.answered(timeout).await == Some(*expect_status))
             }
 
-            // **In the server's own protocol, with no process** — roadmap task T190b, D4. Each is
-            // bounded by the same timeout inside; see `wire`.
+            // **In the server's own protocol, with no process.** Each is bounded by the same
+            // timeout inside; see `wire`.
             HealthProbe::MysqlGreeting { addr } => Ok(crate::wire::greeting(*addr, timeout).await),
 
             HealthProbe::RedisPing { addr } => Ok(crate::wire::ping(*addr, timeout).await),
@@ -356,7 +356,7 @@ mod tests {
         );
     }
 
-    // ---- The protocol probes, against a socket — roadmap task T190b, D4. ----
+    // ---- The protocol probes, against a socket. ----
 
     /// What the pretend server does once it has accepted.
     #[derive(Clone, Copy)]

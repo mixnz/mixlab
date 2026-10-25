@@ -87,7 +87,7 @@ impl Db {
 /// Durable Objects ever stop being free — so the two halves of this repository already prove that
 /// the protocol survives it.
 /// A database made before `account.public_id` existed gets the column, and every row an id. The
-/// published image follows `master`, so a file from before T178c may already be serving somebody;
+/// published image follows `master`, so such a file may already be serving somebody;
 /// `CREATE TABLE IF NOT EXISTS` leaves its table as it was.
 fn add_public_id(connection: &Connection) -> rusqlite::Result<()> {
     let has_column = connection
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS account (
   -- is kept beside it so that whoever runs this for their own team can administer it.
   account_key          TEXT    NOT NULL UNIQUE,
   -- The account's id on the wire (`accountId`): random at registration and never reused, unlike
-  -- `id`, which SQLite may hand out again once the last row is deleted (T178c, C4).
+  -- `id`, which SQLite may hand out again once the last row is deleted.
   public_id            TEXT    NOT NULL UNIQUE,
   email                TEXT    NOT NULL,
   verifier             TEXT    NOT NULL,
@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS record (
   PRIMARY KEY (account_id, collection, id)
 );
 CREATE INDEX IF NOT EXISTS record_by_seq ON record (account_id, seq);
--- What `heads` reads: one collection's rows above a cursor, without walking the others (T189).
+-- What `heads` reads: one collection's rows above a cursor, without walking the others.
 CREATE INDEX IF NOT EXISTS record_by_collection_seq ON record (account_id, collection, seq);
 
 -- Guessing at one account, counted against that account.

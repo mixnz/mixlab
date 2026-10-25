@@ -1,4 +1,4 @@
-//! Telling a runtime about this home's certificate authority — roadmap task **T133**.
+//! Telling a runtime about this home's certificate authority.
 //!
 //! The third complaint this phase answers, end to end: a Node process fetching
 //! `https://ezweb.test` reported `unable to verify the first certificate` while a browser on the
@@ -22,9 +22,9 @@ use mixengine_proto::RuntimeKind;
 /// Variables a machine may already export, taken out of the child before every case below.
 ///
 /// **`ubuntu-latest` exports `SSL_CERT_FILE`**, so a shim running there leaves it exactly as it
-/// found it — the design's D11 — and a case asserting MixEngine's own value arrives would be
-/// asserting about the runner. `a_variable_somebody_set_is_left_alone` below is that behaviour's
-/// own case, and it sets the variable itself rather than hoping a machine does.
+/// found it, and a case asserting MixEngine's own value arrives would be asserting about the
+/// runner. `a_variable_somebody_set_is_left_alone` below is that behaviour's own case, and it sets
+/// the variable itself rather than hoping a machine does.
 const CLEARED: &[&str] = &["SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "NODE_EXTRA_CA_CERTS"];
 
 /// What a Node artifact publishes, spelled as each system really packs it.

@@ -1,4 +1,4 @@
-//! The command line of the documentation site generator — roadmap task T90.
+//! The command line of the documentation site generator.
 //!
 //! Five lines, deliberately: everything it does is in `support/generate.rs`, which
 //! `crates/mixengine-docs/tests/site.rs` includes the same way this file does. An example rather

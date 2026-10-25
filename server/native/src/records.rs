@@ -391,7 +391,7 @@ pub fn apply_delete(
         ));
     }
     // D4 weighs a deletion like any other edit, so it needs the time it was made — kept as the
-    // tombstone's own, never the replaced version's (T178c, C1).
+    // tombstone's own, never the replaced version's.
     let Some(updated_at) = updated_at.filter(|at| *at >= 0) else {
         return Ok(Outcome::bad("A deletion needs updatedAt."));
     };
@@ -487,7 +487,7 @@ pub async fn write(
     }
     let limits = state.config.capabilities.clone();
     let precondition = precondition_from(&headers);
-    // Both methods carry a body: a PUT the record, a DELETE the time it was made (T178c, C1).
+    // Both methods carry a body: a PUT the record, a DELETE the time it was made.
     let parsed = match parse(&body) {
         Ok(fields) => fields,
         Err(failure) => return failure.into_response(),
@@ -666,8 +666,8 @@ pub async fn list(
             .into_response();
     }
     // `resync=1`: this cursor came from a read that began at 0, which has missed nothing, so it is
-    // not expired (T178b, M4). Any other value is refused rather than guessed at: a flag that turns
-    // expiry off should not also mean `true`, `0` or nothing.
+    // not expired. Any other value is refused rather than guessed at: a flag that turns expiry off
+    // should not also mean `true`, `0` or nothing.
     let resync = match cursor.resync.as_deref() {
         None => false,
         Some("1") => true,
@@ -683,13 +683,13 @@ pub async fn list(
 
             // One snapshot for every read below: the pool's WAL connections let a writer commit
             // between two statements, and `nextSince` must never name a seq the rows were read
-            // before (T178b, M3).
+            // before.
             let snapshot = connection.transaction()?;
 
             // D3: a machine that has been away longer than a tombstone lives is told to resync
             // from empty rather than told incomplete news quietly. `since = 0` is exempt — a
             // machine with no history has missed nothing — and so is a cursor from a read that
-            // began at 0, for the same reason (M4).
+            // began at 0, for the same reason.
             let (reaped_below, latest): (i64, i64) = snapshot.query_row(
                 "SELECT reaped_below_seq, next_seq FROM account WHERE id = ?1",
                 params![session.account_id],
@@ -743,7 +743,7 @@ pub async fn list(
                 .unwrap_or(since);
             // The last page ends at the account's latest seq: nothing of this collection lies
             // between its last row and there, and a cursor stopped at the row would sit below
-            // every later write in the account, where one reap expires it for good (M3).
+            // every later write in the account, where one reap expires it for good.
             let next_since = if more { last } else { last.max(latest) };
             snapshot.commit()?;
 
@@ -768,9 +768,9 @@ pub async fn list(
     }
 }
 
-/// `POST /v1/records/heads` (T189, D2): which of the cursors a pull would bring news of. A row
-/// this device wrote is not news to it, since its push remembered the row; a row of unknown device
-/// is. One snapshot, so `nextSince` never names a seq the tests below did not see (M3).
+/// `POST /v1/records/heads`: which of the cursors a pull would bring news of. A row this device
+/// wrote is not news to it, since its push remembered the row; a row of unknown device is. One
+/// snapshot, so `nextSince` never names a seq the tests below did not see.
 pub async fn heads(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

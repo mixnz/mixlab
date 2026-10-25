@@ -55,7 +55,7 @@ describe("heads", () => {
   it("ends at the seq a pull read to its last page ends at", async () => {
     const { session } = await signedUp();
     const { collection, stored } = await seed(session.accessToken);
-    // Another collection moves the account's seq past this one's last row (M3).
+    // Another collection moves the account's seq past this one's last row.
     await seed(session.accessToken);
 
     const answer = await heads(session.accessToken, { [collection]: stored.seq });

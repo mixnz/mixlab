@@ -1,9 +1,9 @@
 //! What ports may be opened, decided by the binary that will open them.
 //!
 //! **The helper validates the request itself rather than trusting the daemon** —
-//! `docs/architecture/security-model.md`, and the T74 design, D7. If the daemon is compromised
-//! it *is* the attacker, so nothing the request asserts can be believed: not the ports, not the
-//! label, not the length of the list.
+//! `docs/architecture/security-model.md`. If the daemon is compromised it *is* the attacker, so
+//! nothing the request asserts can be believed: not the ports, not the label, not the length of the
+//! list.
 //!
 //! **And this one cannot check the question it would most like to ask.** The resolver's helper can
 //! compare a TLD against a table compiled into itself; "is this a web port" has no such table,
@@ -41,9 +41,9 @@ pub(crate) fn apply(plan: &FirewallPlan) -> OpOutcome {
 /// What the machine did, in the vocabulary the response speaks.
 ///
 /// [`Applied::Unmanaged`] survives the crossing as its own outcome rather than collapsing into
-/// success — the T74 design, D8. It is the whole reason [`OpOutcome::Unmanaged`] exists: two of the
-/// three systems reach it in their ordinary configuration, and a user told "applied" on a machine
-/// where nothing was applied has been told the one thing that will waste their afternoon.
+/// success. It is the whole reason [`OpOutcome::Unmanaged`] exists: two of the three systems reach
+/// it in their ordinary configuration, and a user told "applied" on a machine where nothing was
+/// applied has been told the one thing that will waste their afternoon.
 fn outcome(applied: mixengine_platform::Result<Applied>) -> OpOutcome {
     match applied {
         Ok(Applied::Unchanged) => OpOutcome::AlreadyDone,

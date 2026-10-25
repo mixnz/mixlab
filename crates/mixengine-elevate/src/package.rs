@@ -1,4 +1,4 @@
-//! Removing the program the macOS `.pkg` placed — roadmap task **T182a**, spec D2.
+//! Removing the program the macOS `.pkg` placed.
 //!
 //! Every path is `mixengine_platform::install::package_paths()`'s, compiled in; the request carries
 //! none, on `helper::remove`'s rule. The bundle goes only when its `Info.plist` names MixLab, so

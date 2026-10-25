@@ -4,14 +4,14 @@
 //! it validates that request **itself** rather than trusting the daemon, applies it, writes
 //! `response.json` beside it, and exits. It never listens on a socket, never runs an arbitrary
 //! command, and is never resident. Keep it small enough to audit in one sitting; see
-//! `docs/architecture/security-model.md` and roadmap task T40.
+//! `docs/architecture/security-model.md` and `docs/specs/2026-08-22-t40-elevate-design.md`.
 //!
 //! **The response file is the protocol.** Exit 0 means "the batch was processed and there is a report
 //! to read" — *even when every operation in it failed*. It does not mean "it worked". Every other
 //! code means there is no report, and is the only case where the number itself carries the answer.
 //!
 //! **"User declined" is not one of these codes.** When the user clicks Cancel this binary never ran,
-//! so it cannot report it; that is `ElevationOutcome::Declined`, mapped by the launcher (T40a) from
+//! so it cannot report it; that is `ElevationOutcome::Declined`, mapped by the launcher from
 //! `ERROR_CANCELLED`, osascript's `-128` and `pkexec`'s 126.
 
 mod audit;
@@ -179,10 +179,10 @@ fn process(accepted: &Accepted, elevated: bool, log: &Path) -> Result<Vec<OpOutc
 /// The body of [`process`], taking values rather than the request so a test can drive it.
 ///
 /// **`audit-log-remove` is applied after every other operation in the batch, and no line is written
-/// for it** — roadmap task T87, the design's D5. Applied in place it would be followed by the line
-/// describing it, which recreates the file the operation exists to remove; and every operation after
-/// it in the batch would recreate it again. Its outcome still lands at **its own index**, because
-/// the daemon settles the queue by position.
+/// for it**. Applied in place it would be followed by the line describing it, which recreates the
+/// file the operation exists to remove; and every operation after it in the batch would recreate it
+/// again. Its outcome still lands at **its own index**, because the daemon settles the queue by
+/// position.
 ///
 /// **The ordering is enforced here rather than by refusing a badly ordered request.** A refusal
 /// would turn a queue that happened to accumulate one extra row into a queue that can never be
@@ -340,7 +340,7 @@ fn write(path: &Path, response: &PrivilegedResponse) -> Result<(), Failure> {
 mod tests {
     use super::*;
 
-    /// D2: every code is at or below 125. `pkexec` reserves 126 and 127 for its own failures and
+    /// Every code is at or below 125. `pkexec` reserves 126 and 127 for its own failures and
     /// shells use 128+n; a helper that spent those numbers would be indistinguishable from the
     /// launcher failing to start it.
     #[test]
@@ -356,8 +356,8 @@ mod tests {
         }
     }
 
-    /// D5: the line describing the log's removal would recreate the file that removal exists to
-    /// remove, so it is applied after everything else and recorded nowhere — while its outcome still
+    /// The line describing the log's removal would recreate the file that removal exists to remove,
+    /// so it is applied after everything else and recorded nowhere — while its outcome still
     /// arrives at its own index, because the daemon settles the queue by position.
     ///
     /// **The removal sits in the middle of the batch on purpose.** The daemon puts it last; this is

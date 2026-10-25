@@ -1,5 +1,5 @@
-// The privileged helper's fingerprint, and when HELPER_VERSION has to move — roadmap task T182b,
-// design docs/specs/2026-09-25-t182b-a-helper-that-keeps-up-and-an-uninstall-that-finishes-design.md, D1.
+// The privileged helper's fingerprint, and when HELPER_VERSION has to move. The rule is D1 of
+// docs/specs/2026-09-25-t182b-a-helper-that-keeps-up-and-an-uninstall-that-finishes-design.md.
 //
 //   node packaging/helper-lock.mjs --check     fail if the helper changed since the last release
 //                                              and HELPER_VERSION did not

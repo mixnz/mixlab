@@ -1,9 +1,9 @@
 //! What may be routed where, decided by the binary that will route it.
 //!
 //! **The helper validates the request itself rather than trusting the daemon** —
-//! `docs/architecture/security-model.md`, and the T45 design, D3 and D5. If the daemon is
-//! compromised it *is* the attacker, so nothing the request asserts can be believed: not the TLDs,
-//! not the port, not the length of the list.
+//! `docs/architecture/security-model.md`. If the daemon is compromised it *is* the attacker, so
+//! nothing the request asserts can be believed: not the TLDs, not the port, not the length of the
+//! list.
 //!
 //! **And the one thing that would matter most is not in the request at all.** The nameserver
 //! address, the Linux link's name and address, and the Windows registry key are compiled into this
@@ -104,7 +104,7 @@ fn refusal(plan: &ResolverPlan) -> Option<String> {
         }
 
         // Named before the general check so the refusal says *why*, which is the one a person is
-        // most likely to meet and the one whose reason is least guessable — the T45 design, D9.
+        // most likely to meet and the one whose reason is least guessable.
         if tld == "local" {
             return Some(
                 "`local` is mDNS territory: routing it would send printer.local and every other \
@@ -140,8 +140,8 @@ mod tests {
         }
     }
 
-    /// D9, and the reason it lives here as well as in the planner: this is a rule about what may be
-    /// done to a machine, and the binary that does it checks its own rules.
+    /// `.local` is refused here as well as in the planner: this is a rule about what may be done to
+    /// a machine, and the binary that does it checks its own rules.
     #[test]
     fn local_is_refused_however_it_arrives() {
         let why = refusal(&directory(&["test", "local"], 53_535)).expect("a refusal");

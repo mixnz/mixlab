@@ -5,10 +5,12 @@
 //! job. What is left for `system.rs` is the audit directory, which genuinely needs one.
 //!
 //! **The trap this suite is written around.** The Windows leg of CI runs under a full administrator
-//! token (T2b), so an assertion phrased "refused because the token is not elevated" would be red
-//! there and green everywhere else for reasons that have nothing to do with the code. Nothing here
-//! asserts on the value of `elevated`; the assertions are about what the helper *reports* and how it
-//! answers, which reads the same from any token.
+//! token, so an assertion phrased "refused because the token is not elevated" would be red there
+//! and green everywhere else for reasons that have nothing to do with the code. Nothing here
+//! asserts on the value of `elevated`; the assertions are about what the helper *reports* and how
+//! it answers, which reads the same from any token.
+//!
+//! The D-numbers below are those of `docs/specs/2026-08-22-t40-elevate-design.md`.
 
 mod harness;
 
@@ -48,11 +50,11 @@ fn a_probe_is_applied_and_the_report_arrives_with_it() {
     ));
 }
 
-/// T88a. `mixengine-elevate` is excluded from auto-update, so a daemon newer than the installed
-/// helper is the ordinary state of a machine — and the newer peer is the one that speaks down,
-/// because a fixed old binary can never be taught what a later protocol means. A request marked at
-/// the floor is therefore served by every build that will ever exist, which is what makes the
-/// daemon's handshake possible against a helper it has never met.
+/// `mixengine-elevate` is excluded from auto-update, so a daemon newer than the installed helper is
+/// the ordinary state of a machine — and the newer peer is the one that speaks down, because a
+/// fixed old binary can never be taught what a later protocol means. A request marked at the floor
+/// is therefore served by every build that will ever exist, which is what makes the daemon's
+/// handshake possible against a helper it has never met.
 #[test]
 fn a_request_at_the_protocol_floor_is_served() {
     let request = harness::Request::new().version(mixengine_proto::PROTOCOL_MINIMUM.0);

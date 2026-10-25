@@ -47,7 +47,7 @@ const DATABASE_FILE_NAME: &str = "mixengine.db";
 /// The settings file, restated from `mixengine_core::config::FILE_NAME`.
 const CONFIG_FILE_NAME: &str = "config.toml";
 
-/// The one setting written into every home this fixture makes — roadmap task **T44**.
+/// The one setting written into every home this fixture makes.
 ///
 /// **Rule 1 in `docs/standards/testing.md`: no test touches port 53.** Left to its default the
 /// daemon's DNS server binds 53 on Windows and 53535 on macOS and Linux, so without this every
@@ -59,7 +59,7 @@ const CONFIG_FILE_NAME: &str = "config.toml";
 /// a port the operating system hands out and nothing else can be wired to.
 const DNS_ON_AN_EPHEMERAL_PORT: &str = "[dns]\nport = 0\n";
 
-/// Make the directory a home lives in, somewhere short — roadmap task **T82a**.
+/// Make the directory a home lives in, somewhere short.
 ///
 /// **`/tmp` on Unix rather than `$TMPDIR`, and this is about `sockaddr_un`.** macOS hands each
 /// process a per-user temporary directory like
@@ -137,11 +137,10 @@ impl Home {
 
     /// The same, with `extra` appended to `config.toml`.
     ///
-    /// **The seed [`Home::SEEDED`] anticipated** — roadmap task **T52**. Every home this fixture
-    /// makes carries `[dns] port = 0` and nothing could add to it, so a suite that needed a second
-    /// setting had no way to ask for one. That absence is what would make a period no test can move
-    /// look like the only option available, which is the mistake T51 nearly shipped with the nginx
-    /// TLS port.
+    /// **The seed [`Home::SEEDED`] anticipated.** Every home this fixture makes carries
+    /// `[dns] port = 0` and nothing could add to it, so a suite that needed a second setting had no
+    /// way to ask for one. That absence is what would make a period no test can move look like the
+    /// only option available, which is the mistake the nginx TLS port nearly shipped with.
     ///
     /// # Panics
     ///
@@ -167,10 +166,10 @@ impl Home {
 
     /// Everything in this home that this fixture put there, and nothing a daemon or a client added.
     ///
-    /// The list a test asserts against when its claim is "that command created nothing": since T44
-    /// a fresh home is not empty, and a test comparing against `0` would be asserting that the DNS
-    /// port fix is absent. Named here so a future seed is one line rather than a hunt through every
-    /// suite for a number that quietly stopped meaning "empty".
+    /// The list a test asserts against when its claim is "that command created nothing": a fresh
+    /// home is not empty, and a test comparing against `0` would be asserting that the DNS port fix
+    /// is absent. Named here so a future seed is one line rather than a hunt through every suite
+    /// for a number that quietly stopped meaning "empty".
     pub const SEEDED: [&str; 1] = [CONFIG_FILE_NAME];
 
     /// What is in the home right now, by file name, sorted — for comparing against [`Home::SEEDED`].
@@ -273,9 +272,9 @@ impl Home {
 
     /// The SQLite file a daemon serving this home opens.
     ///
-    /// The fourth path this crate restates, and it exists for [`mod@crate::declare`]: a test that has to
-    /// put a `services` row somewhere until T30 can create one needs to know where. Held against
-    /// `Paths::database_file` by the same test as the other three.
+    /// The fourth path this crate restates, and it exists for [`mod@crate::declare`]: a test that
+    /// has to put a row there by hand needs to know where. Held against `Paths::database_file` by
+    /// the same test as the other three.
     #[must_use]
     pub fn database_file(&self) -> PathBuf {
         self.root.join(DATABASE_FILE_NAME)

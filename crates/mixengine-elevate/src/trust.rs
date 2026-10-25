@@ -1,12 +1,11 @@
-//! Deciding what may enter this machine's trust store, and what may leave it — roadmap task
-//! **T49a**.
+//! Deciding what may enter this machine's trust store, and what may leave it.
 //!
 //! **The two directions are not symmetrical, and this file is arranged around that.**
 //!
-//! An install is close to harmless. A daemon compromised badly enough to forge one already holds the
-//! private key of the authority this machine trusts, and can sign any certificate for any name
+//! An install is close to harmless. A daemon compromised badly enough to forge one already holds
+//! the private key of the authority this machine trusts, and can sign any certificate for any name
 //! without installing a second root — so the shape check below is not a boundary against an
-//! attacker. It is there so that `mix cert ca-uninstall` (T54) and uninstall (T87) can **enumerate**
+//! attacker. It is there so that `mix cert ca-uninstall` and `mix uninstall` can **enumerate**
 //! everything an install could ever have created, which an unconstrained one would make impossible.
 //!
 //! A removal is not harmless. One that could name an arbitrary certificate could take the root that
@@ -162,8 +161,8 @@ mod tests {
         }
     }
 
-    /// A certificate that is not one T48 makes never reaches a store — and, this refusal happening
-    /// before anything is opened, never reaches an elevated call either.
+    /// A certificate that is not one `mixengine_core::certs::ca` makes never reaches a store — and,
+    /// this refusal happening before anything is opened, never reaches an elevated call either.
     #[test]
     fn an_install_of_something_that_is_not_our_authority_is_refused() {
         for der in [

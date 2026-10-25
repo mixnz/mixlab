@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# When the privileged helper's version has to move — roadmap task T182b, D1.
+# When the privileged helper's version has to move. The rule is D1 of
+# docs/specs/2026-09-25-t182b-a-helper-that-keeps-up-and-an-uninstall-that-finishes-design.md.
 #
 #   bash packaging/helper-lock.sh --check     fail if the helper changed and HELPER_VERSION did not
 #   bash packaging/helper-lock.sh --bump      raise HELPER_VERSION one patch past the last release
