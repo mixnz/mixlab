@@ -863,3 +863,71 @@ async fn a_superuser_credential_is_re_set_and_the_databases_are_kept() {
         "the repair discarded the data directory: {again}"
     );
 }
+
+/// **M48's first half: a second MySQL moves onto the port the first one left, with its data.**
+///
+/// `mysql@57` held the port and `mysql@8` was given another; the first is deleted, the second is
+/// moved onto its number with `mix service set`, and its data directory is the one it had. The
+/// suite never takes a developer's real 3306, so the port here is any free one; that a bare `mysql`
+/// then picks the instance on the product's own port is the order's own rule, proved without a
+/// server in `mixengine_core::services::client`.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs a real MySQL — see the module note, and the `mysql` step in _services.yml"]
+async fn a_second_mysql_moves_onto_the_port_the_first_left() {
+    let (home, _daemon, _registry, installed_at, first_port) = created_as("mysql@first").await;
+    let second_port = free_port();
+
+    at("creating the second instance beside the first");
+    expect(
+        &home,
+        &[
+            "service",
+            "create",
+            "mysql@second",
+            VERSION,
+            "--port",
+            &second_port.to_string(),
+            "--json",
+        ],
+    );
+
+    at("starting the second, which bootstraps its data directory");
+    expect(&home, &["service", "start", "mysql@second", "--json"]);
+    let data = data_directory(&home, "second");
+    let marker = std::fs::read_to_string(data.join(".mixengine-ready"))
+        .expect("a finished bootstrap leaves its marker");
+
+    at("deleting the first, which promotes nobody into its port");
+    expect(&home, &["service", "delete", "mysql@first", "--json"]);
+    assert_eq!(status(&home, "mysql@second")["port"], second_port);
+
+    at("moving the second onto the first one's port");
+    let moved = expect(
+        &home,
+        &[
+            "service",
+            "set",
+            "mysql@second",
+            "--port",
+            &first_port.to_string(),
+            "--yes",
+            "--json",
+        ],
+    );
+    assert_eq!(moved["restarted"], true, "{moved}\n{}", home.daemon_log());
+
+    let after = status(&home, "mysql@second");
+    assert_eq!(after["port"], first_port, "{after}");
+    assert_eq!(after["state"], "running", "{after}\n{}", home.daemon_log());
+    assert_eq!(
+        std::fs::read_to_string(data.join(".mixengine-ready")).expect("the marker is still there"),
+        marker,
+        "the data directory is not the one it had"
+    );
+
+    // The server answers on the new port: a refusal is an answer, and only a server gives it.
+    let answered = without_a_password(&installed_at, first_port, "root");
+    assert!(!answered.is_empty(), "nothing answered on {first_port}");
+
+    expect(&home, &["service", "stop", "mysql@second", "--json"]);
+}

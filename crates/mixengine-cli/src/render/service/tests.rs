@@ -444,3 +444,59 @@ fn an_exemption_names_what_is_holding_the_service_open() {
     assert!(rendered.contains("php-fpm@8.3"), "{rendered}");
     assert!(rendered.contains("shop"), "{rendered}");
 }
+
+/// A move says where from and where to, whether it restarted, and lists what MixEngine left alone.
+#[test]
+fn service_set_lists_what_was_not_followed() {
+    let restarted = super::service_set(&mixengine_proto::ServiceSetResult {
+        service: summary("mysql@8", Some(ServiceState::Running)),
+        port: Some(mixengine_proto::PortChange {
+            from: 3307,
+            to: 3306,
+        }),
+        restarted: true,
+        not_followed: vec!["a project's .env that names 3307".to_owned()],
+    });
+
+    assert!(
+        restarted.starts_with("mysql@8 moved from 3307 to 3306, and was restarted."),
+        "{restarted}"
+    );
+    assert!(
+        restarted.contains("Not changed by MixEngine:"),
+        "{restarted}"
+    );
+    assert!(
+        restarted.contains("  - a project's .env that names 3307"),
+        "{restarted}"
+    );
+
+    let stopped = super::service_set(&mixengine_proto::ServiceSetResult {
+        service: summary("mysql@8", Some(ServiceState::Stopped)),
+        port: Some(mixengine_proto::PortChange {
+            from: 3307,
+            to: 3306,
+        }),
+        restarted: false,
+        not_followed: Vec::new(),
+    });
+
+    assert!(
+        stopped.starts_with(
+            "mysql@8 moved from 3307 to 3306. It is stopped, and will listen there when it starts."
+        ),
+        "{stopped}"
+    );
+
+    let unchanged = super::service_set(&mixengine_proto::ServiceSetResult {
+        service: summary("mysql@8", Some(ServiceState::Stopped)),
+        port: Some(mixengine_proto::PortChange {
+            from: 3306,
+            to: 3306,
+        }),
+        restarted: false,
+        not_followed: Vec::new(),
+    });
+
+    assert_eq!(unchanged, "mysql@8 is already on 3306.\n");
+}

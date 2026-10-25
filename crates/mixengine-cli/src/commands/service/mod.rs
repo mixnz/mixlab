@@ -22,6 +22,7 @@ use crate::parse::{idle_after, runtime_version, service_id};
 use crate::{confirm, render};
 
 mod front_end;
+mod set;
 
 use front_end::{Found, set_front_end, the_front_end};
 
@@ -221,6 +222,29 @@ pub(crate) enum ServiceCommand {
         /// Return once the daemon has accepted the switch rather than once it has made it.
         #[arg(long)]
         no_wait: bool,
+    },
+
+    /// Move a service to another port.
+    ///
+    /// The port is checked the way one is when a service is created: no other service or extension
+    /// may hold it, and nothing else on this machine may be listening there. The configuration is
+    /// rendered again for the new port. A running service is restarted, which drops every open
+    /// connection, so it asks first; a stopped one stays stopped.
+    ///
+    /// A project's .env, a saved connection in MixLab and shell history still name the old port,
+    /// and are listed afterwards.
+    Set {
+        /// The service to move: `mysql@8`, `redis@cache`.
+        #[arg(value_name = "SERVICE", value_parser = service_id)]
+        service: ServiceId,
+
+        /// The port it should listen on.
+        #[arg(long, value_name = "PORT")]
+        port: u16,
+
+        /// Do not ask before restarting a running service.
+        #[arg(long, short = 'y')]
+        yes: bool,
     },
 
     /// Start a service, and everything it depends on.
@@ -580,6 +604,10 @@ pub(crate) async fn service(
                 render::service::save_resources(answer)
             }))?;
             return Ok(ExitCode::SUCCESS);
+        }
+
+        ServiceCommand::Set { service, port, yes } => {
+            return set::set(&mut client, json, service, *port, *yes).await;
         }
 
         ServiceCommand::Autostart { service, on, off } => {

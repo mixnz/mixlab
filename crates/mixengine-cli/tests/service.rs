@@ -774,3 +774,100 @@ fn a_failed_service_carries_why_while_it_is_failed() {
         "a stop with nothing to stop changed why it failed: {after}"
     );
 }
+
+/// A free port out of a band nothing on the machine is handed by accident.
+fn a_free_port(after: u16) -> u16 {
+    (after..after + 200)
+        .find(|port| std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, *port)).is_ok())
+        .expect("a free port in the band")
+}
+
+/// **A stopped service moves without a question**: nothing is restarted, so there is nothing to
+/// agree to.
+#[test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "the fakeservice recipe is compiled into debug builds only"
+)]
+fn set_moves_a_stopped_service_without_asking() {
+    let (home, _daemon) = running(&[Service::new("fakeservice@moved")]);
+    let to = a_free_port(28_100).to_string();
+
+    let output = home.mix(&["service", "set", "fakeservice@moved", "--port", &to]);
+    let said = stdout(&output);
+
+    assert!(output.status.success(), "{output:?}");
+    assert!(said.contains("moved from"), "{said}");
+    assert!(said.contains("Not changed by MixEngine:"), "{said}");
+}
+
+/// **A running service is not restarted on a script's say-so** unless the script said `--yes`.
+#[test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "the fakeservice recipe is compiled into debug builds only"
+)]
+fn set_on_a_running_service_refuses_without_an_answer() {
+    let (home, _daemon) = running(&[Service::new("fakeservice@live")]);
+    assert!(
+        home.mix(&["service", "start", "fakeservice@live"])
+            .status
+            .success()
+    );
+    let to = a_free_port(28_300).to_string();
+
+    let output = home.mix(&[
+        "service",
+        "set",
+        "fakeservice@live",
+        "--port",
+        &to,
+        "--json",
+    ]);
+
+    assert!(!output.status.success(), "{output:?}");
+    let said = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        said.contains("--yes"),
+        "the refusal does not say how to answer: {said}"
+    );
+    let listed = json(&home.mix(&["service", "status", "fakeservice@live", "--json"]));
+    assert_ne!(
+        listed["port"].to_string(),
+        to,
+        "the port moved without an answer"
+    );
+}
+
+/// **`--yes` is the answer in advance**, and the restart is said.
+#[test]
+#[cfg_attr(
+    not(debug_assertions),
+    ignore = "the fakeservice recipe is compiled into debug builds only"
+)]
+fn set_with_yes_restarts_a_running_service() {
+    let (home, _daemon) = running(&[Service::new("fakeservice@agreed")]);
+    assert!(
+        home.mix(&["service", "start", "fakeservice@agreed"])
+            .status
+            .success()
+    );
+    let to = a_free_port(28_500).to_string();
+
+    let output = home.mix(&[
+        "service",
+        "set",
+        "fakeservice@agreed",
+        "--port",
+        &to,
+        "--yes",
+    ]);
+    let said = stdout(&output);
+
+    assert!(output.status.success(), "{output:?}");
+    assert!(said.contains("was restarted"), "{said}");
+}
