@@ -50,8 +50,7 @@ jobs:
           node scripts/check-file-sizes.mjs
 
       # A code comment says its reason rather than citing a roadmap task (docs/standards/rust.md,
-      # *Comments*): no file cites more task numbers than scripts/task-citation-baseline.json
-      # allows, and that file only ever goes down. Needs only Node.
+      # *Comments*): no file cites a task number. Needs only Node.
       - name: Task citations
         run: |
           node --test scripts/check-task-citations.test.mjs

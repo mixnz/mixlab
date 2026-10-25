@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # Three checks that are cheaper to fail here, before the commit exists, than in CI:
 #
-# - Roadmap task T182b, D1: a change to what goes into the privileged helper must bump
-#   HELPER_VERSION. Run only when a staged file is one the helper is built from (the list
-#   helper.lock keeps), or Cargo.lock.
+# - A change to what goes into the privileged helper must bump HELPER_VERSION. Run only when a
+#   staged file is one the helper is built from (the list helper.lock keeps), or Cargo.lock.
 # - The file size limit in docs/standards/source-files.md. Run only when a staged file is one the
 #   check counts. It reads the working tree, not the index, so it can only be stricter than the
 #   commit.
-# - The task citations in docs/standards/rust.md, *Comments*, on the same condition: a commit that
-#   removed some learns here that it needs --shrink, not from CI.
+# - No roadmap task number in code (docs/standards/rust.md, *Comments*), on the same condition: a
+#   commit that adds one learns it here, not from CI.
 #
 # Enabled once per clone with `git config core.hooksPath .githooks`. A commit that touches none of
 # their files pays nothing for them.

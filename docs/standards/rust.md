@@ -138,11 +138,9 @@ from somebody else's manifest, and write the reason as the edge, not as "upstrea
   message, where `git log -S` and `git blame` find it. A number in a comment sends the reader to
   another file, and it goes wrong when the task is split, lettered or moved. Where a reader really
   needs the longer argument, link the ADR or the spec under `docs/specs/` by file name. Never link
-  a plan under `docs/plans/`. The rule holds for the window's TypeScript too. Citations that
-  predate it go when the code around them next changes, not in a bulk rewrite.
-  `node scripts/check-task-citations.mjs`, in `scripts/gate.sh` and CI's `lint` job, fails when a
-  file cites more task numbers than `scripts/task-citation-baseline.json` allows. After removing
-  some, `--shrink` lowers the file's entry, so the next change cannot spend them again.
+  a plan under `docs/plans/`. The rule holds for the window's TypeScript too.
+  `node scripts/check-task-citations.mjs`, in `scripts/gate.sh` and CI's `lint` job, fails on any
+  citation.
 - Where the claim is about **another crate's behaviour** — that `sqlx` reports this as that, that
   `tracing-subscriber` appends recorded fields — prefer a test to a sentence. A sentence is checked
   by nobody and goes stale in silence on the day the dependency is upgraded.
