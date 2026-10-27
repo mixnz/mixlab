@@ -182,9 +182,11 @@ const KNOWN_EMPTY: &[(&str, &str, Os, Arch)] = &[
     // no Windows artifact exists and an ARM64 Windows machine has nothing to emulate either.
     ("redis", "7.2.15", Os::Windows, Arch::X86_64),
     ("redis", "7.2.15", Os::Windows, Arch::Aarch64),
-    // The same line's next patch, published since, for the same reason.
+    // The same line's next patches, published since, for the same reason.
     ("redis", "7.2.16", Os::Windows, Arch::X86_64),
     ("redis", "7.2.16", Os::Windows, Arch::Aarch64),
+    ("redis", "7.2.17", Os::Windows, Arch::X86_64),
+    ("redis", "7.2.17", Os::Windows, Arch::Aarch64),
 ];
 
 /// The kinds this build can install: `RuntimeKind::ALL`, and every recipe's package but `php-fpm`.
