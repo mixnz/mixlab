@@ -4,7 +4,7 @@ slug = "updating"
 order = 12
 summary = "Cập nhật do bạn quyết, có kiểm tra chữ ký, và có chạy thử trước khi thay bất cứ thứ gì. Riêng một chương trình cố ý không bao giờ được thay theo đường này."
 translation_of = "en/updating.md"
-source_sha256 = "cfe4e513049c9e523ab37f29633b41be68400838ad5ff03242d75f53020824a8"
+source_sha256 = "fcb2bc81dd2f0189739f6ad126be8ab36cb87e0845e208e5239a644d72941c27"
 +++
 
 # Cập nhật MixLab
@@ -75,7 +75,7 @@ Bản cài từ `.deb` hoặc `.rpm` thuộc về `apt` hoặc `dnf`, nên MixLa
 `mix self-update` tải gói tiếp theo cùng loại, kiểm tra với bản phát hành đã ký, rồi in lệnh cài:
 
 ```bash
-sudo apt install '<đường dẫn nó in ra>/mixlab_0.0.19-1_amd64.deb'
+sudo apt install '<đường dẫn nó in ra>/mixlab_0.0.20-1_amd64.deb'
 ```
 
 Trên máy có desktop, nó mở luôn gói đó trong trình quản lý phần mềm. Cài xong thì chạy

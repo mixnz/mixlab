@@ -1,8 +1,8 @@
 {
   "version": "0.1.8",
   "baseline": {
-    "version": "0.1.7",
-    "fingerprint": "4205442bafc5326e0f1b55d19579ccbc3dd62331c1c812582f84fbb2bdb559d6"
+    "version": "0.1.8",
+    "fingerprint": "d756b9a73e63663bce179577123796e57838054848689c0282df06d2444ece1d"
   },
   "files": [
     "crates/mixengine-elevate/src/audit.rs",

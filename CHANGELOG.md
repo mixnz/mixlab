@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.20
+
 ### Added
 - A database or cache can move to another port: `mix service set <service> --port <n>`, or
   *Change port…* in MixLab. MixLab then offers to update the saved connections that used the old port.
@@ -13,6 +15,11 @@
   and `mix` says so before it asks.
 
 ### Fixed
+- MixEngine starts with `check_seconds = 0` under `[updates]` in `config.toml`. Before, it refused
+  the file and would not start. `enabled` and `check_seconds` there no longer do anything, so
+  MixEngine ignores any value and warns at start that the lines can be removed.
+- In MixLab, a command that crashes no longer makes every later command of its kind fail until
+  you restart MixLab.
 - With two MixEngine homes on one machine, such as a release and a development build, each keeps
   its own names in the hosts file, and uninstalling one leaves the other's names, DNS routing,
   privileged helper and audit log in place.
