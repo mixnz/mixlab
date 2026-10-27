@@ -375,7 +375,7 @@ tempfile = "3.24.0"
 # The encoding half of `ruzstd`, and a **dev-dependency of `mixengine-testkit` only** — see the note
 # on `ruzstd` for why the two are deliberately different implementations. This one binds the
 # reference C library, which is affordable here and would not be in a shipped binary.
-zstd = "0.13.3"
+zstd = "0.14.3"
 
 # Lints apply to every member through `[lints] workspace = true`.
 [workspace.lints.rust]
