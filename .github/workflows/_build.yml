@@ -367,10 +367,21 @@ jobs:
           sudo apt-get install --yes rpm
 
       # NSIS is not on the windows image; Chocolatey puts it where `packaging/windows/build.sh` looks.
+      # The community feed answers 504 now and then, and choco reports "installed 0/0" with exit 0,
+      # so the step retries and then checks for the binary itself instead of trusting choco.
       - name: Install the packaging tools this runner is missing
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: choco install nsis --no-progress --yes
+        shell: bash
+        run: |
+          makensis="/c/Program Files (x86)/NSIS/makensis.exe"
+          for attempt in 1 2 3 4; do
+            choco install nsis --no-progress --yes || true
+            [ -x "$makensis" ] && exit 0
+            echo "nsis is not installed after attempt $attempt; waiting before the next one"
+            sleep $((attempt * 20))
+          done
+          echo "::error title=NSIS not installed::Chocolatey did not install nsis after 4 attempts (the community feed may be down)"
+          exit 1
 
       - name: Windows artifacts
         if: runner.os == 'Windows'
