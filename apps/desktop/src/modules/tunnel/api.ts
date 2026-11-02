@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-import type { Provider, TunnelInfo } from "./tunnelState";
+import type { AuthtokenStatus, Provider, TunnelInfo } from "./tunnelState";
 
 /** The program a tunnel would run, and what downloading one would fetch — `BinaryStatus`. */
 export interface BinaryStatus {
@@ -30,9 +30,19 @@ export function tunnelList(): Promise<TunnelInfo[]> {
   return invoke<TunnelInfo[]>("tunnel_list");
 }
 
-/** Hands an authtoken to ngrok's own config; MixLab keeps no copy. */
+/** Hands an authtoken to ngrok's own config; MixLab keeps no copy. Rows waiting for one restart. */
 export function tunnelNgrokAuthtoken(token: string, configured: string): Promise<void> {
   return invoke("tunnel_ngrok_authtoken", { token, configured });
+}
+
+/** Whether ngrok has an authtoken, and where from — never the token. */
+export function tunnelNgrokAuthtokenStatus(configured: string): Promise<AuthtokenStatus> {
+  return invoke<AuthtokenStatus>("tunnel_ngrok_authtoken_status", { configured });
+}
+
+/** Empties the authtoken in ngrok's config, with ngrok's own command. */
+export function tunnelNgrokAuthtokenRemove(configured: string): Promise<void> {
+  return invoke("tunnel_ngrok_authtoken_remove", { configured });
 }
 
 /** The list changed — a tunnel opened, failed, started or stopped. Read `tunnelList` again. */

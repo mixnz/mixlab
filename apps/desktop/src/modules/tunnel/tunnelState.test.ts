@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { formatSize, hintKey, parseProvider, programPathKey, rowTone, type TunnelInfo } from "./tunnelState";
+import {
+  formatSize,
+  hintKey,
+  needsTokenCard,
+  parseProvider,
+  programPathKey,
+  rowTone,
+  tokenStateKey,
+  type TunnelInfo,
+} from "./tunnelState";
 
 const row = (over: Partial<TunnelInfo>): TunnelInfo => ({
   id: 1,
@@ -64,5 +73,30 @@ describe("hintKey", () => {
 
   it("says nothing without a hint", () => {
     expect(hintKey(row({}))).toBeNull();
+  });
+});
+
+describe("tokenStateKey", () => {
+  it("says where a token comes from, and never what it is", () => {
+    expect(tokenStateKey({ set: true, source: "config", path: "/c/ngrok.yml" })).toBe("tunnelTab.tokenInConfig");
+    expect(tokenStateKey({ set: true, source: "environment", path: null })).toBe("tunnelTab.tokenInEnvironment");
+    expect(tokenStateKey({ set: false, source: null, path: "/c/ngrok.yml" })).toBe("tunnelTab.tokenNone");
+  });
+});
+
+describe("needsTokenCard", () => {
+  const none = { set: false, source: null, path: null } as const;
+  const set = { set: true, source: "config", path: "/c/ngrok.yml" } as const;
+
+  it("asks for a token only with ngrok chosen, found, and no token set", () => {
+    expect(needsTokenCard("ngrok", true, none)).toBe(true);
+    expect(needsTokenCard("ngrok", true, set)).toBe(false);
+    expect(needsTokenCard("ngrok", false, none)).toBe(false);
+    expect(needsTokenCard("cloudflare", true, none)).toBe(false);
+  });
+
+  // Before the status has been read, nothing is claimed.
+  it("asks nothing while the status is unknown", () => {
+    expect(needsTokenCard("ngrok", true, null)).toBe(false);
   });
 });

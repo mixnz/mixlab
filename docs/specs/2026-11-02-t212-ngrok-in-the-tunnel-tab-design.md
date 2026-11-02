@@ -148,6 +148,11 @@ apply unchanged.
 - **No console UI.** With `--log stdout` and no TTY ngrok draws none (`console_ui: iftty`); a config
   that sets `console_ui: true` is the person's, and is measured rather than overridden (Open
   questions).
+- **Two variables are passed on.** `spawn_supervised` gives a child only a floor of MixLab's
+  environment (`LOCALAPPDATA` and `HOME` among it, so ngrok finds its usual config), so
+  `NGROK_AUTHTOKEN` and `XDG_CONFIG_HOME` are passed to ngrok by name when set. Without them a token
+  from the environment would never reach the tunnel, and on Unix the tunnel could read another
+  config than the one Settings reports (D6).
 - **The macOS sweep** checks the recorded program's name against both `cloudflared` and `ngrok`
   (`is_cloudflared` becomes `is_ours`). The records file stays one file.
 - **The target rule (T203 D4) is unchanged**: loopback only, no scheme means `http://`, the host as
@@ -158,6 +163,47 @@ apply unchanged.
   Vite's `403`. `needsAuthtoken` is new (D3). Any other failure shows ngrok's `ERR_NGROK_*` line as
   the row's detail, which already names the problem and links ngrok's page for it — including a
   second tunnel refused because the free plan's dev domain is already online.
+
+### D6 — The authtoken in the tab, its state in Settings, and a way to remove it
+
+Added after the first build, from using it: a row that failed for want of a token offered only
+*Get authtoken*, the field lived in Settings alone, and Settings could neither say whether a token
+was set nor take one away.
+
+**Where a token can be given.** In the tab and in Settings, both through the same command
+(`tunnel_ngrok_authtoken`, D3), so both write ngrok's own config and nothing else.
+
+- **In the tab, before anything fails.** With *ngrok* chosen, ngrok found, and no token set (below),
+  a card above the address field says ngrok needs an authtoken from the person's account, with a
+  password field, **Save**, and **Get authtoken** (the dashboard page). Start stays enabled: a token
+  in a config MixLab cannot see (a second `--config`, a token ngrok reads some other way) still works.
+- **On a failed row.** A row whose hint is `needsAuthtoken` shows the same field and Save under its
+  message, beside *Get authtoken*, so a person who started anyway fixes it where they are.
+
+**A saved token restarts what was waiting for it.** When Save succeeds, wherever it was pressed,
+every ngrok row that failed with `needsAuthtoken` is started again **in place**: same id, same
+target, state back to `connecting`, hint and detail cleared, a new process with its own records
+line. The row then turns `open` with Copy, Open and Stop as any other. Nothing else is restarted, and
+a cloudflared row is never touched. This happens in the backend, so a token saved in the Settings
+window moves the tab's rows too.
+
+**Whether a token is set.** `tunnel_ngrok_authtoken_status` answers `{ set, source, path }`:
+
+- `source: "environment"` when `NGROK_AUTHTOKEN` is set and non-empty in MixLab's environment;
+- else `source: "config"` when ngrok's config file has a non-empty `authtoken:` line (v3 under
+  `agent:`, v2 at the top). The file is the one `ngrok config check` names (its `Valid
+  configuration file at <path>` line), read for that one line and nothing more;
+- else `set: false`.
+
+MixLab never shows the token or any part of it. Settings says *An authtoken is set in ngrok's config*
+with the file's path, or *Set by NGROK_AUTHTOKEN in the environment*, or *No authtoken yet*. The tab
+reads the same status to decide whether to show its card.
+
+**Removing it.** Settings shows **Remove** when `source` is `config`. It runs
+`ngrok config add-authtoken ""` — ngrok's own command, measured on 3.39.13 to leave
+`authtoken: ""` in the file — after a confirm dialog that says tunnels already running keep running
+and the next ngrok tunnel will need a token again. A token from the environment cannot be removed
+from MixLab, and Settings says where it comes from instead of offering Remove.
 
 ### D5 — What stays as it is
 
@@ -200,7 +246,8 @@ before T212 is ticked; until then the code reads them in the shape ngrok documen
 - **Tunnel tab:** the provider choice before the address (D1), a Provider column, the per-provider
   download card and *for testing* note, the `needsAuthtoken` hint with its dashboard link (D3).
 - **Settings → Tunnel:** an *ngrok path* field beside the cloudflared one, and the *ngrok authtoken*
-  field with Save (D3).
+  field with Save (D3), the token's state and Remove (D6).
+- **Tunnel tab, token:** the card before Start and the field on a failed row (D6).
 - **Tray:** each line names its provider.
 - **Backend:** `src-tauri/src/modules/tunnel/` gains a provider table (D1), ngrok pins in
   `binary.rs` (D2), a JSON reader in `process.rs` and a per-provider reader in `state.rs` (D4), and
@@ -218,6 +265,11 @@ start an ngrok tunnel from MixLab's Tunnel tab, beside Cloudflare's.
   checked against its pinned SHA-256 before it is unpacked, on Windows, macOS and Linux.
 - With no authtoken, the row names it and links the dashboard; pasting the token in Settings and
   pressing Save makes the next start succeed, and the token appears in no MixLab file, log or error.
+- With *ngrok* chosen and no token set, the tab shows the token card before Start; saving there hides
+  the card. A row failed for want of a token takes the token in place and, once saved from the tab or
+  from Settings, restarts itself and reaches Copy, Open and Stop without another click.
+- Settings says whether a token is set and where from, without showing it; Remove empties it in
+  ngrok's config after a confirm, and the tab's card comes back.
 - A cloudflared tunnel and an ngrok tunnel run at once, each row naming its provider, in the tab and
   in the tray.
 - Quitting MixLab ends both kinds. Killing MixLab ends them on Windows; on macOS the next start ends

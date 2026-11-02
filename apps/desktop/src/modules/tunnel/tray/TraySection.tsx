@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 import Button from "../../../components/Button";
 import StatusPill from "../../../components/StatusPill";
@@ -71,26 +72,39 @@ function TraySection({ focused }: TraySectionProps) {
                   {info.provider === "ngrok" ? t("tunnelTab.providerNgrok") : t("tunnelTab.providerCloudflare")} ·{" "}
                   {info.target}
                 </span>
-                <span className={styles.url} title={info.url ?? undefined}>
-                  {info.url ?? ""}
-                </span>
+                {info.url && (
+                  <span className={styles.url}>
+                    <Button
+                      variant="link"
+                      className={styles.urlLink}
+                      title={t("tunnelTab.open")}
+                      onClick={() => void openUrl(info.url ?? "")}
+                    >
+                      {info.url}
+                    </Button>
+                  </span>
+                )}
                 {hintKey(info) && <span className={styles.hint}>{hintText(info)}</span>}
               </span>
-              <StatusPill tone={rowTone(info)} pulse={info.state === "connecting"}>
-                {info.state === "open"
-                  ? t("tunnelTab.stateOpen")
-                  : info.state === "failed"
-                    ? t("tunnelTab.stateFailed")
-                    : t("tunnelTab.stateConnecting")}
-              </StatusPill>
-              {info.url && (
-                <Button size="small" variant="soft" onClick={() => void copy(info)}>
-                  {copied === info.id ? t("tunnelTab.copied") : t("tunnelTab.copy")}
-                </Button>
-              )}
-              <Button size="small" onClick={() => void api.tunnelStop(info.id)}>
-                {t("tunnelTab.stop")}
-              </Button>
+              <span className={styles.side}>
+                <StatusPill tone={rowTone(info)} pulse={info.state === "connecting"}>
+                  {info.state === "open"
+                    ? t("tunnelTab.stateOpen")
+                    : info.state === "failed"
+                      ? t("tunnelTab.stateFailed")
+                      : t("tunnelTab.stateConnecting")}
+                </StatusPill>
+                <span className={styles.actions}>
+                  {info.url && (
+                    <Button size="small" variant="soft" onClick={() => void copy(info)}>
+                      {copied === info.id ? t("tunnelTab.copied") : t("tunnelTab.copy")}
+                    </Button>
+                  )}
+                  <Button size="small" onClick={() => void api.tunnelStop(info.id)}>
+                    {t("tunnelTab.stop")}
+                  </Button>
+                </span>
+              </span>
             </li>
           ))}
         </ul>

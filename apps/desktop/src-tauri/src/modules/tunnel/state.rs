@@ -76,25 +76,64 @@ impl Tunnels {
             *next += 1;
             *next
         };
+        self.spawn_into(app, id, provider, program, target, records)
+    }
+
+    /// Starts again, in place, every ngrok row that failed for want of an authtoken: same id, same
+    /// target, a new process. Answers how many were started; one that cannot start stays failed
+    /// with the reason as its detail.
+    pub fn retry_waiting_for_token<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        program: &Path,
+        records: &Path,
+    ) -> usize {
+        let waiting = waiting_for_token(&lock(&self.entries));
+        let mut started = 0;
+        for (id, target) in waiting {
+            match self.spawn_into(app, id, Provider::Ngrok, program, target, records) {
+                Ok(_) => started += 1,
+                Err(e) => {
+                    if let Some(entry) = lock(&self.entries).get_mut(&id) {
+                        // The program's own words: the row's detail is shown as it is.
+                        entry.info.detail = Some(
+                            e.params
+                                .get("message")
+                                .cloned()
+                                .unwrap_or_else(|| e.code.to_owned()),
+                        );
+                    }
+                    let _ = app.emit(CHANGED_EVENT, ());
+                }
+            }
+        }
+        started
+    }
+
+    /// Spawns the program for row `id` and (re)fills its entry, still connecting.
+    fn spawn_into<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        id: u32,
+        provider: Provider,
+        program: &Path,
+        target: String,
+        records: &Path,
+    ) -> Result<TunnelInfo, AppError> {
         let args: Vec<OsString> = provider.args(&target);
         let directory = program
             .parent()
             .map(Path::to_path_buf)
             .unwrap_or_else(std::env::temp_dir);
-        let mut child = spawn_supervised(
-            program,
-            &args,
-            &directory,
-            &BTreeMap::new(),
-            &Limits::default(),
-        )
-        .map_err(|e| {
-            err!(
-                "error.tunnelCannotStart",
-                program = provider.program(),
-                message = e
-            )
-        })?;
+        let env = provider.env(|name| std::env::var(name).ok());
+        let mut child = spawn_supervised(program, &args, &directory, &env, &Limits::default())
+            .map_err(|e| {
+                err!(
+                    "error.tunnelCannotStart",
+                    program = provider.program(),
+                    message = e
+                )
+            })?;
         // cloudflared says everything on stderr; ngrok's JSON log is on stdout, and its stderr
         // repeats a failure as plain text. The other pipe is drained so a full buffer never
         // blocks the child.
@@ -198,6 +237,19 @@ impl Tunnels {
 
 fn lock(entries: &Entries) -> MutexGuard<'_, BTreeMap<u32, Entry>> {
     entries.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The ngrok rows a saved authtoken should start again, with their targets.
+fn waiting_for_token(entries: &BTreeMap<u32, Entry>) -> Vec<(u32, String)> {
+    entries
+        .iter()
+        .filter(|(_, entry)| {
+            entry.info.provider == Provider::Ngrok
+                && entry.info.state == "failed"
+                && entry.info.hint == Some(Hint::NeedsAuthtoken)
+        })
+        .map(|(id, entry)| (*id, entry.info.target.clone()))
+        .collect()
 }
 
 /// What one line of the program's output says: an address, a hint, and the text the failure tail
@@ -392,7 +444,52 @@ pub fn records_path(data_dir: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::is_ours;
+    use super::{is_ours, waiting_for_token, Entry, TunnelInfo};
+    use crate::modules::tunnel::process::Hint;
+    use crate::modules::tunnel::provider::Provider;
+    use std::collections::BTreeMap;
+
+    fn entry(id: u32, provider: Provider, state: &'static str, hint: Option<Hint>) -> (u32, Entry) {
+        let info = TunnelInfo {
+            id,
+            provider,
+            target: format!("http://localhost:{id}"),
+            url: None,
+            state,
+            detail: None,
+            hint,
+        };
+        let entry = Entry {
+            info,
+            process: None,
+            tail: Vec::new(),
+            stopping: false,
+        };
+        (id, entry)
+    }
+
+    /// Only an ngrok row that failed for want of a token is started again once one is saved.
+    #[test]
+    fn only_ngrok_rows_that_failed_for_a_token_wait_for_one() {
+        let entries: BTreeMap<u32, Entry> = [
+            entry(1, Provider::Ngrok, "failed", Some(Hint::NeedsAuthtoken)),
+            entry(2, Provider::Ngrok, "failed", Some(Hint::NothingListening)),
+            entry(3, Provider::Ngrok, "open", None),
+            entry(
+                4,
+                Provider::Cloudflare,
+                "failed",
+                Some(Hint::NeedsAuthtoken),
+            ),
+            entry(5, Provider::Ngrok, "connecting", Some(Hint::NeedsAuthtoken)),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            waiting_for_token(&entries),
+            vec![(1, "http://localhost:1".to_owned())]
+        );
+    }
 
     #[test]
     fn only_our_two_programs_are_ours() {

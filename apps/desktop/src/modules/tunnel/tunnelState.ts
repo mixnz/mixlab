@@ -39,6 +39,25 @@ export function programPathKey(provider: Provider): string {
   return provider === "cloudflare" ? "mixlab-tunnel-cloudflared" : "mixlab-tunnel-ngrok";
 }
 
+/** Whether ngrok has an authtoken, and where from — `Status` in `src-tauri/src/modules/tunnel/authtoken.rs`. */
+export interface AuthtokenStatus {
+  set: boolean;
+  source: "config" | "environment" | null;
+  path: string | null;
+}
+
+/** What Settings says about the token: where it comes from, never what it is. */
+export function tokenStateKey(status: AuthtokenStatus): TranslationKey {
+  if (status.source === "environment") return "tunnelTab.tokenInEnvironment";
+  if (status.set) return "tunnelTab.tokenInConfig";
+  return "tunnelTab.tokenNone";
+}
+
+/** Whether the tab asks for a token before Start: ngrok chosen, ngrok found, and no token known. */
+export function needsTokenCard(provider: Provider, ngrokFound: boolean, status: AuthtokenStatus | null): boolean {
+  return provider === "ngrok" && ngrokFound && status !== null && !status.set;
+}
+
 /** The string a row's hint is said with, the same in the tab and in the tray. */
 export function hintKey(info: TunnelInfo): { key: TranslationKey; params?: Record<string, string> } | null {
   if (info.hint === "allowedHosts") return { key: "tunnelTab.hintAllowedHosts" };

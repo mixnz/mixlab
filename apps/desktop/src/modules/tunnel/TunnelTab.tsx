@@ -15,16 +15,26 @@ import { errorMessage } from "../../core/errors";
 import { useTranslation } from "../../i18n";
 import type { ModuleTabProps } from "../../shell/module";
 import * as api from "./api";
+import NgrokTokenForm from "./components/NgrokTokenForm";
 import { readProgramPath, readProvider, writeProvider } from "./settings";
-import { formatSize, hintKey, PROVIDERS, rowTone, type Provider, type TunnelInfo } from "./tunnelState";
+import {
+  formatSize,
+  hintKey,
+  needsTokenCard,
+  PROVIDERS,
+  rowTone,
+  type AuthtokenStatus,
+  type Provider,
+  type TunnelInfo,
+} from "./tunnelState";
 import styles from "./TunnelTab.module.css";
 
-/** Where ngrok shows a person their authtoken. */
-const NGROK_AUTHTOKEN_PAGE = "https://dashboard.ngrok.com/get-started/your-authtoken";
-
 /**
- * The Tunnel tab. One list of every tunnel, cloudflared's and ngrok's, read from the backend, which holds them so the tray
- * reads the same list and closing this tab stops nothing.
+ * The Tunnel tab. One list of every tunnel, cloudflared's and ngrok's, read from the backend, which
+ * holds them so the tray reads the same list and closing this tab stops nothing.
+ *
+ * **ngrok's authtoken is asked for here** as well as in Settings: before Start when none is set, and
+ * on a row that failed for want of one. Saving it restarts that row in the backend.
  *
  * **The tab's session slot stays empty**: it is `localStorage`, which holds ids and never a host or
  * a URL, and a target is both. `onStateChange` is never called.
@@ -39,6 +49,7 @@ export default function TunnelTab(_props: ModuleTabProps) {
   const [download, setDownload] = useState<{ done: number; total: number } | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [token, setToken] = useState<AuthtokenStatus | null>(null);
 
   const readBinary = useCallback(() => {
     setBinary(null);
@@ -49,16 +60,26 @@ export default function TunnelTab(_props: ModuleTabProps) {
     api.tunnelList().then(setTunnels, (e: unknown) => setError(errorMessage(t, e)));
   }, [t]);
 
+  /* Read again on every change: a token saved or removed in Settings says so on the same event. */
+  const readToken = useCallback(() => {
+    if (provider !== "ngrok") return;
+    api.tunnelNgrokAuthtokenStatus(readProgramPath("ngrok")).then(setToken, () => setToken(null));
+  }, [provider]);
+
   useEffect(() => {
     readBinary();
     readList();
-    const changed = api.onChanged(readList);
+    readToken();
+    const changed = api.onChanged(() => {
+      readList();
+      readToken();
+    });
     const progress = api.onDownload(setDownload);
     return () => {
       void changed.then((unlisten) => unlisten());
       void progress.then((unlisten) => unlisten());
     };
-  }, [readBinary, readList]);
+  }, [readBinary, readList, readToken]);
 
   function choose(next: Provider) {
     writeProvider(next);
@@ -71,6 +92,7 @@ export default function TunnelTab(_props: ModuleTabProps) {
     try {
       await api.tunnelDownload(provider);
       readBinary();
+      readToken();
     } catch (e) {
       setError(errorMessage(t, e));
     } finally {
@@ -156,6 +178,12 @@ export default function TunnelTab(_props: ModuleTabProps) {
         </Card>
       )}
 
+      {needsTokenCard(provider, binary?.found != null, token) && (
+        <Card title={t("tunnelTab.needAuthtoken")} description={t("tunnelTab.needAuthtokenHint")}>
+          <NgrokTokenForm showGetLink onSaved={readToken} />
+        </Card>
+      )}
+
       <Card>
         <form
           className={styles.form}
@@ -232,15 +260,11 @@ export default function TunnelTab(_props: ModuleTabProps) {
                           </span>
                         )}
                         {hint && <span className={styles.hint}>{hint}</span>}
+                        {info.hint === "needsAuthtoken" && info.state === "failed" && <NgrokTokenForm showGetLink />}
                       </span>
                     </td>
                     <td data-align="end" data-nowrap>
                       <span className={styles.actions}>
-                        {info.hint === "needsAuthtoken" && (
-                          <Button size="small" variant="soft" onClick={() => void openUrl(NGROK_AUTHTOKEN_PAGE)}>
-                            {t("tunnelTab.openNgrokDashboard")}
-                          </Button>
-                        )}
                         {info.url && (
                           <>
                             <Button size="small" variant="soft" onClick={() => void copy(info)}>

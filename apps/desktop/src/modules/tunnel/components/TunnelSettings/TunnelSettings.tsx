@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import Button from "../../../../components/Button";
+import ConfirmDialog from "../../../../components/ConfirmDialog";
 import Input from "../../../../components/Input";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import { readProgramPath, writeProgramPath } from "../../settings";
-import type { Provider } from "../../tunnelState";
+import { tokenStateKey, type AuthtokenStatus, type Provider } from "../../tunnelState";
+import NgrokTokenForm from "../NgrokTokenForm";
 import styles from "./TunnelSettings.module.css";
 
 /** One program's path: empty means the one on PATH, or the one MixLab downloads. */
@@ -39,84 +41,81 @@ function ProgramPath({ provider, label, onChange }: { provider: Provider; label:
 /**
  * The Tunnel pane in Settings: which `cloudflared` and which `ngrok` to run, and ngrok's authtoken.
  *
- * **The authtoken is handed to ngrok and forgotten.** It lives in this component's state until Save,
- * which asks ngrok to write it into ngrok's own config; the field is then emptied, and nothing of it
- * is stored by MixLab.
+ * **The authtoken is ngrok's.** This pane says whether one is set and where from, never what it is;
+ * it hands a new one to ngrok, and Remove empties the one in ngrok's config. A token from
+ * `NGROK_AUTHTOKEN` cannot be removed from here, and the pane says where it comes from instead.
  */
 export default function TunnelSettings() {
   const { t } = useTranslation();
-  const [token, setToken] = useState("");
   const [hasNgrok, setHasNgrok] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [status, setStatus] = useState<AuthtokenStatus | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
-  const [pathChanged, setPathChanged] = useState(0);
 
-  useEffect(() => {
-    api.tunnelBinary("ngrok", readProgramPath("ngrok")).then(
-      (status) => setHasNgrok(status.found !== null),
+  const read = useCallback(() => {
+    const configured = readProgramPath("ngrok");
+    api.tunnelBinary("ngrok", configured).then(
+      (binary) => setHasNgrok(binary.found !== null),
       () => setHasNgrok(false),
     );
-  }, [pathChanged]);
+    api.tunnelNgrokAuthtokenStatus(configured).then(setStatus, () => setStatus(null));
+  }, []);
 
-  async function save() {
+  useEffect(() => {
+    read();
+    const changed = api.onChanged(read);
+    return () => {
+      void changed.then((unlisten) => unlisten());
+    };
+  }, [read]);
+
+  async function remove() {
+    setConfirming(false);
     setError("");
-    setSaved(false);
-    setSaving(true);
     try {
-      await api.tunnelNgrokAuthtoken(token, readProgramPath("ngrok"));
-      setToken("");
-      setSaved(true);
+      await api.tunnelNgrokAuthtokenRemove(readProgramPath("ngrok"));
+      read();
     } catch (e) {
       setError(errorMessage(t, e));
-    } finally {
-      setSaving(false);
     }
   }
 
   return (
     <>
       <ProgramPath provider="cloudflare" label={t("tunnelTab.pathLabel")} />
-      <ProgramPath provider="ngrok" label={t("tunnelTab.ngrokPathLabel")} onChange={() => setPathChanged((n) => n + 1)} />
+      <ProgramPath provider="ngrok" label={t("tunnelTab.ngrokPathLabel")} onChange={read} />
       <div className={styles.section}>
         <label className={styles.label} htmlFor="tunnel-ngrok-authtoken">
           {t("tunnelTab.ngrokAuthtokenLabel")}
         </label>
-        <form
-          className={styles.row}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void save();
-          }}
-        >
-          <Input
-            id="tunnel-ngrok-authtoken"
-            type="password"
-            value={token}
-            mono
-            disabled={!hasNgrok}
-            onChange={(event) => {
-              setToken(event.target.value);
-              setSaved(false);
-            }}
-          />
-          <Button
-            type="submit"
-            disabled={!hasNgrok || token.trim() === ""}
-            busy={saving ? t("tunnelTab.saveAuthtoken") : undefined}
-          >
-            {t("tunnelTab.saveAuthtoken")}
-          </Button>
-        </form>
+        {status && (
+          <div className={styles.state}>
+            <span className={status.set ? styles.set : styles.unset}>
+              {t(tokenStateKey(status), { path: status.path ?? "" })}
+            </span>
+            {status.source === "config" && hasNgrok && (
+              <Button size="small" variant="danger" onClick={() => setConfirming(true)}>
+                {t("tunnelTab.removeAuthtoken")}
+              </Button>
+            )}
+          </div>
+        )}
+        <NgrokTokenForm id="tunnel-ngrok-authtoken" disabled={!hasNgrok} onSaved={read} />
         <p className={styles.hint}>
-          {!hasNgrok
-            ? t("tunnelTab.ngrokAuthtokenNeedsNgrok")
-            : saved
-              ? t("tunnelTab.authtokenSaved")
-              : t("tunnelTab.ngrokAuthtokenHint")}
+          {hasNgrok ? t("tunnelTab.ngrokAuthtokenHint") : t("tunnelTab.ngrokAuthtokenNeedsNgrok")}
         </p>
         {error !== "" && <p className={styles.error}>{error}</p>}
       </div>
+      {confirming && (
+        <ConfirmDialog
+          title={t("tunnelTab.removeAuthtokenTitle")}
+          message={t("tunnelTab.removeAuthtokenMessage")}
+          confirmLabel={t("tunnelTab.removeAuthtoken")}
+          danger
+          onConfirm={() => void remove()}
+          onCancel={() => setConfirming(false)}
+        />
+      )}
     </>
   );
 }
