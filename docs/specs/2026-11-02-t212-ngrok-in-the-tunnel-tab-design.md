@@ -179,6 +179,12 @@ adds no module.
 To be measured on the pinned version, on Windows and macOS at least, before the code depends on
 them. None of them changes the design; each fixes a string or a pattern.
 
+**Measured so far (3.39.13, Windows):** with no authtoken, ngrok writes `ERR_NGROK_4018` inside the
+`err` field of its `eror`/`crit` JSON lines and exits 1, and repeats the failure on stderr as
+`ERROR:` lines, so the reader drains stderr. Its Windows archive holds `ngrok` with no `.exe`. Items
+1, 3, 4 and 5, and the exact line of item 2's second agent, need an authtoken and are checked by hand
+before T212 is ticked; until then the code reads them in the shape ngrok documents.
+
 1. The exact JSON of the `started tunnel` line, and of the line for an unreachable upstream.
 2. The exact text of `ERR_NGROK_4018` with no authtoken, and of the error for a dev domain already
    online.
