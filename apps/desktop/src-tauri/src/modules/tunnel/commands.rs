@@ -81,7 +81,13 @@ pub async fn tunnel_start(
     )
     .ok_or_else(|| err!("error.tunnelNoBinary"))?;
     let _ = std::fs::create_dir_all(data.join("tunnel"));
-    state.start(&app, &found.path, target, &records_path(&data))
+    state.start(
+        &app,
+        Provider::Cloudflare,
+        &found.path,
+        target,
+        &records_path(&data),
+    )
 }
 
 #[tauri::command]
