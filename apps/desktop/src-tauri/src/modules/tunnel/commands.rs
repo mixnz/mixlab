@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use tauri::{AppHandle, Emitter, State};
 
-use super::binary::{self, Found};
+use super::binary::{self, Found, Provider};
 use super::state::{records_path, TunnelInfo, Tunnels};
 use super::target;
 use crate::error::AppError;
@@ -36,9 +36,13 @@ fn configured_path(configured: Option<String>) -> Option<PathBuf> {
 pub fn tunnel_binary(app: AppHandle, configured: Option<String>) -> Result<BinaryStatus, AppError> {
     let data = app_data_dir(&app)?;
     Ok(BinaryStatus {
-        found: binary::find(configured_path(configured).as_deref(), &data),
-        download: binary::source().map(|source| Download {
-            version: binary::VERSION.to_owned(),
+        found: binary::find(
+            Provider::Cloudflare,
+            configured_path(configured).as_deref(),
+            &data,
+        ),
+        download: binary::source(Provider::Cloudflare).map(|source| Download {
+            version: binary::version(Provider::Cloudflare).to_owned(),
             size: source.size,
         }),
     })
@@ -50,7 +54,7 @@ pub async fn tunnel_download(app: AppHandle) -> Result<String, AppError> {
     let data = app_data_dir(&app)?;
     let reporter = app.clone();
     in_background(move || {
-        binary::install(&data, &|done, total| {
+        binary::install(Provider::Cloudflare, &data, &|done, total| {
             let _ = reporter.emit(
                 "tunnel://download",
                 serde_json::json!({ "done": done, "total": total }),
@@ -70,8 +74,12 @@ pub async fn tunnel_start(
 ) -> Result<TunnelInfo, AppError> {
     let target = target::parse(&target)?;
     let data = app_data_dir(&app)?;
-    let found = binary::find(configured_path(configured).as_deref(), &data)
-        .ok_or_else(|| err!("error.tunnelNoBinary"))?;
+    let found = binary::find(
+        Provider::Cloudflare,
+        configured_path(configured).as_deref(),
+        &data,
+    )
+    .ok_or_else(|| err!("error.tunnelNoBinary"))?;
     let _ = std::fs::create_dir_all(data.join("tunnel"));
     state.start(&app, &found.path, target, &records_path(&data))
 }

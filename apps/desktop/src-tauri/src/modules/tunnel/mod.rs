@@ -1,9 +1,10 @@
 //! The `tunnel` module. Shares an address on this machine on the internet through a Cloudflare
-//! quick tunnel. Dials nothing of MixEngine's: ADR 0056.
+//! quick tunnel or ngrok. Dials nothing of MixEngine's: ADR 0056.
 
 pub mod binary;
 pub mod commands;
 pub mod process;
+pub mod provider;
 pub mod state;
 pub mod target;
 

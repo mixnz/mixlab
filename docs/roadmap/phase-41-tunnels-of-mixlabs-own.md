@@ -1,7 +1,7 @@
-# Phase 41 — A tunnel of MixLab's own
+# Phase 41 — Tunnels of MixLab's own
 
-*Goal: an address on this machine can be shared on the internet from MixLab, with or without
-MixEngine, and a module added to a preset reaches everyone who chose it.*
+*Goal: an address on this machine can be shared on the internet from MixLab, through cloudflared or
+ngrok, with or without MixEngine, and a module added to a preset reaches everyone who chose it.*
 
 Part of the [build plan](todo.md). Legend: `[ ]` todo · `[~]` in progress · `[x]` done · **(P)** =
 has a platform-layer component and needs verification on Windows + macOS + Linux.
@@ -23,3 +23,15 @@ the download, a tunnel answering through Cloudflare, the hints, the tray, Quit, 
 `kill -9` whose leftover `cloudflared` the next start ended. **Linux** is covered by CI's
 `build / window (ubuntu-22.04)` and by cloudflared itself measured under WSL; no Linux desktop ran
 the window, which is the one half still owed a hand check.
+
+---
+
+A second provider, for the people who already share with ngrok. Design:
+[2026-11-02-t212-ngrok-in-the-tunnel-tab-design.md](../specs/2026-11-02-t212-ngrok-in-the-tunnel-tab-design.md).
+
+- [ ] **T212** ngrok as a second provider in the Tunnel tab: chosen per tunnel, found or downloaded
+      pinned by version, its URL read from its JSON log, its authtoken left in ngrok's own config and
+      handed to ngrok from Settings, ended with MixLab like cloudflared. **(P)**
+
+**M41a** On Windows and macOS, a dev server opens from another network through an ngrok URL made in
+MixLab's Tunnel tab, beside a running cloudflared tunnel, and quitting MixLab ends both.
