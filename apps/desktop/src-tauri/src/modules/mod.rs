@@ -29,6 +29,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         crate::modules::tunnel::commands::tunnel_start,
         crate::modules::tunnel::commands::tunnel_stop,
         crate::modules::tunnel::commands::tunnel_list,
+        crate::modules::tunnel::commands::tunnel_ngrok_authtoken,
         crate::import::import_happened,
         crate::relaunch::relaunch_app,
         // ── updates ──
