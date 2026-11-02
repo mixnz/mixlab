@@ -7,7 +7,7 @@ import { TunnelIcon } from "../../../icons";
 import { useTranslation } from "../../../i18n";
 import type { TraySectionProps } from "../../../shell/module";
 import * as api from "../api";
-import { rowTone, type TunnelInfo } from "../tunnelState";
+import { hintKey, rowTone, type TunnelInfo } from "../tunnelState";
 import styles from "./TraySection.module.css";
 
 /**
@@ -37,6 +37,11 @@ function TraySection({ focused }: TraySectionProps) {
     };
   }, [refresh]);
 
+  function hintText(info: TunnelInfo): string {
+    const hint = hintKey(info);
+    return hint ? t(hint.key, hint.params) : "";
+  }
+
   async function copy(info: TunnelInfo) {
     if (!info.url) return;
     try {
@@ -62,17 +67,14 @@ function TraySection({ focused }: TraySectionProps) {
           {tunnels.map((info) => (
             <li key={info.id} className={styles.row}>
               <span className={styles.text}>
-                <span className={styles.target}>{info.target}</span>
+                <span className={styles.target}>
+                  {info.provider === "ngrok" ? t("tunnelTab.providerNgrok") : t("tunnelTab.providerCloudflare")} ·{" "}
+                  {info.target}
+                </span>
                 <span className={styles.url} title={info.url ?? undefined}>
                   {info.url ?? ""}
                 </span>
-                {info.hint && (
-                  <span className={styles.hint}>
-                    {info.hint === "allowedHosts"
-                      ? t("tunnelTab.hintAllowedHosts")
-                      : t("tunnelTab.hintNothingListening", { target: info.target })}
-                  </span>
-                )}
+                {hintKey(info) && <span className={styles.hint}>{hintText(info)}</span>}
               </span>
               <StatusPill tone={rowTone(info)} pulse={info.state === "connecting"}>
                 {info.state === "open"

@@ -10,6 +10,18 @@
   font-weight: 500;
 }
 
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--danger-text);
+}
+
 .hint {
   margin: 0;
   font-size: var(--text-sm);

@@ -7,6 +7,7 @@ import EmptyState from "../../components/EmptyState";
 import ErrorBanner from "../../components/ErrorBanner";
 import Input from "../../components/Input";
 import PageHeader from "../../components/PageHeader";
+import SegmentedControl from "../../components/SegmentedControl";
 import StatusPill from "../../components/StatusPill";
 import Table from "../../components/Table";
 import { copyText } from "../../core/clipboard";
@@ -14,12 +15,15 @@ import { errorMessage } from "../../core/errors";
 import { useTranslation } from "../../i18n";
 import type { ModuleTabProps } from "../../shell/module";
 import * as api from "./api";
-import { readCloudflaredPath } from "./settings";
-import { formatSize, rowTone, type TunnelInfo } from "./tunnelState";
+import { readProgramPath, readProvider, writeProvider } from "./settings";
+import { formatSize, hintKey, PROVIDERS, rowTone, type Provider, type TunnelInfo } from "./tunnelState";
 import styles from "./TunnelTab.module.css";
 
+/** Where ngrok shows a person their authtoken. */
+const NGROK_AUTHTOKEN_PAGE = "https://dashboard.ngrok.com/get-started/your-authtoken";
+
 /**
- * The Tunnel tab. One list of every tunnel, read from the backend, which holds them so the tray
+ * The Tunnel tab. One list of every tunnel, cloudflared's and ngrok's, read from the backend, which holds them so the tray
  * reads the same list and closing this tab stops nothing.
  *
  * **The tab's session slot stays empty**: it is `localStorage`, which holds ids and never a host or
@@ -27,6 +31,7 @@ import styles from "./TunnelTab.module.css";
  */
 export default function TunnelTab(_props: ModuleTabProps) {
   const { t } = useTranslation();
+  const [provider, setProvider] = useState<Provider>(readProvider);
   const [binary, setBinary] = useState<api.BinaryStatus | null>(null);
   const [tunnels, setTunnels] = useState<TunnelInfo[]>([]);
   const [address, setAddress] = useState("");
@@ -36,8 +41,9 @@ export default function TunnelTab(_props: ModuleTabProps) {
   const [error, setError] = useState("");
 
   const readBinary = useCallback(() => {
-    api.tunnelBinary(readCloudflaredPath()).then(setBinary, (e: unknown) => setError(errorMessage(t, e)));
-  }, [t]);
+    setBinary(null);
+    api.tunnelBinary(provider, readProgramPath(provider)).then(setBinary, (e: unknown) => setError(errorMessage(t, e)));
+  }, [t, provider]);
 
   const readList = useCallback(() => {
     api.tunnelList().then(setTunnels, (e: unknown) => setError(errorMessage(t, e)));
@@ -54,11 +60,16 @@ export default function TunnelTab(_props: ModuleTabProps) {
     };
   }, [readBinary, readList]);
 
-  async function fetchCloudflared() {
+  function choose(next: Provider) {
+    writeProvider(next);
+    setProvider(next);
+  }
+
+  async function fetchProgram() {
     setError("");
     setDownload({ done: 0, total: binary?.download?.size ?? 0 });
     try {
-      await api.tunnelDownload();
+      await api.tunnelDownload(provider);
       readBinary();
     } catch (e) {
       setError(errorMessage(t, e));
@@ -71,7 +82,7 @@ export default function TunnelTab(_props: ModuleTabProps) {
     setError("");
     setStarting(true);
     try {
-      await api.tunnelStart(address, readCloudflaredPath());
+      await api.tunnelStart(provider, address, readProgramPath(provider));
       setAddress("");
       readList();
     } catch (e) {
@@ -98,9 +109,12 @@ export default function TunnelTab(_props: ModuleTabProps) {
   }
 
   function hintText(info: TunnelInfo): string | null {
-    if (info.hint === "allowedHosts") return t("tunnelTab.hintAllowedHosts");
-    if (info.hint === "nothingListening") return t("tunnelTab.hintNothingListening", { target: info.target });
-    return null;
+    const hint = hintKey(info);
+    return hint ? t(hint.key, hint.params) : null;
+  }
+
+  function providerLabel(of: Provider): string {
+    return of === "ngrok" ? t("tunnelTab.providerNgrok") : t("tunnelTab.providerCloudflare");
   }
 
   const ready = binary?.found != null;
@@ -112,11 +126,12 @@ export default function TunnelTab(_props: ModuleTabProps) {
       <PageHeader title={t("tunnelTab.title")} description={t("tunnelTab.description")} />
 
       {binary !== null && !ready && (
-        <Card title={t("tunnelTab.needCloudflared")}>
+        <Card title={provider === "ngrok" ? t("tunnelTab.needNgrok") : t("tunnelTab.needCloudflared")}>
           <div className={styles.download}>
             {binary.download && (
               <span className={styles.note}>
                 {t("tunnelTab.downloadSize", {
+                  program: provider === "ngrok" ? "ngrok" : "cloudflared",
                   version: binary.download.version,
                   size: formatSize(binary.download.size),
                 })}
@@ -133,9 +148,9 @@ export default function TunnelTab(_props: ModuleTabProps) {
               variant="primary"
               disabled={binary.download === null}
               busy={download !== null ? t("tunnelTab.downloading") : undefined}
-              onClick={() => void fetchCloudflared()}
+              onClick={() => void fetchProgram()}
             >
-              {t("tunnelTab.download")}
+              {provider === "ngrok" ? t("tunnelTab.downloadNgrok") : t("tunnelTab.download")}
             </Button>
           </div>
         </Card>
@@ -149,6 +164,12 @@ export default function TunnelTab(_props: ModuleTabProps) {
             void start();
           }}
         >
+          <SegmentedControl<Provider>
+            aria-label={t("tunnelTab.provider")}
+            segments={PROVIDERS.map((value) => ({ value, label: providerLabel(value) }))}
+            value={provider}
+            onChange={choose}
+          />
           <Input
             aria-label={t("tunnelTab.address")}
             placeholder={t("tunnelTab.addressPlaceholder")}
@@ -166,7 +187,9 @@ export default function TunnelTab(_props: ModuleTabProps) {
           </Button>
         </form>
         <p className={styles.note}>{t("tunnelTab.anyoneWithTheLink")}</p>
-        <p className={styles.note}>{t("tunnelTab.forTesting")}</p>
+        <p className={styles.note}>
+          {provider === "ngrok" ? t("tunnelTab.forTestingNgrok") : t("tunnelTab.forTesting")}
+        </p>
         {binary?.found && (
           <p className={styles.note} title={binary.found.path}>
             {t("tunnelTab.using", { path: binary.found.path })}
@@ -181,6 +204,7 @@ export default function TunnelTab(_props: ModuleTabProps) {
           <Table aria-label={t("tunnelTab.running")}>
             <thead>
               <tr>
+                <th>{t("tunnelTab.columnProvider")}</th>
                 <th>{t("tunnelTab.columnAddress")}</th>
                 <th>{t("tunnelTab.columnState")}</th>
                 <th>{t("tunnelTab.columnUrl")}</th>
@@ -192,6 +216,7 @@ export default function TunnelTab(_props: ModuleTabProps) {
                 const hint = hintText(info);
                 return (
                   <tr key={info.id}>
+                    <td>{providerLabel(info.provider)}</td>
                     <td className={styles.mono}>{info.target}</td>
                     <td>
                       <StatusPill tone={rowTone(info)} pulse={info.state === "connecting"}>
@@ -211,6 +236,11 @@ export default function TunnelTab(_props: ModuleTabProps) {
                     </td>
                     <td data-align="end" data-nowrap>
                       <span className={styles.actions}>
+                        {info.hint === "needsAuthtoken" && (
+                          <Button size="small" variant="soft" onClick={() => void openUrl(NGROK_AUTHTOKEN_PAGE)}>
+                            {t("tunnelTab.openNgrokDashboard")}
+                          </Button>
+                        )}
                         {info.url && (
                           <>
                             <Button size="small" variant="soft" onClick={() => void copy(info)}>
