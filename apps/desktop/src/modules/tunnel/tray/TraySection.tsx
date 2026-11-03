@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 import Button from "../../../components/Button";
 import StatusPill from "../../../components/StatusPill";
@@ -7,7 +8,7 @@ import { TunnelIcon } from "../../../icons";
 import { useTranslation } from "../../../i18n";
 import type { TraySectionProps } from "../../../shell/module";
 import * as api from "../api";
-import { rowTone, type TunnelInfo } from "../tunnelState";
+import { hintKey, rowTone, type TunnelInfo } from "../tunnelState";
 import styles from "./TraySection.module.css";
 
 /**
@@ -37,6 +38,11 @@ function TraySection({ focused }: TraySectionProps) {
     };
   }, [refresh]);
 
+  function hintText(info: TunnelInfo): string {
+    const hint = hintKey(info);
+    return hint ? t(hint.key, hint.params) : "";
+  }
+
   async function copy(info: TunnelInfo) {
     if (!info.url) return;
     try {
@@ -62,33 +68,43 @@ function TraySection({ focused }: TraySectionProps) {
           {tunnels.map((info) => (
             <li key={info.id} className={styles.row}>
               <span className={styles.text}>
-                <span className={styles.target}>{info.target}</span>
-                <span className={styles.url} title={info.url ?? undefined}>
-                  {info.url ?? ""}
+                <span className={styles.target}>
+                  {info.provider === "ngrok" ? t("tunnelTab.providerNgrok") : t("tunnelTab.providerCloudflare")} ·{" "}
+                  {info.target}
                 </span>
-                {info.hint && (
-                  <span className={styles.hint}>
-                    {info.hint === "allowedHosts"
-                      ? t("tunnelTab.hintAllowedHosts")
-                      : t("tunnelTab.hintNothingListening", { target: info.target })}
+                {info.url && (
+                  <span className={styles.url}>
+                    <Button
+                      variant="link"
+                      className={styles.urlLink}
+                      title={t("tunnelTab.open")}
+                      onClick={() => void openUrl(info.url ?? "")}
+                    >
+                      {info.url}
+                    </Button>
                   </span>
                 )}
+                {hintKey(info) && <span className={styles.hint}>{hintText(info)}</span>}
               </span>
-              <StatusPill tone={rowTone(info)} pulse={info.state === "connecting"}>
-                {info.state === "open"
-                  ? t("tunnelTab.stateOpen")
-                  : info.state === "failed"
-                    ? t("tunnelTab.stateFailed")
-                    : t("tunnelTab.stateConnecting")}
-              </StatusPill>
-              {info.url && (
-                <Button size="small" variant="soft" onClick={() => void copy(info)}>
-                  {copied === info.id ? t("tunnelTab.copied") : t("tunnelTab.copy")}
-                </Button>
-              )}
-              <Button size="small" onClick={() => void api.tunnelStop(info.id)}>
-                {t("tunnelTab.stop")}
-              </Button>
+              <span className={styles.side}>
+                <StatusPill tone={rowTone(info)} pulse={info.state === "connecting"}>
+                  {info.state === "open"
+                    ? t("tunnelTab.stateOpen")
+                    : info.state === "failed"
+                      ? t("tunnelTab.stateFailed")
+                      : t("tunnelTab.stateConnecting")}
+                </StatusPill>
+                <span className={styles.actions}>
+                  {info.url && (
+                    <Button size="small" variant="soft" onClick={() => void copy(info)}>
+                      {copied === info.id ? t("tunnelTab.copied") : t("tunnelTab.copy")}
+                    </Button>
+                  )}
+                  <Button size="small" onClick={() => void api.tunnelStop(info.id)}>
+                    {t("tunnelTab.stop")}
+                  </Button>
+                </span>
+              </span>
             </li>
           ))}
         </ul>

@@ -10,13 +10,14 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use mixengine_platform::process::{spawn_supervised, Limits, OutputPipe, Supervised};
 use tauri::{AppHandle, Emitter, Runtime};
 
-use super::process::{blocks_the_host, hint_for, public_url, Hint, Record};
+use super::process::{blocks_the_host, hint_for, public_url, read_ngrok, Hint, NgrokLine, Record};
+use super::provider::Provider;
 use crate::error::AppError;
 
 /// Said whenever the list changes; carries nothing, and the listener reads `tunnel_list`.
 pub const CHANGED_EVENT: &str = "tunnel://changed";
 
-/// How many of cloudflared's last lines a tunnel that ends before it opens shows as its error.
+/// How many of the program's last lines a tunnel that ends before it opens shows as its error.
 const TAIL_LINES: usize = 6;
 
 /// One tunnel as the tab and the tray see it.
@@ -24,6 +25,7 @@ const TAIL_LINES: usize = 6;
 #[serde(rename_all = "camelCase")]
 pub struct TunnelInfo {
     pub id: u32,
+    pub provider: Provider,
     pub target: String,
     pub url: Option<String>,
     /// `connecting`, `open` or `failed`. A stopped tunnel leaves the list.
@@ -35,7 +37,7 @@ pub struct TunnelInfo {
 struct Entry {
     info: TunnelInfo,
     process: Option<Supervised>,
-    /// The last lines cloudflared printed, for a tunnel that ends before it opens.
+    /// The last lines the program printed, for a tunnel that ends before it opens.
     tail: Vec<String>,
     /// Set by `stop`, so the reader thread does not call a stop a failure.
     stopping: bool,
@@ -60,10 +62,11 @@ impl Tunnels {
             .collect()
     }
 
-    /// Starts `cloudflared tunnel --url <target>` and answers the new row, still connecting.
+    /// Starts the provider's program towards `target` and answers the new row, still connecting.
     pub fn start<R: Runtime>(
         &self,
         app: &AppHandle<R>,
+        provider: Provider,
         program: &Path,
         target: String,
         records: &Path,
@@ -73,28 +76,83 @@ impl Tunnels {
             *next += 1;
             *next
         };
-        let args: Vec<OsString> = ["tunnel", "--no-autoupdate", "--url", target.as_str()]
-            .into_iter()
-            .map(OsString::from)
-            .collect();
+        self.spawn_into(app, id, provider, program, target, records)
+    }
+
+    /// Starts again, in place, every ngrok row that failed for want of an authtoken: same id, same
+    /// target, a new process. Answers how many were started; one that cannot start stays failed
+    /// with the reason as its detail.
+    pub fn retry_waiting_for_token<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        program: &Path,
+        records: &Path,
+    ) -> usize {
+        let waiting = waiting_for_token(&lock(&self.entries));
+        let mut started = 0;
+        for (id, target) in waiting {
+            match self.spawn_into(app, id, Provider::Ngrok, program, target, records) {
+                Ok(_) => started += 1,
+                Err(e) => {
+                    if let Some(entry) = lock(&self.entries).get_mut(&id) {
+                        // The program's own words: the row's detail is shown as it is.
+                        entry.info.detail = Some(
+                            e.params
+                                .get("message")
+                                .cloned()
+                                .unwrap_or_else(|| e.code.to_owned()),
+                        );
+                    }
+                    let _ = app.emit(CHANGED_EVENT, ());
+                }
+            }
+        }
+        started
+    }
+
+    /// Spawns the program for row `id` and (re)fills its entry, still connecting.
+    fn spawn_into<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        id: u32,
+        provider: Provider,
+        program: &Path,
+        target: String,
+        records: &Path,
+    ) -> Result<TunnelInfo, AppError> {
+        let args: Vec<OsString> = provider.args(&target);
         let directory = program
             .parent()
             .map(Path::to_path_buf)
             .unwrap_or_else(std::env::temp_dir);
-        let mut child = spawn_supervised(
-            program,
-            &args,
-            &directory,
-            &BTreeMap::new(),
-            &Limits::default(),
-        )
-        .map_err(|e| err!("error.tunnelCannotStart", message = e))?;
-        let stderr = child.take_stderr();
+        let env = provider.env(|name| std::env::var(name).ok());
+        let mut child = spawn_supervised(program, &args, &directory, &env, &Limits::default())
+            .map_err(|e| {
+                err!(
+                    "error.tunnelCannotStart",
+                    program = provider.program(),
+                    message = e
+                )
+            })?;
+        // cloudflared says everything on stderr; ngrok's JSON log is on stdout, and its stderr
+        // repeats a failure as plain text. The other pipe is drained so a full buffer never
+        // blocks the child.
+        let (stdout, stderr) = (child.take_stdout(), child.take_stderr());
+        let (read, drain) = match provider {
+            Provider::Cloudflare => (stderr, stdout),
+            Provider::Ngrok => (stdout, stderr),
+        };
+        if let Some(drain) = drain {
+            std::thread::spawn(move || {
+                let _ = std::io::copy(&mut BufReader::new(drain), &mut std::io::sink());
+            });
+        }
         remember(records, &child);
         *self.records.lock().unwrap_or_else(|e| e.into_inner()) = Some(records.to_path_buf());
 
         let info = TunnelInfo {
             id,
+            provider,
             target: target.clone(),
             url: None,
             state: "connecting",
@@ -114,7 +172,7 @@ impl Tunnels {
 
         let entries = Arc::clone(&self.entries);
         let app = app.clone();
-        std::thread::spawn(move || read_output(&app, &entries, id, stderr));
+        std::thread::spawn(move || read_output(&app, &entries, id, provider, read));
         Ok(info)
     }
 
@@ -181,15 +239,43 @@ fn lock(entries: &Entries) -> MutexGuard<'_, BTreeMap<u32, Entry>> {
     entries.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-/// Reads cloudflared's output until it ends, moving the row as it goes.
+/// The ngrok rows a saved authtoken should start again, with their targets.
+fn waiting_for_token(entries: &BTreeMap<u32, Entry>) -> Vec<(u32, String)> {
+    entries
+        .iter()
+        .filter(|(_, entry)| {
+            entry.info.provider == Provider::Ngrok
+                && entry.info.state == "failed"
+                && entry.info.hint == Some(Hint::NeedsAuthtoken)
+        })
+        .map(|(id, entry)| (*id, entry.info.target.clone()))
+        .collect()
+}
+
+/// What one line of the program's output says: an address, a hint, and the text the failure tail
+/// keeps (none for a line a hint already says better).
+fn interpret(provider: Provider, line: &str) -> (Option<String>, Option<Hint>, Option<String>) {
+    match provider {
+        Provider::Cloudflare => (public_url(line), hint_for(line), Some(line.to_owned())),
+        Provider::Ngrok => match read_ngrok(line) {
+            NgrokLine::Url(url) => (Some(url), None, None),
+            NgrokLine::Hint(hint) => (None, Some(hint), None),
+            NgrokLine::Other(text) => (None, None, Some(text)),
+        },
+    }
+}
+
+/// Reads the program's output until it ends, moving the row as it goes.
 fn read_output<R: Runtime>(
     app: &AppHandle<R>,
     entries: &Entries,
     id: u32,
-    stderr: Option<OutputPipe>,
+    provider: Provider,
+    output: Option<OutputPipe>,
 ) {
-    if let Some(stderr) = stderr {
-        for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+    if let Some(output) = output {
+        for line in BufReader::new(output).lines().map_while(Result::ok) {
+            let (url, hint, tail) = interpret(provider, &line);
             let mut changed = false;
             let mut opened = None;
             {
@@ -197,12 +283,14 @@ fn read_output<R: Runtime>(
                 let Some(entry) = guard.get_mut(&id) else {
                     return;
                 };
-                entry.tail.push(line.clone());
-                if entry.tail.len() > TAIL_LINES {
-                    entry.tail.remove(0);
+                if let Some(tail) = tail {
+                    entry.tail.push(tail);
+                    if entry.tail.len() > TAIL_LINES {
+                        entry.tail.remove(0);
+                    }
                 }
                 if entry.info.url.is_none() {
-                    if let Some(url) = public_url(&line) {
+                    if let Some(url) = url {
                         entry.info.url = Some(url.clone());
                         entry.info.state = "open";
                         opened = Some(url);
@@ -210,7 +298,7 @@ fn read_output<R: Runtime>(
                     }
                 }
                 if entry.info.hint.is_none() {
-                    if let Some(hint) = hint_for(&line) {
+                    if let Some(hint) = hint {
                         entry.info.hint = Some(hint);
                         changed = true;
                     }
@@ -242,7 +330,8 @@ fn read_output<R: Runtime>(
 /// One `GET /` through a tunnel that has just opened. A dev server that refuses the tunnel's host
 /// (Vite 5 and later) answers `403 Blocked request`, which reads as a broken tunnel when it is a
 /// setting; the row then names `server.allowedHosts`. One request, once: the module does not watch
-/// the traffic.
+/// the traffic. ngrok's free plan puts a warning page before a browser's first visit; the header
+/// asks it not to, so Vite's own answer comes back.
 fn check_the_host<R: Runtime>(app: &AppHandle<R>, entries: &Entries, id: u32, url: &str) {
     let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -253,6 +342,7 @@ fn check_the_host<R: Runtime>(app: &AppHandle<R>, entries: &Entries, id: u32, ur
     let blocked = runtime.block_on(async {
         let response = reqwest::Client::new()
             .get(url)
+            .header("ngrok-skip-browser-warning", "1")
             .timeout(std::time::Duration::from_secs(15))
             .send()
             .await
@@ -300,26 +390,36 @@ pub fn sweep(records: &Path) {
                 .flatten()
                 .map(|started| started.stored())
         });
-        if ours && is_cloudflared(record.pid) {
+        if ours && runs_one_of_ours(record.pid) {
             end_group(record.pid);
         }
     }
     let _ = std::fs::remove_file(records);
 }
 
+/// Whether a process name is one of the programs a tunnel runs, exactly: a pid whose program is
+/// anything else is a stranger's, and is never signalled. Only macOS asks; the rule is tested
+/// everywhere.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn is_ours(name: &[u8]) -> bool {
+    [Provider::Cloudflare, Provider::Ngrok]
+        .iter()
+        .any(|provider| name == provider.program().as_bytes())
+}
+
 #[cfg(target_os = "macos")]
-fn is_cloudflared(pid: u32) -> bool {
+fn runs_one_of_ours(pid: u32) -> bool {
     let mut name = [0u8; 256];
     let Ok(pid) = i32::try_from(pid) else {
         return false;
     };
     // SAFETY: `proc_name` writes at most the length it is given into the buffer it is given.
     let len = unsafe { libc::proc_name(pid, name.as_mut_ptr().cast(), name.len() as u32) };
-    usize::try_from(len).is_ok_and(|len| len > 0 && name[..len].starts_with(b"cloudflared"))
+    usize::try_from(len).is_ok_and(|len| is_ours(&name[..len]))
 }
 
 #[cfg(not(target_os = "macos"))]
-fn is_cloudflared(_pid: u32) -> bool {
+fn runs_one_of_ours(_pid: u32) -> bool {
     false
 }
 
@@ -340,4 +440,63 @@ fn end_group(_pid: u32) {}
 /// Where the records live.
 pub fn records_path(data_dir: &Path) -> PathBuf {
     data_dir.join("tunnel").join("running")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_ours, waiting_for_token, Entry, TunnelInfo};
+    use crate::modules::tunnel::process::Hint;
+    use crate::modules::tunnel::provider::Provider;
+    use std::collections::BTreeMap;
+
+    fn entry(id: u32, provider: Provider, state: &'static str, hint: Option<Hint>) -> (u32, Entry) {
+        let info = TunnelInfo {
+            id,
+            provider,
+            target: format!("http://localhost:{id}"),
+            url: None,
+            state,
+            detail: None,
+            hint,
+        };
+        let entry = Entry {
+            info,
+            process: None,
+            tail: Vec::new(),
+            stopping: false,
+        };
+        (id, entry)
+    }
+
+    /// Only an ngrok row that failed for want of a token is started again once one is saved.
+    #[test]
+    fn only_ngrok_rows_that_failed_for_a_token_wait_for_one() {
+        let entries: BTreeMap<u32, Entry> = [
+            entry(1, Provider::Ngrok, "failed", Some(Hint::NeedsAuthtoken)),
+            entry(2, Provider::Ngrok, "failed", Some(Hint::NothingListening)),
+            entry(3, Provider::Ngrok, "open", None),
+            entry(
+                4,
+                Provider::Cloudflare,
+                "failed",
+                Some(Hint::NeedsAuthtoken),
+            ),
+            entry(5, Provider::Ngrok, "connecting", Some(Hint::NeedsAuthtoken)),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            waiting_for_token(&entries),
+            vec![(1, "http://localhost:1".to_owned())]
+        );
+    }
+
+    #[test]
+    fn only_our_two_programs_are_ours() {
+        assert!(is_ours(b"cloudflared"));
+        assert!(is_ours(b"ngrok"));
+        assert!(!is_ours(b"node"));
+        assert!(!is_ours(b"ngrok-like"));
+        assert!(!is_ours(b""));
+    }
 }

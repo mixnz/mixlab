@@ -44,15 +44,37 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* The address and its URL on the left, wrapped rather than cut; on the right the state, with the
+   buttons under it. The URL is the link that opens it. */
 .row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Several tunnels at once: a rule between them, so one tunnel's buttons are not read as the next
+   one's. */
+.row + .row {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
   gap: 8px;
 }
 
@@ -63,18 +85,26 @@
   min-width: 0;
 }
 
+/* Wrapped rather than cut: the whole address and URL are what a person checks here. */
 .target,
 .url {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   line-height: var(--leading-sm);
 }
 
+/* The link variant takes its font and colour from here: it sets them to `inherit`. */
 .url {
   color: var(--text-secondary);
+}
+
+/* `Button` keeps its label on one line; a URL here wraps instead, and reads from the left. */
+.urlLink {
+  display: block;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* What the tab says under a tunnel's URL, said here too: a person who only looks at the tray should

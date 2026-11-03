@@ -246,3 +246,4 @@ status means: [plans-and-specs.md](../standards/plans-and-specs.md).
 | 2026-10-24 | [No roadmap task numbers in code (design)](2026-10-24-t209m-no-task-numbers-in-code-design.md) | T209m | implemented |
 | 2026-10-25 | [No task outlives shutdown (design)](2026-10-25-t209h-no-task-outlives-shutdown-design.md) | T209h | implemented |
 | 2026-10-25 | [T210 — Moving a service to another port](2026-10-25-t210-moving-a-service-to-another-port-design.md) | T210 | implemented |
+| 2026-11-02 | [T212 — ngrok in the Tunnel tab, beside cloudflared](2026-11-02-t212-ngrok-in-the-tunnel-tab-design.md) | T212 | approved |

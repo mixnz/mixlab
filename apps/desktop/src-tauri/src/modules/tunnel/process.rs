@@ -10,6 +10,56 @@ pub enum Hint {
     NothingListening,
     /// The dev server refused the tunnel's host — Vite's `server.allowedHosts`.
     AllowedHosts,
+    /// ngrok found no authtoken in its config or its environment (`ERR_NGROK_4018`).
+    NeedsAuthtoken,
+}
+
+/// What one line of ngrok's JSON log means to the row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NgrokLine {
+    /// The tunnel opened at this `https://` address.
+    Url(String),
+    /// Something the row should suggest.
+    Hint(Hint),
+    /// Anything else, as the failure tail shows it: the line's error, else its message, else the
+    /// line itself.
+    Other(String),
+}
+
+/// Reads one line of `ngrok … --log stdout --log-format json`. The URL is taken from the
+/// `started tunnel` line whatever its domain: the assigned one differs by plan and has changed over
+/// time.
+pub fn read_ngrok(line: &str) -> NgrokLine {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
+        return NgrokLine::Other(line.to_owned());
+    };
+    let field = |name: &str| value.get(name).and_then(serde_json::Value::as_str);
+    let msg = field("msg").unwrap_or_default();
+    let err = field("err").unwrap_or_default();
+    if msg == "started tunnel" {
+        if let Some(url) = field("url").filter(|url| url.starts_with("https://")) {
+            return NgrokLine::Url(url.to_owned());
+        }
+    }
+    if err.contains("ERR_NGROK_4018") {
+        return NgrokLine::Hint(Hint::NeedsAuthtoken);
+    }
+    let refused = err.contains("dial tcp")
+        && (err.contains("refused") || err.contains("No connection could be made"));
+    if err.contains("ERR_NGROK_8012") || refused {
+        return NgrokLine::Hint(Hint::NothingListening);
+    }
+    let text = if err.is_empty() { msg } else { err };
+    if text.is_empty() {
+        return NgrokLine::Other(line.to_owned());
+    }
+    NgrokLine::Other(
+        text.lines()
+            .map(str::trim)
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" "),
+    )
 }
 
 /// The `https://….trycloudflare.com` address in one line of cloudflared's output.
@@ -91,6 +141,79 @@ impl Record {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// ngrok's line for an opened tunnel, in the shape its JSON log documents.
+    const NGROK_STARTED: &str = r#"{"addr":"http://localhost:5173","lvl":"info","msg":"started tunnel","name":"command_line","obj":"tunnels","t":"2026-11-02T20:00:00+0700","url":"https://quiet-river-1234.ngrok-free.app"}"#;
+
+    /// What ngrok 3.39.13 printed, measured, with no authtoken anywhere.
+    const NGROK_NO_AUTHTOKEN: &str = r#"{"t":"2026-11-02T20:01:44+0700","lvl":"crit","msg":"command failed","err":"authentication failed: This ngrok session is not authenticated. ngrok requires an account and a valid credential to start a session.\n\nSign up for an account: https://dashboard.ngrok.com/signup\nGet your credential: https://dashboard.ngrok.com/get-started/your-authtoken\r\n\r\nERR_NGROK_4018\r\n"}"#;
+
+    /// A request through the tunnel with nothing listening at the target.
+    const NGROK_UPSTREAM_REFUSED: &str = r#"{"t":"2026-11-02T20:05:00+0700","lvl":"warn","msg":"failed to open private leg","obj":"tunnels.session","id":"1","privaddr":"localhost:59999","err":"dial tcp [::1]:59999: connectex: No connection could be made because the target machine actively refused it."}"#;
+
+    /// A second agent on a free account, refused by its session limit.
+    const NGROK_SECOND_AGENT: &str = r#"{"t":"2026-11-02T20:06:00+0700","lvl":"crit","msg":"command failed","err":"authentication failed: Your account is limited to 1 simultaneous ngrok agent sessions.\r\n\r\nERR_NGROK_108\r\n"}"#;
+
+    #[test]
+    fn ngrok_s_started_tunnel_line_gives_its_url() {
+        assert_eq!(
+            read_ngrok(NGROK_STARTED),
+            NgrokLine::Url("https://quiet-river-1234.ngrok-free.app".into())
+        );
+    }
+
+    #[test]
+    fn a_url_on_any_domain_is_taken_but_only_https() {
+        assert_eq!(
+            read_ngrok(r#"{"msg":"started tunnel","url":"https://a.example.dev"}"#),
+            NgrokLine::Url("https://a.example.dev".into())
+        );
+        assert!(matches!(
+            read_ngrok(r#"{"msg":"started tunnel","url":"http://a.example.dev"}"#),
+            NgrokLine::Other(_)
+        ));
+    }
+
+    #[test]
+    fn no_authtoken_is_named() {
+        assert_eq!(
+            read_ngrok(NGROK_NO_AUTHTOKEN),
+            NgrokLine::Hint(Hint::NeedsAuthtoken)
+        );
+    }
+
+    #[test]
+    fn an_unreachable_upstream_is_named() {
+        assert_eq!(
+            read_ngrok(NGROK_UPSTREAM_REFUSED),
+            NgrokLine::Hint(Hint::NothingListening)
+        );
+    }
+
+    #[test]
+    fn a_refused_second_agent_shows_ngrok_s_own_error_on_one_line() {
+        let NgrokLine::Other(text) = read_ngrok(NGROK_SECOND_AGENT) else {
+            panic!("not Other");
+        };
+        assert!(text.contains("ERR_NGROK_108"), "{text}");
+        assert!(!text.contains('\n') && !text.contains('\r'), "{text}");
+    }
+
+    #[test]
+    fn a_line_with_no_error_shows_its_message() {
+        assert_eq!(
+            read_ngrok(r#"{"lvl":"info","msg":"open config file","err":null}"#),
+            NgrokLine::Other("open config file".into())
+        );
+    }
+
+    #[test]
+    fn a_line_that_is_not_json_is_kept_as_it_is() {
+        assert_eq!(
+            read_ngrok("t=x lvl=warn msg=\"update available\""),
+            NgrokLine::Other("t=x lvl=warn msg=\"update available\"".into())
+        );
+    }
 
     #[test]
     fn the_public_url_is_found_in_cloudflared_s_box() {

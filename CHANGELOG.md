@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+- MixLab's Tunnel tab can share an address through ngrok as well as Cloudflare. It uses the ngrok
+  and the authtoken you already have, or downloads ngrok and takes your authtoken right in the tab.
+  Settings → Tunnel shows whether a token is set and can remove it.
+
 ## v0.0.20
 
 ### Added

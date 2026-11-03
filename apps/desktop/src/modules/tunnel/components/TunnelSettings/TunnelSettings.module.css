@@ -10,6 +10,32 @@
   font-weight: 500;
 }
 
+.state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.set,
+.unset {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+}
+
+.unset {
+  color: var(--text-secondary);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-sm);
+  color: var(--danger-text);
+}
+
 .hint {
   margin: 0;
   font-size: var(--text-sm);

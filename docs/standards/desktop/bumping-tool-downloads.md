@@ -109,6 +109,24 @@ old — see the comment on it.
 6. **No changelog entry.** A bump nobody notices is not a user-visible change; see
    [changelog.md](changelog.md). A bump that adds a platform, or that a user has to act on, is.
 
+## The Tunnel tab's programs
+
+The `tunnel` module downloads `cloudflared` and `ngrok` the same way, pinned in
+[`src-tauri/src/modules/tunnel/binary.rs`](../../../apps/desktop/src-tauri/src/modules/tunnel/binary.rs):
+`CLOUDFLARED_VERSION` and `NGROK_VERSION`, each with one URL, SHA-256 and size per target. Neither
+has a deadline; bump one when it stops working or carries a fix somebody needs.
+
+- **cloudflared** — the assets of a [GitHub release](https://github.com/cloudflare/cloudflared/releases);
+  the URL is built from the version, so only the digests and sizes change.
+- **ngrok** — the [archive](https://dl.equinox.io/ngrok/ngrok-v3/stable/archive), **never** a link
+  with `-stable-` in it: those move with every release, and a digest pinned against one breaks on
+  the next. Each version and target has its own id under `bin.equinox.io/a/<id>/`, so a bump changes
+  six ids as well as six digests and sizes. Take the `.tar.gz` for every target, Windows included;
+  its archive holds `ngrok` with no `.exe`, which `install` renames.
+
+Download each file, take `sha256sum` and its size, and compare the digest with the one the archive
+page or the release lists.
+
 ## Adding a platform to a suite
 
 A new arm in `archive_source` needs three things beyond the URL and hash: `library_dir` has to know

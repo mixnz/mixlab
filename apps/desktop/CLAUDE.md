@@ -14,7 +14,7 @@ MixLab is a desktop app built with **Tauri 2 + React 19 + TypeScript** (frontend
 - **`rest`** — an HTTP client: saved requests, environments, history, and a response pane.
 - **`terminal`** — a shell on this machine or on a server over SSH, with saved hosts.
 - **`tools`** — small utilities that run in this process.
-- **`tunnel`** — a Cloudflare quick tunnel to an address on this machine, ended with MixLab.
+- **`tunnel`** — a Cloudflare quick tunnel or ngrok to an address on this machine, ended with MixLab.
 - **`mixengine`** — the one module that talks to the MixEngine daemon, and an **optional** one.
 
 **MixLab comes first; MixEngine is an add-on.** Many users never start the daemon, so the shell and
@@ -105,7 +105,7 @@ src/                 React frontend
   modules/tools/     Small utilities that run in this process
     ToolsTab.tsx     The tool list, frequently used first, and the tool that is open
     registry.ts      TOOLS — every tool; each lives in tools/<name>/
-  modules/tunnel/    A Cloudflare quick tunnel to an address on this machine
+  modules/tunnel/    A Cloudflare quick tunnel or ngrok to an address on this machine
     TunnelTab.tsx    The tab; tray/ is its TraySection, settings.ts what it remembers
   modules/mixengine/ The only module that talks to the daemon — optional (ADR 0056)
     MixEngineTab.tsx The daemon's state, then one screen at a time
@@ -128,7 +128,7 @@ src-tauri/src/       Rust backend
     rest/            commands.rs, models.rs, state.rs
     terminal/        commands.rs, local.rs, remote.rs, stream.rs, models.rs, state.rs
     tools/           commands.rs, ports.rs — one command, read-only
-    tunnel/          binary.rs (cloudflared), process.rs, target.rs, commands.rs, state.rs
+    tunnel/          provider.rs, binary.rs (cloudflared, ngrok), process.rs, target.rs, commands.rs, state.rs
     mixengine/       transport.rs, rpc.rs, events.rs, sse.rs — the daemon client; for_update.rs,
                      for_uninstall.rs — what the shell asks of it
 ```
